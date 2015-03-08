@@ -75,13 +75,13 @@ class TrainingAlgorithm: boost::noncopyable
 //      return maxIt_;
 //  }
 
-    public: void train(const DataSet<ValueT>& data)
-    {
+//    public: void train(const DataSet<ValueT>& data)
+//    {
 //        while (...)
 //        {
 //            this->trainSingleEpoch(data);
 //        }
-    }
+//    }
 
     public: ValueT trainSingleEpoch(const DataSet<ValueT>& data)
     {
@@ -94,14 +94,22 @@ class TrainingAlgorithm: boost::noncopyable
             FL_THROW("Cannot train with a null error function");
         }
 
-		p_errFunc_->reset();
+		this->resetSingleEpoch();
 
         this->doTrainSingleEpoch(data);
 
 		return p_errFunc_->getTotalError();
     }
 
+	protected: void resetSingleEpoch()
+	{
+		p_errFunc_->reset();
+		this->doResetSingleEpoch();
+	}
+
     private: virtual void doTrainSingleEpoch(const DataSet<ValueT>& data) = 0;
+
+    private: virtual void doResetSingleEpoch() = 0;
 
 
     private: Network<ValueT>* p_nnet_;
@@ -113,7 +121,7 @@ class TrainingAlgorithm: boost::noncopyable
 
 
 /**
- * The stochastic gradient descent backpropagation learning algorithm with momentum
+ * The gradient descent backpropagation learning algorithm with momentum
  * 
  * In the backpropagation learning algorithm, there are two phases in its
  * learning cycle:
@@ -122,6 +130,33 @@ class TrainingAlgorithm: boost::noncopyable
  * 2. the backward phase, where the error between the desired and obtained
  *    output is back-propagated through the network in order to change the
  *    weights and then to decrease the error.
+ *
+ * This class implements both the batch (offline) and stochastic (online)
+ * gradient descent backpropagation algorithm.
+ *
+ * The batch gradient descent backpropagation algorithm updates the weights
+ * only after all training data have been processed.
+ *
+ * Intuitively, the batch gradient descent backpropagation algorithm can be
+ * outlined as follows [1]:
+ *   Given a set of input patterns (the training set)
+ *   WHILE the neural network can consecutively map all patterns correctly DO
+ *    FOR EACH input pattern x, repeat the following Steps 1 to 3 until the output vector y is equal (or close enough) to the target vector t for the given input vector x.
+ *     1. Input x to the neural network.
+ *     2. (Feedforward)
+ *        Go through the neural network, from the input to hidden layers, then from the hidden to output layers, and get output vector y.
+ *     3. (Backward propagation of error corrections)
+ *        IF y is equal or close enough to t, THEN
+ *         BREAK // Go back to the beginning of the outer WHILE loop.
+ *        ELSE
+ *         Backpropagate through the neural network
+ *        END IF
+ *    Adjust the weights:
+ *    \f[
+ *      w_{ij}(n) = w_{ij}(n-1) + \Delta w_{ij}(n-1)
+ *    \f]
+ *    where \f$w_{ij}(n)\f$ is the weight on the connection from neuron \f$i\f$ to neuron \f$j\f$ at step \f$n\f$.
+ *   END WHILE
  *
  * The stochastic gradient descent backpropagation algorithm (also known as
  * incremental gradient descent algorithm) differs from the traditional gradient
@@ -196,14 +231,23 @@ class TrainingAlgorithm: boost::noncopyable
 template <typename ValueT>
 class GradientDescentBackpropagationAlgorithm: public TrainingAlgorithm<ValueT>
 {
-	//FIXME:  Move error terms inside each neuron into this class
-
     public: GradientDescentBackpropagationAlgorithm()
     : learnRate_(0.01),
 	  momentum_(0.9),
-	  maxEpochs_(1)
+	  maxEpochs_(1),
+	  online_(true)
     {
     }
+
+	public: void setIsOnline(bool v)
+	{
+		online_ = v;
+	}
+
+	public: bool isOnline() const
+	{
+		return online_;
+	}
 
     public: void setLearningRate(ValueT v)
     {
@@ -225,24 +269,26 @@ class GradientDescentBackpropagationAlgorithm: public TrainingAlgorithm<ValueT>
         return momentum_;
     }
 
-    public: void setMaxEpochs(std::size_t n)
-    {
-        maxEpochs_ = n;
-    }
+//    public: void setMaxEpochs(std::size_t n)
+//    {
+//        maxEpochs_ = n;
+//    }
 
-    public: std::size_t getMaxEpochs() const
-    {
-        return maxEpochs_;
-    }
+//    public: std::size_t getMaxEpochs() const
+//    {
+//        return maxEpochs_;
+//    }
 
     /// Training for a single epoch
     private: void doTrainSingleEpoch(const DataSet<ValueT>& data)
     {
-        Network<ValueT>* p_nnet = this->getNetwork();
-        ErrorFunction<ValueT>* p_errFunc = this->getErrorFunction();
+		Network<ValueT>* p_nnet = this->getNetwork();
 
 		// check: null
 		FL_DEBUG_ASSERT( p_nnet );
+
+		ErrorFunction<ValueT>* p_errFunc = this->getErrorFunction();
+
 		// check: null
 		FL_DEBUG_ASSERT( p_errFunc );
 
@@ -290,13 +336,20 @@ std::cerr << "]" << std::endl;
             //    network
             this->backpropagateErrors(targetOut, actualOut);
 
+			if (online_)
+			{
 //FL_DEBUG_TRACE("Update weight step");//XXX
-            // 2.3. Update network weights
-            this->updateWeights(targetOut, actualOut);
+				// 2.3. Update network weights
+				this->updateWeightsOnline(targetOut, actualOut);
+			}
+			else
+			{
+				this->updateErrorGradients(targetOut, actualOut);
+			}
 
 //FL_DEBUG_TRACE("Update error step");//XXX
-        	// 3. Update total network error
-            p_errFunc->update(targetOut.begin(), targetOut.end(), actualOut.begin(), actualOut.end());
+			// 3. Update total network error
+			p_errFunc->update(targetOut.begin(), targetOut.end(), actualOut.begin(), actualOut.end());
 //[XXX]
 #ifdef FL_DEBUG
 std::cerr << "  Weights & Biases: ";
@@ -311,6 +364,11 @@ std::cerr << std::endl;
 #endif // FL_DEBUG
 //[/XXX]
         }
+
+		if (!online_)
+		{
+			this->updateWeightsOffline();
+		}
     }
 
     private: void backpropagateErrors(const std::vector<ValueT>& targetOut, const std::vector<ValueT>& actualOut)
@@ -368,11 +426,12 @@ std::cerr << std::endl;
                 ActivationFunction<ValueT>* p_actFunc = p_neuron->getActivationFunction();
                 const ValueT dOjdNetj = p_actFunc->evalDerivative(p_neuron->getNetInput());
 
-                // Updates the error term of this neuron
-                p_neuron->setError(dEdOj*dOjdNetj);
+                // Updates the error term (aka, sensitivity) of this neuron
+                //p_neuron->setError(dEdOj*dOjdNetj);
+				sensitivies_[p_neuron] = dEdOj*dOjdNetj;
 //////[XXX]
 //#ifdef FL_DEBUG
-//std::cerr << "Output neuron (" << p_neuron << ") - dEdOj: " << dEdOj << " - dOjdNetj: " << dOjdNetj << " -> Error: " << p_neuron->getError() << std::endl;
+//std::cerr << "Output neuron (" << p_neuron << ") - dEdOj: " << dEdOj << " - dOjdNetj: " << dOjdNetj << " -> Error: " << sensitivies_.at(p_neuron) << std::endl;
 //#endif // FL_DEBUG
 //[/XXX]
 
@@ -440,7 +499,8 @@ std::cerr << std::endl;
                         FL_DEBUG_ASSERT( p_toNeuron );
 
                         // Compute $\frac{\partial E}{\partial \mathrm{net}_k}$
-                        const ValueT dEdNetk = p_toNeuron->getError();
+                        //const ValueT dEdNetk = p_toNeuron->getError();
+                        const ValueT dEdNetk = sensitivies_.at(p_toNeuron);
 
                         // Compute $\frac{\partial \mathrm{net}_k}{\partial o_j}$
                         NetInputFunction<ValueT>* p_netInFunc = p_toNeuron->getNetInputFunction();
@@ -456,10 +516,11 @@ std::cerr << std::endl;
                     // Computes $\frac{\partial E}{\partial \mathrm{net}_j}$
                     const ValueT dEdNetj = dOjdNetj*dEdNetkdNetkdOjs;
 
-                    p_neuron->setError(dEdNetj);
+                    //p_neuron->setError(dEdNetj);
+                    sensitivies_[p_neuron] = dEdNetj;
 ////[XXX]
 //#ifdef FL_DEBUG
-//std::cerr << "Hidden neuron (" << p_neuron << ") - dOjdNetj: " << dOjdNetj << " - dEdNetkdNetkdOjs: " << dEdNetkdNetkdOjs << " -> Error: " << p_neuron->getError() << std::endl;
+//std::cerr << "Hidden neuron (" << p_neuron << ") - dOjdNetj: " << dOjdNetj << " - dEdNetkdNetkdOjs: " << dEdNetkdNetkdOjs << " -> Error: " << sensitivies_.at(p_neuron) << std::endl;
 //#endif // FL_DEBUG
 ////[/XXX]
 
@@ -469,10 +530,18 @@ std::cerr << std::endl;
         }
     }
 
-    private: void updateWeights(const std::vector<ValueT>& targetOut, const std::vector<ValueT>& actualOut)
+    private: void updateWeightsOnline(const std::vector<ValueT>& targetOut, const std::vector<ValueT>& actualOut)
     {
 		Network<ValueT>* p_nnet = this->getNetwork();
+
+		// check: null
+		FL_DEBUG_ASSERT( p_nnet );
+
 		ErrorFunction<ValueT>* p_errFunc = this->getErrorFunction();
+
+		// check: null
+		FL_DEBUG_ASSERT( p_errFunc );
+
         const ValueT eta = this->getLearningRate();
 
         // 2.3.2. Update weights in the hidden layers
@@ -499,7 +568,8 @@ std::cerr << std::endl;
                     FL_DEBUG_ASSERT( p_neuron );
 
                     // Get the error term $\frac{\partial E}{\partial \mathrm{net}_j}$
-                    const ValueT dEdNetj = p_neuron->getError();
+                    //const ValueT dEdNetj = p_neuron->getError();
+                    const ValueT dEdNetj = sensitivies_.at(p_neuron);
 
                     // Computes $\frac{\partial \mathrm{net}_j}{\partial w_{ij}}$
                     NetInputFunction<ValueT>* p_netInFunc = p_neuron->getNetInputFunction();
@@ -628,7 +698,8 @@ std::cerr << std::endl;
                 FL_DEBUG_ASSERT( p_neuron );
 
                 // Get the error term $\frac{\partial E}{\partial \mathrm{net}_j}$
-                const ValueT dEdNetj = p_neuron->getError();
+                //const ValueT dEdNetj = p_neuron->getError();
+                const ValueT dEdNetj = sensitivies_.at(p_neuron);
 
                 // Computes $\frac{\partial \mathrm{net}_j}{\partial w_{ij}}$
                 NetInputFunction<ValueT>* p_netInFunc = p_neuron->getNetInputFunction();
@@ -715,12 +786,333 @@ std::cerr << std::endl;
         }
     }
 
+    private: void updateWeightsOffline()
+    {
+		Network<ValueT>* p_nnet = this->getNetwork();
+
+		// check: null
+		FL_DEBUG_ASSERT( p_nnet );
+
+        const ValueT eta = this->getLearningRate();
+
+        // 2.3.2. Update weights in the hidden layers
+        {
+            for (typename Network<ValueT>::LayerIterator hidLayerIt = p_nnet->hiddenLayerBegin(),
+                                                               		  hidLayerEndIt = p_nnet->hiddenLayerEnd();
+                 hidLayerIt != hidLayerEndIt;
+                 ++hidLayerIt)
+            {
+                Layer<ValueT>* p_layer = *hidLayerIt;
+
+                //check: null
+                FL_DEBUG_ASSERT( p_layer );
+
+                 // For each unit in this hidden layer, computes the error
+                for (typename Layer<ValueT>::NeuronIterator neurIt = p_layer->neuronBegin(),
+                                                            neurEndIt = p_layer->neuronEnd();
+                     neurIt != neurEndIt;
+                     ++neurIt)
+                {
+                    Neuron<ValueT>* p_neuron = *neurIt;
+
+                    //check: null
+                    FL_DEBUG_ASSERT( p_neuron );
+
+                    // For each incoming connection $i$, updates its weights $w_{ij}$ as
+                    // \[
+                    //  w_{ij} = w_{ij} + \Delta w_{ij}
+                    // \]
+                    // where $\Delta w_{ij} = -\eta \frac{\partial E}{\partial w_{ij}}
+					std::vector<Connection<ValueT>*> inConns = p_neuron->inputConnections();
+					for (typename std::vector<Connection<ValueT>*>::iterator connIt = inConns.begin(),
+																			 connEndIt = inConns.end();
+                         connIt != connEndIt;
+                         ++connIt)
+                    {
+                        Connection<ValueT>* p_conn = *connIt;
+
+                        FL_DEBUG_ASSERT( p_conn );
+
+                        // Computes $\Delta w_{ij} = -\eta\frac{\partial E}{\partial w_{ij}}$
+                        const ValueT deltaWij = -eta*dEdWs_.at(p_conn);
+
+////[XXX]
+//#ifdef FL_DEBUG
+//const ValueT oldWeight=p_conn->getWeight();//XXX
+//#endif // FL_DEBUG
+////[/XXX]
+                        p_conn->setWeight(p_conn->getWeight() + deltaWij);
+////[XXX]
+//#ifdef FL_DEBUG
+//std::cerr << "hidden neuron (" << p_neuron << ") - connection (" << p_conn->getFromNeuron() << " -> " << p_conn->getToNeuron() << ") - Old Weight: " << oldWeight << " - dNetjdWij: " << dNetjdWij << " - DeltaWij: " << deltaWij << " - Weight: " << p_conn->getWeight() << std::endl;///XXX
+//#endif // FL_DEBUG
+////[/XXX]
+
+						if (momentum_ > 0)
+						{
+							const ValueT oldDeltaWij = oldDeltaWs_.count(p_conn) > 0 ? oldDeltaWs_.at(p_conn) : 0;
+
+							p_conn->setWeight(p_conn->getWeight() + oldDeltaWij);
+
+							oldDeltaWs_[p_conn] = deltaWij;
+						}
+                    }
+					if (p_neuron->hasBias())
+					{
+                        // Computes $\Delta w_{ij} = -\eta\frac{\partial E}{\partial w_{ij}}$
+                        const ValueT deltaWij = -eta*dEdBs_.at(p_neuron);
+
+////[XXX]
+//#ifdef FL_DEBUG
+//const ValueT oldBias=p_neuron->getBias();//XXX
+//#endif // FL_DEBUG
+////[/XXX]
+						p_neuron->setBias(p_neuron->getBias() + deltaWij);
+
+						if (momentum_ > 0)
+						{
+							const ValueT oldDeltaWij = oldDeltaBs_.count(p_neuron) > 0 ? oldDeltaBs_.at(p_neuron) : 0;
+
+							p_neuron->setBias(p_neuron->getBias() + oldDeltaWij);
+
+							oldDeltaBs_[p_neuron] = deltaWij;
+						}
+////[XXX]
+//#ifdef FL_DEBUG
+//std::cerr << "hidden neuron (" << p_neuron << ") - BIAS - Old Weight: " << oldBias << " - dNetjdWij: " << dNetjdWij << " - DeltaWij: " << deltaWij << " - Weight: " << p_neuron->getBias() << std::endl;///XXX
+//#endif // FL_DEBUG
+////[/XXX]
+					}
+                }
+            }
+        }
+
+        // 2.3.1. Update weights in the output layer
+        {
+            Layer<ValueT>* p_outLayer =  this->getNetwork()->getOutputLayer();
+
+            //check: null
+            FL_DEBUG_ASSERT( p_outLayer );
+
+            for (typename Layer<ValueT>::NeuronIterator neurIt = p_outLayer->neuronBegin(),
+                                                        neurEndIt = p_outLayer->neuronEnd();
+                 neurIt != neurEndIt;
+                 ++neurIt)
+            {
+                Neuron<ValueT>* p_neuron = *neurIt;
+
+                //check: null
+                FL_DEBUG_ASSERT( p_neuron );
+
+                // For each incoming connection $i$, updates its weights $w_{ij}$ as
+                // \[
+                //  w_{ij} = w_{ij} + \Delta w_{ij}
+                // \]
+                // where $\Delta w_{ij} = -\eta \frac{\partial E}{\partial w_{ij}}
+				std::vector<Connection<ValueT>*> inConns = p_neuron->inputConnections();
+                for (typename std::vector<Connection<ValueT>*>::iterator connIt = inConns.begin(),
+																		 connEndIt = inConns.end();
+                     connIt != connEndIt;
+                     ++connIt)
+                {
+                    Connection<ValueT>* p_conn = *connIt;
+
+                    FL_DEBUG_ASSERT( p_conn );
+
+                    // Computes $\Delta w_{ij} = -\eta\frac{\partial E}{\partial w_{ij}}$
+                    const ValueT deltaWij = -eta*dEdWs_.at(p_conn);
+
+                    p_conn->setWeight(p_conn->getWeight() + deltaWij);
+////[XXX]
+//#ifdef FL_DEBUG
+//std::cerr << "output neuron (" << p_neuron << ") - connection (" << p_conn->getFromNeuron() << " -> " << p_conn->getToNeuron() << ") - dNetjdWij: " << dNetjdWij << " - DeltaWij: " << deltaWij << " - Weight: " << p_conn->getWeight() << std::endl;///XXX
+//#endif // FL_DEBUG
+////[/XXX]
+                }
+				if (p_neuron->hasBias())
+				{
+					// Computes $\Delta w_{ij} = -\eta\frac{\partial E}{\partial w_{ij}}$
+					const ValueT deltaWij = -eta*dEdBs_.at(p_neuron);
+
+////[XXX]
+//#ifdef FL_DEBUG
+//const ValueT oldBias=p_neuron->getBias();//XXX
+//#endif // FL_DEBUG
+////[/XXX]
+					p_neuron->setBias(p_neuron->getBias() + deltaWij);
+
+					if (momentum_ > 0)
+					{
+						const ValueT oldDeltaWij = oldDeltaBs_.count(p_neuron) > 0 ? oldDeltaBs_.at(p_neuron) : 0;
+
+						p_neuron->setBias(p_neuron->getBias() + oldDeltaWij);
+
+						oldDeltaBs_[p_neuron] = deltaWij;
+					}
+////[XXX]
+//#ifdef FL_DEBUG
+//std::cerr << "output neuron (" << p_neuron << ") - BIAS - Old Weight: " << oldBias << " - dNetjdWij: " << dNetjdWij << " - DeltaWij: " << deltaWij << " - Weight: " << p_neuron->getBias() << std::endl;///XXX
+//#endif // FL_DEBUG
+////[/XXX]
+				}
+            }
+        }
+    }
+
+    private: void updateErrorGradients(const std::vector<ValueT>& targetOut, const std::vector<ValueT>& actualOut)
+    {
+		Network<ValueT>* p_nnet = this->getNetwork();
+		ErrorFunction<ValueT>* p_errFunc = this->getErrorFunction();
+
+        // 2.3.2. Update error gradients in the hidden layers
+        {
+            for (typename Network<ValueT>::LayerIterator hidLayerIt = p_nnet->hiddenLayerBegin(),
+                                                               		  hidLayerEndIt = p_nnet->hiddenLayerEnd();
+                 hidLayerIt != hidLayerEndIt;
+                 ++hidLayerIt)
+            {
+                Layer<ValueT>* p_layer = *hidLayerIt;
+
+                //check: null
+                FL_DEBUG_ASSERT( p_layer );
+
+                 // For each unit in this hidden layer, computes the error
+                for (typename Layer<ValueT>::NeuronIterator neurIt = p_layer->neuronBegin(),
+                                                            neurEndIt = p_layer->neuronEnd();
+                     neurIt != neurEndIt;
+                     ++neurIt)
+                {
+                    Neuron<ValueT>* p_neuron = *neurIt;
+
+                    //check: null
+                    FL_DEBUG_ASSERT( p_neuron );
+
+                    // Get the error term $\frac{\partial E}{\partial \mathrm{net}_j}$
+                    //const ValueT dEdNetj = p_neuron->getError();
+                    const ValueT dEdNetj = sensitivies_.at(p_neuron);
+
+                    // Computes $\frac{\partial \mathrm{net}_j}{\partial w_{ij}}$
+                    NetInputFunction<ValueT>* p_netInFunc = p_neuron->getNetInputFunction();
+                    std::vector<ValueT> inputs = p_neuron->inputs();
+                    std::vector<ValueT> weights = p_neuron->weights();
+					if (p_neuron->hasBias())
+					{
+						inputs.push_back(1);
+						weights.push_back(p_neuron->getBias());
+					}
+                    const std::vector<ValueT> dNetjdWs = p_netInFunc->evalDerivativeWrtWeight(inputs.begin(), inputs.end(), weights.begin(), weights.end());
+
+                    // For each incoming connection $i$, updates the error gradient term \frac{\partial E}{\partial w_{ij}}
+					std::size_t i = 0;
+					std::vector<Connection<ValueT>*> inConns = p_neuron->inputConnections();
+					for (typename std::vector<Connection<ValueT>*>::iterator connIt = inConns.begin(),
+																			 connEndIt = inConns.end();
+                         connIt != connEndIt;
+                         ++connIt)
+                    {
+                        Connection<ValueT>* p_conn = *connIt;
+
+                        FL_DEBUG_ASSERT( p_conn );
+
+                        const ValueT dNetjdWij = dNetjdWs[i];
+
+                        dEdWs_[p_conn] = dEdNetj*dNetjdWij;
+
+						++i;
+                    }
+					if (p_neuron->hasBias())
+					{
+                        const ValueT dNetjdWij = dNetjdWs[i];
+
+                        dEdBs_[p_neuron] = dEdNetj*dNetjdWij;
+					}
+                }
+            }
+        }
+
+        // 2.3.1. Update error gradients in the output layer
+        {
+            Layer<ValueT>* p_outLayer =  this->getNetwork()->getOutputLayer();
+
+            //check: null
+            FL_DEBUG_ASSERT( p_outLayer );
+
+            // Computes $\frac{\partial E}{\partial o_j}
+            const std::vector<ValueT> dEdOs = p_errFunc->evalDerivativeWrtOutput(targetOut.begin(), targetOut.end(), actualOut.begin(), actualOut.end());
+
+            for (typename Layer<ValueT>::NeuronIterator neurIt = p_outLayer->neuronBegin(),
+                                                        neurEndIt = p_outLayer->neuronEnd();
+                 neurIt != neurEndIt;
+                 ++neurIt)
+            {
+                Neuron<ValueT>* p_neuron = *neurIt;
+
+                //check: null
+                FL_DEBUG_ASSERT( p_neuron );
+
+                // Get the error term $\frac{\partial E}{\partial \mathrm{net}_j}$
+                const ValueT dEdNetj = sensitivies_.at(p_neuron);
+
+                // Computes $\frac{\partial \mathrm{net}_j}{\partial w_{ij}}$
+                NetInputFunction<ValueT>* p_netInFunc = p_neuron->getNetInputFunction();
+                std::vector<ValueT> inputs = p_neuron->inputs();
+                std::vector<ValueT> weights = p_neuron->weights();
+				if (p_neuron->hasBias())
+				{
+					inputs.push_back(1);
+					weights.push_back(p_neuron->getBias());
+				}
+                const std::vector<ValueT> dNetjdWs = p_netInFunc->evalDerivativeWrtWeight(inputs.begin(), inputs.end(), weights.begin(), weights.end());
+
+                // For each incoming connection $i$, compute its error gradient term \frac{\partial E}{\partial w_{ij}}
+				std::size_t i = 0;
+				std::vector<Connection<ValueT>*> inConns = p_neuron->inputConnections();
+                for (typename std::vector<Connection<ValueT>*>::iterator connIt = inConns.begin(),
+																		 connEndIt = inConns.end();
+                     connIt != connEndIt;
+                     ++connIt)
+                {
+                    Connection<ValueT>* p_conn = *connIt;
+
+                    FL_DEBUG_ASSERT( p_conn );
+
+                    const ValueT dNetjdWij = dNetjdWs[i];
+
+					dEdWs_[p_conn] = dEdNetj*dNetjdWij;
+
+					++i;
+                }
+				if (p_neuron->hasBias())
+				{
+					// Computes $\Delta w_{ij} = -\eta\frac{\partial E}{\partial w_{ij}}$
+					const ValueT dNetjdWij = dNetjdWs[i];
+
+					dEdBs_[p_neuron] = dEdNetj*dNetjdWij;
+
+				}
+            }
+        }
+    }
+
+	private: void doResetSingleEpoch()
+	{
+		sensitivies_.clear();
+		oldDeltaWs_.clear();
+		oldDeltaBs_.clear();
+		dEdWs_.clear();
+		dEdBs_.clear();
+	}
+
 
     private: ValueT learnRate_ ; ///< The learning rate parameter
     private: ValueT momentum_ ; ///< The momentum_ parameter
     private: std::size_t maxEpochs_; ///< Maximum number of epochs to train
-	private: std::map<const Connection<ValueT>*,ValueT> oldDeltaWs_;
-	private: std::map<const Neuron<ValueT>*,ValueT> oldDeltaBs_;
+	private: bool online_; ///< Tells if the learning procedure is either online (\c true) or offline (\c false)
+	private: std::map<const Neuron<ValueT>*,ValueT> sensitivies_;
+	private: std::map<const Connection<ValueT>*,ValueT> oldDeltaWs_; // Only for momentum learning
+	private: std::map<const Neuron<ValueT>*,ValueT> oldDeltaBs_; // Only for momentum learning
+	private: std::map<const Connection<ValueT>*,ValueT> dEdWs_; // Only for offline training
+	private: std::map<const Neuron<ValueT>*,ValueT> dEdBs_; // Only for offline training
 }; // GradientDescentBackprogrationAlgorithm
 
 }} // Namespace fl::ann

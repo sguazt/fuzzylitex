@@ -44,7 +44,7 @@ class Neuron
 	  p_layer_(p_layer),
 	  netIn_(std::numeric_limits<ValueT>::quiet_NaN()),
 	  out_(std::numeric_limits<ValueT>::quiet_NaN()),
-	  err_(std::numeric_limits<ValueT>::quiet_NaN()),
+//	  err_(std::numeric_limits<ValueT>::quiet_NaN()),
 	  hasBias_(false),
 	  biasWeight_(0)
 	{
@@ -58,7 +58,7 @@ class Neuron
 	  p_layer_(p_layer),
 	  netIn_(std::numeric_limits<ValueT>::quiet_NaN()),
 	  out_(std::numeric_limits<ValueT>::quiet_NaN()),
-	  err_(std::numeric_limits<ValueT>::quiet_NaN()),
+//	  err_(std::numeric_limits<ValueT>::quiet_NaN()),
 	  hasBias_(false),
 	  biasWeight_(0)
 	{
@@ -97,7 +97,7 @@ class Neuron
 	{
 //FL_DEBUG_TRACE("In Neuron's reset (" << this << ")");//XXX
 		netIn_ = out_
-			   = err_
+//			   = err_
 			   = std::numeric_limits<ValueT>::quiet_NaN();
 
 		hasBias_ = false;
@@ -353,15 +353,15 @@ class Neuron
 		out_ = v;
 	}
 
-	public: void setError(ValueT v)
-	{
-		err_ = v;
-	}
+//	public: void setError(ValueT v)
+//	{
+//		err_ = v;
+//	}
 
-	public: ValueT getError() const
-	{
-		return err_;
-	}
+//	public: ValueT getError() const
+//	{
+//		return err_;
+//	}
 
 	public: void setHasBias(bool v)
 	{
@@ -389,7 +389,7 @@ class Neuron
 	private: Layer<ValueT>* p_layer_; ///< The layer containing this neuron
 	private: ValueT netIn_; ///< The input for this neuron received from the net input function
 	private: ValueT out_; ///< The output of this neuron
-	private: ValueT err_; //< The error term
+//	private: ValueT err_; //< The error term
 	private: bool hasBias_; ///< Tells if this neuron has a bias connection
 	private: ValueT biasWeight_; ///< The weight associated to the bias connection
 }; // Neuron
