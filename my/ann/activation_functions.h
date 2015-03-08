@@ -220,6 +220,31 @@ class LinearActivationFunction: public ActivationFunction<ValueT>
 }; // LinearActivationFunction
 
 /**
+ * Pure Linear activation function.
+ *
+ * The pure linear activation function \f$f(x;k)\f$ is defined as:
+ * \f[
+ *  f(x;k) = x
+ * \f]
+ *
+ * This is a special case of the linear activation function with slope 1 and
+ * intercept 0.
+ * 
+ * \author Marco Guazzone (marco.guazzone@gmail.com)
+ */
+template <typename ValueT>
+class PureLinearActivationFunction: public LinearActivationFunction<ValueT>
+{
+	private: typedef LinearActivationFunction<ValueT> BaseType;
+
+
+	public: PureLinearActivationFunction()
+	: BaseType(1)
+	{
+	}
+}; // PureLinearActivationFunction
+
+/**
  * Logistic activation function.
  *
  * The logistic activation function \f$f(x;a,b,c)\f$ is defined as:
