@@ -445,7 +445,7 @@ class InputNeuron: public Neuron<ValueT>
 
 
 	public: explicit InputNeuron(Layer<ValueT>* p_layer = fl::null)
-	: BaseType(new WeightedSumNetInputFunction<ValueT>(), new LinearActivationFunction<ValueT>(1), p_layer) 
+	: BaseType(new WeightedSumNetInputFunction<ValueT>(), new PureLinearActivationFunction<ValueT>(), p_layer) 
 	{
 //FL_DEBUG_TRACE("In InputNeuron's constructor (" << this << ")");//XXX
 	}
