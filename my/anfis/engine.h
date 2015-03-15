@@ -1,20 +1,12 @@
-/*
- * Copyright (c) 1991 Jyh-Shing Roger Jang, Dept of EECS, U.C. Berkeley
- * BISC (Berkeley Initiative on Soft Computing) group
- * jang@eecs.berkeley.edu
- * Permission is granted to modify and re-distribute this code in any manner
- * as long as this notice is preserved.  All standard disclaimers apply.
- */
-
-#ifndef FL_ANFIS_ENGINE_HPP
-#define FL_ANFIS_ENGINE_HPP
+#ifndef FL_ANFIS_ENGINE_H
+#define FL_ANFIS_ENGINE_H
 
 
 #include <cstddef>
 #include <fl/Headers.h>
 #include <map>
 #include <my/ann.hpp>
-#include <my/Commons.hpp>
+#include <my/commons.hpp>
 #include <stdexcept>
 #include <vector>
 
@@ -253,6 +245,62 @@ void check_fis_engine_v5_concept()
 	EngineT* cloned = eng.clone();
 
 	eng.toString();
+}
+
+void flattenRuleAntecedentRec(fl::Expression* p_expr, std::vector<fl::Variable*>& vars, std::vector<fl::Term*>& terms, std::vector<fl::Hedge*>& nots, std::string& opKeyword)
+{
+	if (dynamic_cast<fl::Proposition*>(p_expr))
+	{
+		// The expression is a single simple statement like "X is FOO"
+
+		const fl::Proposition* p_prop = dynamic_cast<fl::Proposition*>(p_expr);
+
+		const std::string notKeyword = fl::Not().name();
+
+		bool foundNot = false;
+		for (std::size_t h = 0,
+						 nh = p_prop->hedges.size();
+			 h < nh && !foundNot;
+			 ++h)
+		{
+			if (p_prop->hedges[h].name() == notKeyword)
+			{
+				foundNot = true;
+			}
+		}
+
+		nots.push_back(foundNot);
+		terms.push_back(p_prop->term);
+		vars.push_back(p_prop->variable);
+	}
+	else if (dynamic_cast<fl::Operator*>(p_expr))
+	{
+		// The expression is a compound statement like "X is FOO and Y is BAR"
+
+		fl::Operator* p_op = dynamic_cast<fl::Operator*>(p_expr);
+
+		if (opKeyword.empty())
+		{
+			opKeyword = p_op->name;
+		}
+		else if (opKeyword != p_op->name)
+		{
+			FL_THROW2(std::runtime_error, "Rules with mixed AND/OR operators are not yet supported by ANFIS");
+		}
+
+		flattenRuleAntecedentRec(p_op->left, vars, terms, nots, opKeyword);
+		flattenRuleAntecedentRec(p_op->right, vars, terms, nots, opKeyword);
+	}
+}
+
+void flattenRuleAntecedent(fl::Antecedent* p_antecedent, std::vector<fl::Variable*>& vars, std::vector<fl::Term*>& terms, std::vector<fl::Hedge*>& nots, std::string& opKeyword)
+{
+	flattenRuleAntecedentRec(p_antecedent->getExpression(), vars, terms, nots, opKeyword);
+
+	if (!terms.empty() && opKeyword.empty())
+	{
+		opKeyword = fl::Rule::andKeyword();
+	}
 }
 
 } // Namespace detail
@@ -875,18 +923,18 @@ class FL_API Engine/*: public fl::Engine*/
 
 	private: void build()
 	{
-		OutputVariable* p_output = outputs_.back();
+		fl::OutputVariable* p_output = outputs_.back();
 
 		FL_DEBUG_ASSERT( p_output );
 
 		if (p_output->numberOfTerms() > 0)
 		{
-			const Term* p_term = p_output->getTerm(0);
-			if (dynamic_cast<Constant const*>(p_term))
+			const fl::Term* p_term = p_output->getTerm(0);
+			if (dynamic_cast<fl::Constant const*>(p_term))
 			{
 				order_ = 0;
 			}
-			else if (dynamic_cast<Linear const*>(p_term))
+			else if (dynamic_cast<fl::Linear const*>(p_term))
 			{
 				order_ = 1;
 			}
@@ -894,27 +942,33 @@ class FL_API Engine/*: public fl::Engine*/
 
 		// Build the neural network
 
-		ann::Layer<scalar>* p_layer;
+		nnet_.clear();
 
-		nnet_.reset();
+		fl::ann::Layer<scalar>* p_layer;
 
-		std::map<Variable*,ann::Neuron<scalar>*> varNodeMap;
+		std::map<const fl::Variable*,fl::ann::Neuron<scalar>*> varNodeMap;
+		std::map<const fl::Term*,fl::ann::Neuron<scalar>*> termNodeMap;
+		std::map<const fl::Term*,fl::ann::Neuron<scalar>*> notTermNodeMap;
 
-		// Layer 0 (the input layer): one node for each input variable
-		p_layer = new ann::Layer<scalar>();
+		// Layer 0 (the input layer): input linguistic variables
+		// There is one node for each input variable
+		p_layer = new fl::ann::Layer<scalar>(&nnet_);
 		for (std::size_t i = 0,
 						 n = inputs_.size();
 			 i < n;
 			 ++i)
 		{
-			ann::Neuron<scalar>* p_neuron = new ann::Neuron<scalar>();
+			fl::Variable* p_var = inputs_[i];
+
+			fl::ann::Neuron<scalar>* p_neuron = new InputNode(p_var);
 			p_layer->addNeuron(p_neuron);
-			varNodeMap[inputs_[i]] = p_neuron;
+			varNodeMap[p_var] = p_neuron;
 		}
-		nnet_.addLayer(p_layer);
+		nnet_.setInputLayer(p_layer);
 
-		// Layer 1: one node for each term of each input variable, where the activation function is the term's MF
-		p_layer = new ann::Layer<scalar>();
+		// Layer 1: input linguistic terms
+		// There is one node for each term of each input variable
+		p_layer = new ann::Layer<scalar>(&nnet_);
 		for (std::size_t i = 0,
 						 ni = inputs_.size();
 			 i < ni;
@@ -925,14 +979,19 @@ class FL_API Engine/*: public fl::Engine*/
 				 t < nt;
 				 ++t)
 			{
-				ann::Neuron<scalar>* p_neuron = new ann::Neuron<scalar>();
+				Term* p_term = inputs_[i]->getTerm(t);
+
+				fl::ann::Neuron<fl::scalar>* p_neuron = new TermNode(p_term);
 				p_layer->addNeuron(p_neuron);
+				nnet_.connect(varNodeMap.at(inputs_[i]), p_neuron, 1);
+				termNodeMap[p_term] = p_neuron;
 			}
 		}
 		nnet_.addLayer(p_layer);
 
-		// Layer 2: one node for each term of each input variable, where the activation function is the conjunction operator
-		p_layer = new ann::Layer<scalar>();
+		// Layer 2: linguistic NOT hedge for linguistic terms of input variables
+		// There is one node for each term of each input variable, and its activation function is the opposite of degree of certainity of the related term
+		p_layer = new ann::Layer<scalar>(&nnet_);
 		for (std::size_t i = 0,
 						 ni = inputs_.size();
 			 i < ni;
@@ -943,20 +1002,24 @@ class FL_API Engine/*: public fl::Engine*/
 				 t < nt;
 				 ++t)
 			{
-				ann::Neuron<scalar>* p_neuron = new ann::Neuron<scalar>();
+				Term* p_term = inputs_[i]->getTerm(t);
+
+				fl::ann::Neuron<fl::scalar>* p_neuron = new HedgeNode(FactoryManager::instance()->hedge()->constructObject(Not().name()););
 				p_layer->addNeuron(p_neuron);
+				nnet_.connect(termNodeMap.at(p_term), p_neuron, 1);
+				notTermNodeMap[p_term] = p_neuron;
 			}
 		}
 		nnet_.addLayer(p_layer);
 
-		// Layer 3: one node for each rule, where the activation function is the normalized firing strength
-		p_layer = new ann::Layer<scalar>();
+		// Layer 3: firing strength of fuzzy rules (IF part)
+		// There is a node for each rule, and its net input function is the S-Norm operator
 		for (std::size_t b = 0,
 						 nb = ruleBlocks_.size();
 			 b < nb;
 			 ++b)
 		{
-			const RuleBlock* p_ruleBlock = ruleBlocks_[b];
+			const fl::RuleBlock* p_ruleBlock = ruleBlocks_[b];
 
 			// check: null
 			FL_DEBUG_ASSERT( p_ruleBlock );
@@ -971,20 +1034,84 @@ class FL_API Engine/*: public fl::Engine*/
 				 r < nr;
 				 ++r)
 			{
-				ann::Neuron<scalar>* p_neuron = new ann::Neuron<scalar>();
+				const fl::Rule* p_rule = p_ruleBlock->getRule(r);
+
+				// check: null
+				FL_DEBUG_ASSERT( p_rule );
+
+				std::string opKeyword;
+				std::vector<fl::Variable*> ruleVars;
+				std::vector<fl::Term*> ruleTerms;
+				std::vector<fl::Hedge*> ruleNots;
+
+				detail::flattenRuleAntecedent(p_antecedent->getAntecedent(), ruleVars, ruleTerms, ruleNots, opKeyword);
+
+				fl::Norm* p_norm = fl::null;
+				if (opKeyword == fl::Rule::andKeyword())
+				{
+					p_norm = p_ruleBlock->getConjunction();
+				}
+				else
+				{
+					p_norm = p_ruleBlock->getDisjunction();
+				}
+				fl::ann::Neuron<scalar>* p_neuron = new NormNode(p_norm);
 				p_layer->addNeuron(p_neuron);
+
+				for (std::size_t t = 0,
+								 nt = terms.size();
+					 t < nt;
+					 ++t)
+				{
+					if (nots[t])
+					{
+						nnet_.connect(notTermNodeMap.at(terms[t]), p_neuron, 1);
+					}
+					else
+					{
+						nnet_.connect(termNodeMap.at(terms[t]), p_neuron, 1);
+					}
+				}
 			}
 		}
 		nnet_.addLayer(p_layer);
 
-		// Layer 4: one node for each rule, where the activation function is the rule's consequent weighted by the normalized firing strength
-		p_layer = new ann::Layer<scalar>();
+//		// Layer 3: one node for each rule, where the activation function is the normalized firing strength
+//		p_layer = new fl::ann::Layer<scalar>(&nnet_);
+//		for (std::size_t b = 0,
+//						 nb = ruleBlocks_.size();
+//			 b < nb;
+//			 ++b)
+//		{
+//			const fl::RuleBlock* p_ruleBlock = ruleBlocks_[b];
+//
+//			// check: null
+//			FL_DEBUG_ASSERT( p_ruleBlock );
+//
+//			if (!p_ruleBlock->isEnabled())
+//			{
+//				continue;
+//			}
+//
+//			for (std::size_t r = 0,
+//							 nr = p_ruleBlock->numberOfRules();
+//				 r < nr;
+//				 ++r)
+//			{
+//				fl::ann::Neuron<scalar>* p_neuron = new fl::ann::Neuron<scalar>();
+//				p_layer->addNeuron(p_neuron);
+//			}
+//		}
+//		nnet_.addLayer(p_layer);
+
+		// Layer 3: one node for each rule, where the activation function is the rule's consequent weighted by the firing strength
+		p_layer = new fl::ann::Layer<scalar>(&nnet_);
 		for (std::size_t b = 0,
 						 nb = ruleBlocks_.size();
 			 b < nb;
 			 ++b)
 		{
-			const RuleBlock* p_ruleBlock = ruleBlocks_[b];
+			const fl::RuleBlock* p_ruleBlock = ruleBlocks_[b];
 
 			// check: null
 			FL_DEBUG_ASSERT( p_ruleBlock );
@@ -999,22 +1126,29 @@ class FL_API Engine/*: public fl::Engine*/
 				 r < nr;
 				 ++r)
 			{
-				ann::Neuron<scalar>* p_neuron = new ann::Neuron<scalar>();
+				fl::ann::Neuron<scalar>* p_neuron = new fl::ann::Neuron<scalar>();
 				p_layer->addNeuron(p_neuron);
 			}
 		}
 		nnet_.addLayer(p_layer);
 
-		// Layer 5: two nodes only,
-		p_layer = new ann::Layer<scalar>();
-		p_layer->addNeuron(new ann::Neuron<scalar>());
+		// Layer 4: two summation nodes only.
+		// The first node computes the sum of the weighted firing strengths
+		// (i.e., the outputs of Layer 3).
+		// The second one computes the sum of the weights (i.e., the outputs of
+		// Layer 2).
+		p_layer = new fl::ann::Layer<scalar>(&nnet_);
+		p_layer->addNeuron(new fl::ann::Neuron<scalar>());
 		p_layer->addNeuron(new ann::Neuron<scalar>());
 		nnet_.addLayer(p_layer);
 
-		// Layer 6: one node only
-		p_layer = new ann::Layer<scalar>();
+		// Layer 5: one normalization node only.
+		// This node computes the ratio between the weighted sum of firing
+		// strenghts (i.e., the output of the first node of Layer 4) and the
+		// sum of weights (i.e., the output of the second node of Layer 4).
+		p_layer = new ann::Layer<scalar>(&nnet_);
 		{
-			ann::Neuron<scalar>* p_neuron = new ann::Neuron<scalar>();
+			fl::ann::Neuron<scalar>* p_neuron = new fl::ann::Neuron<scalar>();
 			p_layer->addNeuron(p_neuron);
 			varNodeMap[outputs_[0]] = p_neuron;
 		}
@@ -1023,14 +1157,14 @@ class FL_API Engine/*: public fl::Engine*/
 
 
 	private: std::string name_; ///< The mnemonic name for this FIS engine
-	private: std::vector<InputVariable*> inputs_; ///< Collection of (pointer to) input variables
-	private: std::vector<OutputVariable*> outputs_; ///< Collection of (pointer to) output variables
-	private: std::vector<RuleBlock*> ruleBlocks_; ///< Collection of (pointer to) rule blocks
-//	private: TNorm* p_conj_; ///< Pointer to the conjunction (or AND) operator to compute the firing strength of a rule with AND'ed antecedents
-//	private: SNorm* p_disj_; ///< Pointer to the disjunction (or OR) operator to compute the firing strength of a rule with OR'ed antecedents
-//	private: TNorm* p_activ_; ///< Pointer to the activation (or implication) operator to compute qualified consequent MFs based on given firing strength
-//	private: SNorm* p_accum_; ///< Pointer to the accumulation (or aggregation) operator to aggregate qualified consequent MFs to generate an overall output MF
-//	private: Defuzzifier* p_defuz_; ///< Pointer to the defuzzifier operator to transform an output MF to a crisp single output value
+	private: std::vector<fl::InputVariable*> inputs_; ///< Collection of (pointer to) input variables
+	private: std::vector<fl::OutputVariable*> outputs_; ///< Collection of (pointer to) output variables
+	private: std::vector<fl::RuleBlock*> ruleBlocks_; ///< Collection of (pointer to) rule blocks
+//	private: fl::TNorm* p_conj_; ///< Pointer to the conjunction (or AND) operator to compute the firing strength of a rule with AND'ed antecedents
+//	private: fl::SNorm* p_disj_; ///< Pointer to the disjunction (or OR) operator to compute the firing strength of a rule with OR'ed antecedents
+//	private: fl::TNorm* p_activ_; ///< Pointer to the activation (or implication) operator to compute qualified consequent MFs based on given firing strength
+//	private: fl::SNorm* p_accum_; ///< Pointer to the accumulation (or aggregation) operator to aggregate qualified consequent MFs to generate an overall output MF
+//	private: fl::Defuzzifier* p_defuz_; ///< Pointer to the defuzzifier operator to transform an output MF to a crisp single output value
 	//private: fis_category type_; ///< The type of the fuzzy inference system
 	private: std::vector<fl::scalar> bias_; //FIXME:to be moved inside NN?
 	private: std::size_t order_;
@@ -1059,4 +1193,4 @@ anfis make_anfis(std::vector< std::vector<fl::scalar> > const& train_data,
 
 }} // Namespace fl::anfis
 
-#endif // FL_ANFIS_ENGINE_HPP
+#endif // FL_ANFIS_ENGINE_H
