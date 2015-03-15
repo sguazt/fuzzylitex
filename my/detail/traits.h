@@ -1,5 +1,5 @@
-#ifndef FL_DETAIL_FLOAT_TRAITS_H
-#define FL_DETAIL_FLOAT_TRAITS_H
+#ifndef FL_DETAIL_TRAITS_H
+#define FL_DETAIL_TRAITS_H
 
 
 #include <algorithm>
@@ -175,4 +175,4 @@ const T FloatTraits<T, typename boost::enable_if< boost::is_floating_point<T> >:
 
 }} // Namespace fl::detail
 
-#endif // FL_DETAIL_FLOAT_TRAITS_H
+#endif // FL_DETAIL_TRAITS_H
