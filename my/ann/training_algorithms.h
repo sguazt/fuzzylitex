@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <fl/fuzzylite.h>
 #include <my/dataset.h>
-#include <my/detail/float_traits.h>
+#include <my/detail/traits.h>
 #include <my/detail/iterators.h>
 #include <my/ann/error_functions.h>
 #include <my/ann/networks.h>
