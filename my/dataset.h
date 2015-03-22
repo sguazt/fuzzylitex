@@ -37,6 +37,17 @@ class DataSetEntry
 		return out_.size();
 	}
 
+	public: ValueT getField(std::size_t index) const
+	{
+		if (index >= (in_.size()+out_.size()))
+		{
+			FL_THROW2(std::invalid_argument, "Index is out-of-range");
+		}
+
+		return index < in_.size() ? in_.at(index)
+								  : out_.at(index-in_.size());
+	}
+
 
 	private: Container in_;
 	private: Container out_;
@@ -127,6 +138,16 @@ class DataSet
 	public: std::size_t size() const
 	{
 		return entries_.size();
+	}
+
+	public: std::size_t numOfInputs() const
+	{
+		return ni_;
+	}
+
+	public: std::size_t numOfOutputs() const
+	{
+		return no_;
 	}
 
 
