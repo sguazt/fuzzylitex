@@ -11,6 +11,7 @@
 #include <my/ann/networks.h>
 #include <my/ann/neurons.h>
 #include <my/commons.h>
+//#include <my/detail/math.h>
 #include <my/detail/random.h>
 #include <utility>
 
@@ -18,40 +19,6 @@
 namespace fl { namespace ann {
 
 namespace detail {
-
-/// Returns evenly \a spaced values over the given interval [\a start, \a stop]. The end-point of the interval can be optionally excluded.
-template <typename ValueT>
-std::vector<ValueT> LinSpace(ValueT start, ValueT stop, std::size_t num, bool endPoint = true)
-{
-	std::vector<ValueT> res(num);
-
-	if (endPoint)
-	{
-		if (num == 1)
-		{
-			res[0] = start;
-		}
-		else
-		{
-			const ValueT step = (stop-start)/(num-1);
-			for (std::size_t i = 0; i < num; ++i)
-			{
-				res[i] = i*step+start;
-			}
-			res[num-1] = stop;
-		}
-	}
-	else
-	{
-		const ValueT step = (stop-start)/num;
-		for (std::size_t i = 0; i < num; ++i)
-		{
-			res[i] = i*step+start;
-		}
-	}
-
-	return res;
-}
 
 /// Randomizes the weights of the input connections to the given layer
 template <typename ValueT, typename EngineT>
