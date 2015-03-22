@@ -1,487 +1,284 @@
 #ifndef FL_ANFIS_MODEL_H
 #define FL_ANFIS_MODEL_H
 
-#include <fl/ann.h>
+#include <boost/noncopyable.hpp>
 #include <fl/commons.h>
 #include <fl/detail/math.h>
 #include <fl/detail/traits.h>
 #include <fl/Headers.h>
 
 
-namespace fl { anfis {
+namespace fl { namespace anfis {
 
-namespace detail {
-
-/**
- * Eval the derivative of the generalized bell function with respect to its parameters
- */
-fl::scalar EvalBellTermDerivativeWrtParameter(fl::scalar x, unsigned short param)
-{
-	if (param > 2)
-	{
-		FL_THROW2(std::invalid_argument, "Unknown parameter for the generalizd bell-shaped membership function");
-	}
-
-	const fl::scalar w = p_specTerm->getWeight();
-	const fl::scalar c = p_specTerm->getCenter();
-	const fl::scalar s = p_specTerm->getSlope();
-
-	const fl::scalar xn = (x-c)/w;
-	const fl::scalar xnp = xn != 0 ? std::pow(xn*xn, s) : 0;
-	const fl::scalar den = detail::sqr(1+xnp);
-
-	switch (param)
-	{
-		case 0: // Weight parameter
-			return 2.0*s*xnp/(w*den);
-		case 1: // Slope parameter
-			return (x != c && x != (c+w))
-				   ? -std::log(detail::sqr(xn)*xnp/den
-				   : 0;
-		case 2: // Center parameter
-			return (x != c)
-				   ? 2.0*s*xnp/((x-c)*den)
-				   : 0;
-	}
-
-	// Should never be executed. Just to quiet the compiler
-	return fl::nan;
-}
-
-} // Namespace detail
+class Model;
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Net Input Functions
+// Nodes
+////////////////////////////////////////////////////////////////////////////////
 
 
-/// Net input function based on fuzzy T-norm/S-norm operators
-class NormNetInputFunction: public fl::ann::NetInputFunction<fl::scalar>
+class Node: boost::noncopyable
 {
-	private: typedef fl::ann::NetInputFunction<fl::scalar> BaseType;
-	protected: typedef typename BaseType::ForwardIterator ForwardIterator;
+public:
+	Node(Model* p_model);
 
-	public: NormNetInputFunction(fl::Norm* p_norm)
-	: p_norm_(p_norm)
+	virtual ~Node();
+
+	void setModel(Model* p_model);
+
+	Model* getModel() const;
+
+	std::vector<Node*> inputConnections() const;
+
+	std::vector<Node*> outputConnections() const;
+
+	std::vector<fl::scalar> inputs() const;
+
+	fl::scalar eval();
+
+	fl::scalar getValue() const;
+
+protected:
+	void setValue(fl::scalar v);
+
+private:
+	virtual fl::scalar doEval() = 0;
+
+
+private:
+	Model* p_model_;
+	fl::scalar val_;
+}; // Node
+
+class InputNode: public Node
+{
+public:
+	InputNode(fl::InputVariable* p_var, Model* p_model);
+
+	fl::InputVariable* getInputVariable() const;
+
+private:
+	fl::scalar doEval();
+
+
+private:
+	fl::InputVariable* p_var_;
+}; // InputNode
+
+class TermNode: public Node
+{
+public:
+	TermNode(fl::Term* p_term, Model* p_model);
+
+	fl::Term* getTerm() const;
+
+private:
+	fl::scalar doEval();
+
+
+private:
+	fl::Term* p_term_;
+}; // TermNode
+
+class HedgeNode: public Node
+{
+public:
+	HedgeNode(fl::Hedge* p_hedge, Model* p_model);
+
+	fl::Hedge* getHedge() const;
+
+private:
+	fl::scalar doEval();
+
+
+private:
+	fl::Hedge* p_hedge_;
+}; // HedgeNode
+
+class RuleFiringStrengthNode: public Node
+{
+public:
+	RuleFiringStrengthNode(fl::Norm* p_norm, Model* p_model);
+
+	fl::Norm* getNorm() const;
+
+private:
+	fl::scalar doEval();
+
+/*
+	std::vector<fl::scalar> doEvalDerivativeWrtInput(ForwardIterator inputFirst, ForwardIterator inputLast,
+															  ForwardIterator weightFirst, ForwardIterator weightLast) const;
+*/
+
+
+private:
+	fl::Norm* p_norm_;
+}; // AntecedentNode
+
+
+class RuleImplicationNode: public Node
+{
+public:
+	RuleImplicationNode(fl::Term* p_term, fl::TNorm* p_tnorm, Model* p_model);
+
+	fl::Term* getTerm() const;
+
+	fl::TNorm* getTNorm() const;
+
+private:
+	fl::scalar doEval();
+
+
+private:
+	fl::Term* p_term_;
+	fl::TNorm* p_tnorm_;
+};
+
+class SumNode: public Node
+{
+public:
+	explicit SumNode(Model* p_model);
+
+private:
+	fl::scalar doEval();
+}; // SumNode
+
+class NormalizationNode: public Node
+{
+public:
+	explicit NormalizationNode(Model* p_model);
+
+private:
+	fl::scalar doEval();
+}; // NormalizationNode
+
+class Model
+{
+public:
+	Model();
+
+	template <typename InputIterT,
+			  typename OutputIterT,
+			  typename RuleBlockIterT>
+	Model(InputIterT inputFirst, InputIterT inputLast,
+		  OutputIterT outputFirst, OutputIterT outputLast,
+		  RuleBlockIterT ruleBlockFirst, RuleBlockIterT ruleBlockLast)
+	: inputs_(inputFirst, inputLast),
+	  outputs_(outputFirst, outputLast),
+	  ruleBlocks_(ruleBlockFirst, ruleBlockLast)
+//	  order_(0)
 	{
+		this->build();
 	}
 
-	private: fl::scalar doEval(ForwardIterator inputFirst, ForwardIterator inputLast,
-							   ForwardIterator weightFirst, ForwardIterator weightLast) const
+	~Model();
+
+	void build();
+
+	template <typename InputIterT,
+			  typename OutputIterT,
+			  typename RuleBlockIterT>
+	void build(InputIterT inputFirst, InputIterT inputLast,
+			   OutputIterT outputFirst, OutputIterT outputLast,
+			   RuleBlockIterT ruleBlockFirst, RuleBlockIterT ruleBlockLast)
 	{
-		fl::scalar res = fl::NaN;
+		this->clear();
 
-		if (inputFirst != inputLast && weightFirst != weightLast)
+		inputs_.assign(inputFirst, inputLast);
+		outputs_.assign(outputFirst, outputLast);
+		ruleBlocks_.assign(ruleBlockFirst, ruleBlockLast);
+
+		this->build();
+	}
+
+	std::vector<Node*> inputConnections(const Node* p_node) const;
+
+	std::vector<Node*> outputConnections(const Node* p_node) const;
+
+	template <typename IterT>
+	void setInput(IterT first, IterT last)
+	{
+		std::vector<InputNode*>::iterator nodeIt = inputNodes_.begin();
+		std::vector<InputNode*>::iterator nodeEndIt = inputNodes_.end();
+
+		while (first != last && nodeIt != nodeEndIt)
 		{
-			res = *inputFirst++ * *weightFirst++;
+			(*nodeIt)->getInputVariable()->setInputValue(*first);
 
-			while (inputFirst != inputLast && weightFirst != weightLast)
-			{
-				const fl::scalar in = *inputFirst;
-				const fl::scalar w = *weightFirst;
-				const fl::scalar rhs = w*in;
-
-				res = p_norm_->compute(res, rhs);
-
-				++inputFirst;
-				++weightFirst;
-			}
+			++first;
+			++nodeIt;
 		}
 
+		if (first != last || nodeIt != nodeEndIt)
+		{
+			FL_THROW2(std::invalid_argument, "Wrong number of inputs");
+		}
+	}
+
+	std::vector<fl::scalar> eval();
+
+	template <typename IterT>
+	std::vector<fl::scalar> eval(IterT first, IterT last)
+	{
+		this->setInput(first, last);
+		return this->eval();
+	}
+
+	void clear();
+
+private:
+	void check();
+
+	void connect(Node* p_from, Node* p_to);
+
+	template <typename IterT>
+	std::vector<fl::scalar> evalLayer(IterT first, IterT last)
+	{
+		std::vector<fl::scalar> res;
+		while (first != last)
+		{
+			Node* p_node = *first;
+
+			FL_DEBUG_ASSERT( p_node );
+
+			res.push_back(p_node->eval());
+
+			++first;
+		}
 		return res;
 	}
 
-	private: std::vector<fl::scalar> doEvalDerivativeWrtInput(ForwardIterator inputFirst, ForwardIterator inputLast,
-															  ForwardIterator weightFirst, ForwardIterator weightLast) const
-	{
-		if (dynamic_cast<fl::Minimum*>(p_norm_)
-			|| dynamic_cast<fl::Maximum*>(p_norm_))
-		{
-			// The derivative is 0 for all inputs, excepts for the one
-			// corresponding to the min (or max) for which the derivative is the
-			// associated weight
+	std::vector<fl::scalar> evalInputLayer();
 
-			const fl::scalar fx = this->eval(inputFirst, inputLast, weightFirst, weightLast);
+	std::vector<fl::scalar> evalFuzzificationLayer();
 
-			std::vector<fl::scalar> res;
-			while (inputFirst != inputLast && weightFirst != weightLast)
-			{
-				const fl::scalar in = *inputFirst;
-				const fl::scalar w = *weightFirst;
-				const fl::scalar val = w*in;
+	std::vector<fl::scalar> evalHedgeLayer();
 
-				if (fl::detail::FloatTraits<fl::scalar>::EssentiallyEqual(fx, val))
-				{
-					res.push_back(w);
-				}
-				else
-				{
-					res.push_back(0);
-				}
+	std::vector<fl::scalar> evalAntecedentLayer();
 
-				++inputFirst;
-				++weightFirst;
-			}
+	std::vector<fl::scalar> evalConsequentLayer();
 
-			return res;
-		}
-		else if (dynamic_cast<fl::AlgebraicProduct*>(p_norm_))
-		{
-			// The derivative for a certain input i is given by the product of
-			// all the weights and inputs but i
+	std::vector<fl::scalar> evalAccumulationLayer();
 
-			std::vector<fl::scalar> res;
+	std::vector<fl::scalar> evalNormalizationLayer();
 
-			ForwardIterator inputIt = inputFirst;
-			ForwardIterator weightIt = weightFirst;
-			while (inputFirst != inputLast && weightFirst != weightLast)
-			{
-				fl::scalar prod = 1;
-				while (inputIt != inputLast && weightIt != weightLast)
-				{
-					const fl::scalar w = *weightIt;
+private:
+	std::vector<fl::InputVariable*> inputs_; ///< Collection of (pointer to) input variables
+	std::vector<fl::OutputVariable*> outputs_; ///< Collection of (pointer to) output variables
+	std::vector<fl::RuleBlock*> ruleBlocks_; ///< Collection of (pointer to) rule blocks
+	//std::size_t order_;
+	std::vector<InputNode*> inputNodes_; ///< Nodes in the input layer
+	std::vector<TermNode*> inputTermNodes_; ///< Nodes in the fuzzification layer for linguistic terms
+	std::vector<HedgeNode*> inputHedgeNodes_; ///< Additional nodes in the fuzzification layer for linguistic hedges
+	std::vector<RuleFiringStrengthNode*> antecedentNodes_; ///< Nodes in the antecedent layer
+	std::vector<RuleImplicationNode*> consequentNodes_; ///< Nodes in the consequent layer
+	std::vector<SumNode*> sumNodes_; ///< Nodes in the summation layer
+	std::vector<NormalizationNode*> inferenceNodes_; ///< Nodes in the inference layer
+	std::map< const Node*, std::vector<Node*> > inConns_; ///< Input connection to a given node
+	std::map< const Node*, std::vector<Node*> > outConns_; ///< Output connection from a given node
+}; // Model
 
-					if (inputIt != inputFirst)
-					{
-						const fl::scalar in = *inputIt;
-
-						prod *= in
-					}
-					prod *= w;
-
-					++inputIt;
-					++weightIt;
-				}
-
-				res.push_back(prod);
-
-				++inputFirst;
-				++weightFirst;
-			}
-
-			return res;
-		}
-		else if (dynamic_cast<fl::AlgebraicSum*>(p_norm_))
-		{
-			// The derivative of each input is given by:
-			//  \frac{\partial [x_1 + x_2 - (x_1*x_2) + x_3 - (x_1 + x_2 - (x_1*x_2))*x_3 + x_4 - (x_1 + x_2 - (x_1*x_2) + x_3 - (x_1 + x_2 - (x_1*x_2))*x_3)*x_4 + ...]}{\partial x_1}
-			//  = 1 - x_2 - x_3 - x_2*x_3 - x_4 - x_2*x_4 - x_3*x_4 - x_2*x_3*x_4 + ...
-			//  = (1-x2)*(1-x3)*(1-x4)*...
-			// In order to keep into account weights we have:
-			//  \frac{\partial [w_1*x_1 + w_2*x_2 - (w_1*x_1*w_2*x_2) + w_3*x_3 - (w_1*x_1 + w_2*x_2 - (w_1*x_1*w_2*x_2))*w_3*x_3 + w_4*x_4 - (w_1*x_1 + w_2*x_2 - (w_1*x_1*w_2*x_2) + w_3*x_3 - (w_1*x_1 + w_2*x_2 - (w_1*x_1*w_2*x_2))*w_3*x_3)*w_4*x_4 + ...]}{\partial x_1}
-			//  = w_1*(1-w_2*x_2)*(1-w_3*x_3)*(1-w_4*x_4)*...
-
-			std::vector<fl::scalar> res;
-
-			ForwardIterator inputIt = inputFirst;
-			ForwardIterator weightIt = weightFirst;
-			while (inputFirst != inputLast && weightFirst != weightLast)
-			{
-				fl::scalar prod = 1;
-				while (inputIt != inputLast && weightIt != weightLast)
-				{
-					const fl::scalar w = *weightIt;
-
-					if (inputIt != inputFirst)
-					{
-						const fl::scalar in = *inputIt;
-
-						prod *= (1-in);
-					}
-					prod *= w;
-
-					++inputIt;
-					++weightIt;
-				}
-
-				res.push_back(prod);
-
-				++inputFirst;
-				++weightFirst;
-			}
-
-			return res;
-		}
-		else
-		{
-			FL_THROW2(std::runtime_error, "Norm operator '" + p_norm_->className() + "' not yet implemented");
-		}
-	}
-
-	private: std::vector<fl::scalar> doEvalDerivativeWrtWeight(ForwardIterator inputFirst, ForwardIterator inputLast,
-															   ForwardIterator weightFirst, ForwardIterator weightLast) const
-	{
-		if (dynamic_cast<fl::Minimum*>(p_norm_)
-			|| dynamic_cast<fl::Maximum*>(p_norm_))
-		{
-			// The derivative is 0 for all inputs, excepts for the one
-			// corresponding to the min (or max) for which the derivative is the
-			// associated input value
-
-			const fl::scalar fx = this->eval(inputFirst, inputLast, weightFirst, weightLast);
-
-			std::vector<fl::scalar> res;
-			while (inputFirst != inputLast && weightFirst != weightLast)
-			{
-				const fl::scalar in = *inputFirst;
-				const fl::scalar w = *weightFirst;
-				const fl::scalar val = w*in;
-
-				if (fl::detail::FloatTraits<fl::scalar>::EssentiallyEqual(fx, val))
-				{
-					res.push_back(in);
-				}
-				else
-				{
-					res.push_back(0);
-				}
-
-				++inputFirst;
-				++weightFirst;
-			}
-
-			return res;
-		}
-		else if (dynamic_cast<fl::AlgebraicProduct*>(p_norm_))
-		{
-			// The derivative for a certain input i is given by the product of
-			// all the weights and inputs but i
-
-			std::vector<fl::scalar> res;
-
-			ForwardIterator inputIt = inputFirst;
-			ForwardIterator weightIt = weightFirst;
-			while (inputFirst != inputLast && weightFirst != weightLast)
-			{
-				fl::scalar prod = 1;
-				while (inputIt != inputLast && weightIt != weightLast)
-				{
-					const fl::scalar in = *inputIt;
-
-					if (weightIt != weightFirst)
-					{
-						const fl::scalar w = *weightIt;
-
-						prod *= w
-					}
-					prod *= in;
-
-					++inputIt;
-					++weightIt;
-				}
-
-				res.push_back(prod);
-
-				++inputFirst;
-				++weightFirst;
-			}
-
-			return res;
-		}
-		else if (dynamic_cast<fl::AlgebraicSum*>(p_norm_))
-		{
-			// The derivative of each input is given by:
-			//  \frac{\partial [x_1 + x_2 - (x_1*x_2) + x_3 - (x_1 + x_2 - (x_1*x_2))*x_3 + x_4 - (x_1 + x_2 - (x_1*x_2) + x_3 - (x_1 + x_2 - (x_1*x_2))*x_3)*x_4 + ...]}{\partial x_1}
-			//  = 1 - x_2 - x_3 - x_2*x_3 - x_4 - x_2*x_4 - x_3*x_4 - x_2*x_3*x_4 + ...
-			//  = (1-x2)*(1-x3)*(1-x4)*...
-			// In order to keep into account weights we have:
-			//  \frac{\partial [w_1*x_1 + w_2*x_2 - (w_1*x_1*w_2*x_2) + w_3*x_3 - (w_1*x_1 + w_2*x_2 - (w_1*x_1*w_2*x_2))*w_3*x_3 + w_4*x_4 - (w_1*x_1 + w_2*x_2 - (w_1*x_1*w_2*x_2) + w_3*x_3 - (w_1*x_1 + w_2*x_2 - (w_1*x_1*w_2*x_2))*w_3*x_3)*w_4*x_4 + ...]}{\partial x_1}
-			//  = w_1*(1-w_2*x_2)*(1-w_3*x_3)*(1-w_4*x_4)*...
-
-			std::vector<fl::scalar> res;
-
-			ForwardIterator inputIt = inputFirst;
-			ForwardIterator weightIt = weightFirst;
-			while (inputFirst != inputLast && weightFirst != weightLast)
-			{
-				fl::scalar prod = 1;
-				while (inputIt != inputLast && weightIt != weightLast)
-				{
-					const fl::scalar in = *inputFirst;
-
-					if (weightIt != weightFirst)
-					{
-						const fl::scalar w = *weightFirst;
-
-						prod *= (1-w);
-					}
-					prod *= in;
-
-					++inputIt;
-					++weightIt;
-				}
-
-				res.push_back(prod);
-
-				++inputFirst;
-				++weightFirst;
-			}
-
-			return res;
-		}
-		else
-		{
-			FL_THROW2(std::runtime_error, "Norm operator '" + p_norm_->className() + "' not yet implemented");
-		}
-	}
-
-
-	private: fl::Norm* p_norm_;
-}; // NormNetInputFunction
-
-////////////////////////////////////////////////////////////////////////////////
-// Activation Functions
-
-
-/// Activation function based on fuzzy terms
-class TermActivationFunction: public fl::ann::ActivationFunction<fl::scalar>
-{
-	public: TermActivationtFunction(fl::Term* p_term)
-	: p_term_(p_term)
-	{
-	}
-
-	public: fl::Term* getTerm() const
-	{
-		return p_term_;
-	}
-
-	private: fl::scalar doEval(fl::scalar x) const
-	{
-		return p_term_->membership(x);
-	}
-
-	private: fl::scalar doEvalDerivative(fl::scalar x) const
-	{
-		FL_THROW2(std::runtime_error, "Derivative of a term MF should never be called");
-	}
-
-
-	private: fl::Term* p_term_;
-}; // TermActivationFunction
-
-/// Activation function based on fuzzy hedges
-class HedgeActivationFunction: public fl::ann::ActivationFunction<fl::scalar>
-{
-	public: HedgeActivationtFunction(fl::Hedge* p_hedge)
-	: p_hedge_(p_hedge)
-	{
-	}
-
-	public: fl::Hedge* getHedge() const
-	{
-		return p_hedge_;
-	}
-
-	private: fl::scalar doEval(fl::scalar x) const
-	{
-		return p_hedge_->hedge(x);
-	}
-
-	private: fl::scalar doEvalDerivative(fl::scalar x) const
-	{
-		FL_THROW2(std::runtime_error, "Derivative of a hedge should never be called");
-	}
-
-
-	private: fl::Hedge* p_hedge_;
-}; // HedgeActivationFunction
-
-
-////////////////////////////////////////////////////////////////////////////////
-// Neurons
-
-
-class InputNode: public fl::ann::InputNeuron<fl::scalar>
-{
-	public: typedef fl::ann::InputNeuron<fl::scalar> BaseType;
-
-
-	public: explicit InputNode(fl::Variable* p_var,
-							   fl::ann::Layer<fl::scalar>* p_layer = fl::null)
-	: BaseType(p_layer),
-	  p_var_(p_var)
-	{
-	}
-
-	public: fl::Variable* getVariable() const
-	{
-		return p_var_;
-	}
-
-
-	private: fl::Variable* p_var_;
-}; // InputNode
-
-class TermNode: public fl::ann::Neuron<fl::scalar>
-{
-	public: typedef fl::ann::Neuron<fl::scalar> BaseType;
-
-
-	public: explicit TermNode(fl::Term* p_term,
-							  fl::ann::Layer<fl::scalar>* p_layer = fl::null)
-	: BaseType(new fl::ann::WeightedSumNetInputFunction(),
-			   new TermActivationFunction(p_term),
-			   p_layer),
-	  p_term_(p_term)
-	{
-	}
-
-	public: fl::Term* getTerm() const
-	{
-		return p_term_;
-	}
-
-
-	private: fl::Term* p_term_;
-}; // TermNode
-
-class HedgeNode: public fl::ann::Neuron<fl::scalar>
-{
-	public: typedef fl::ann::Neuron<fl::scalar> BaseType;
-
-
-	public: explicit HedgeNode(fl::Hedge* p_hedge,
-							   fl::ann::Layer<fl::scalar>* p_layer = fl::null)
-	: BaseType(new fl::ann::WeightedSumNetInputFunction(),
-			   new HedgeActivationFunction(p_hedge),
-			   p_layer),
-	  p_hedge_(p_hedge)
-	{
-	}
-
-	public: fl::Hedge* getHedge() const
-	{
-		return p_hedge_;
-	}
-
-
-	private: fl::Hedge* p_hedge_;
-}; // HedgeNode
-
-/// A neuron that applies a norm operator to its input
-class NormNode: public fl::ann::Neuron<fl::scalar>
-{
-	public: typedef fl::ann::Neuron<fl::scalar> BaseType;
-
-
-	public: explicit NormNode(fl::Norm* p_norm,
-							  fl::ann::Layer<fl::scalar>* p_layer = fl::null)
-	: BaseType(new NormNetInputFunction(p_norm),
-			   new fl::ann::PureLinearActivationFunction(),
-			   p_layer),
-	  p_norm_(p_norm)
-	{
-	}
-
-	public: fl::Norm* getNorm() const
-	{
-		return p_norm_;
-	}
-
-
-	private: fl::Norm* p_norm_;
-}; // NormNode
 
 }} // Namespace fl::anfis
 
