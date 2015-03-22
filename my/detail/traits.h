@@ -116,7 +116,7 @@ struct FloatTraits<T, typename ::boost::enable_if< ::boost::is_floating_point<T>
 		return DefinitelyLess(x, y, tol) || ApproximatelyEqual(x, y, tol);
 	}
 
-	static bool EssentiallyLessEquall(T x, T y, T tol = tolerance)
+	static bool EssentiallyLessEqual(T x, T y, T tol = tolerance)
 	{
 		return DefinitelyLess(x, y, tol) || EssentiallyEqual(x, y, tol);
 	}
@@ -126,9 +126,19 @@ struct FloatTraits<T, typename ::boost::enable_if< ::boost::is_floating_point<T>
 		return DefinitelyGreater(x, y, tol) || ApproximatelyEqual(x, y, tol);
 	}
 
-	static bool EssentiallyGreaterEquall(T x, T y, T tol = tolerance)
+	static bool EssentiallyGreaterEqual(T x, T y, T tol = tolerance)
 	{
 		return DefinitelyGreater(x, y, tol) || EssentiallyEqual(x, y, tol);
+	}
+
+	static bool ApproximatelyZero(T x, T tol = tolerance)
+	{
+		return ApproximatelyEqual(x, T(0), tol);
+	}
+
+	static bool EssentiallyZero(T x, T tol = tolerance)
+	{
+		return EssentiallyEqual(x, T(0), tol);
 	}
 
 	static T DefinitelyMin(T x, T y, T tol = tolerance)
