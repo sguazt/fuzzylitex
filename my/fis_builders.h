@@ -280,7 +280,7 @@ class GridPartitionFisBuilder
 				}
 				else if (outTerms_[i] == fl::Linear().className())
 				{
-					p_ov->addTerm(new fl::Linear(oss.str(), std::vector<fl::scalar>(numInputs+1, 0)));
+					p_ov->addTerm(new fl::Linear(oss.str(), std::vector<fl::scalar>(numInputs+1, 0), p_fis.get()));
 				}
 			}
 
