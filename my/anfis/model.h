@@ -2,10 +2,12 @@
 #define FL_ANFIS_MODEL_H
 
 #include <boost/noncopyable.hpp>
+#include <cstddef>
 #include <fl/commons.h>
 #include <fl/detail/math.h>
 #include <fl/detail/traits.h>
 #include <fl/Headers.h>
+#include <string>
 
 
 namespace fl { namespace anfis {
@@ -173,6 +175,22 @@ public:
 	}
 
 	~Model();
+
+	void addInputVariable(fl::InputVariable* p_var);
+
+	fl::InputVariable* getInputVariable(std::size_t idx) const;
+
+	fl::InputVariable* getInputVariable(const std::string& name) const;
+
+	std::vector<fl::InputVariable*> inputVariables() const;
+
+	void addOutputVariable(fl::OutputVariable* p_var);
+
+	fl::OutputVariable* getOutputVariable(std::size_t idx) const;
+
+	fl::OutputVariable* getOutputVariable(const std::string& name) const;
+
+	std::vector<fl::OutputVariable*> outputVariables() const;
 
 	void build();
 

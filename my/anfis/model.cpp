@@ -1,8 +1,13 @@
+#include <cstddef>
 #include <fl/anfis/model.h>
 #include <fl/commons.h>
 #include <fl/detail/math.h>
 #include <fl/detail/traits.h>
 #include <fl/Headers.h>
+#include <map>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 
 namespace fl { namespace anfis {
@@ -443,6 +448,88 @@ Model::Model()
 Model::~Model()
 {
 	this->clear();
+}
+
+void Model::addInputVariable(fl::InputVariable* p_var)
+{
+	inputs_.push_back(p_var);
+}
+
+fl::InputVariable* Model::getInputVariable(std::size_t idx) const
+{
+	if (idx >= inputs_.size())
+	{
+		FL_THROW2(std::invalid_argument, "Index to input variable is out of range");
+	}
+
+	return inputs_[idx];
+}
+
+fl::InputVariable* Model::getInputVariable(const std::string& name) const
+{
+	for (std::size_t i = 0,
+					 n = inputs_.size();
+		 i < n;
+		 ++i)
+	{
+		fl::InputVariable* p_input = inputs_[i];
+
+		//check: null
+		FL_DEBUG_ASSERT( p_input );
+
+		if (p_input->getName() == name)
+		{
+			return p_input;
+		}
+	}
+
+	FL_THROW("Input variable <" + name + "> not found");
+}
+
+std::vector<fl::InputVariable*> Model::inputVariables() const
+{
+	return inputs_;
+}
+
+void Model::addOutputVariable(fl::OutputVariable* p_var)
+{
+	outputs_.push_back(p_var);
+}
+
+fl::OutputVariable* Model::getOutputVariable(std::size_t idx) const
+{
+	if (idx >= outputs_.size())
+	{
+		FL_THROW2(std::invalid_argument, "Index to output variable is out of range");
+	}
+
+	return outputs_[idx];
+}
+
+fl::OutputVariable* Model::getOutputVariable(const std::string& name) const
+{
+	for (std::size_t i = 0,
+					 n = outputs_.size();
+		 i < n;
+		 ++i)
+	{
+		fl::OutputVariable* p_output = outputs_[i];
+
+		//check: null
+		FL_DEBUG_ASSERT( p_output );
+
+		if (p_output->getName() == name)
+		{
+			return p_output;
+		}
+	}
+
+	FL_THROW("Output variable <" + name + "> not found");
+}
+
+std::vector<fl::OutputVariable*> Model::outputVariables() const
+{
+	return outputs_;
 }
 
 std::vector<fl::scalar> Model::evalInputLayer()
