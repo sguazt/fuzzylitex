@@ -85,8 +85,8 @@ void flattenRuleAntecedent(fl::Antecedent* p_antecedent, std::vector<fl::Variabl
 /////////////
 
 
-Node::Node(Engine* p_model)
-: p_model_(p_model)
+Node::Node(Engine* p_engine)
+: p_engine_(p_engine)
 {
 }
 
@@ -95,31 +95,31 @@ Node::~Node()
 	// empty
 }
 
-void Node::setEngine(Engine* p_model)
+void Node::setEngine(Engine* p_engine)
 {
-	p_model_ = p_model;
+	p_engine_ = p_engine;
 }
 
 Engine* Node::getEngine() const
 {
-	return p_model_;
+	return p_engine_;
 }
 
 std::vector<Node*> Node::inputConnections() const
 {
-	return p_model_->inputConnections(this);
+	return p_engine_->inputConnections(this);
 }
 
 std::vector<Node*> Node::outputConnections() const
 {
-	return p_model_->outputConnections(this);
+	return p_engine_->outputConnections(this);
 }
 
 std::vector<fl::scalar> Node::inputs() const
 {
 	std::vector<fl::scalar> inps;
 
-	std::vector<Node*> inConns = p_model_->inputConnections(this);
+	std::vector<Node*> inConns = p_engine_->inputConnections(this);
 	for (typename std::vector<Node*>::const_iterator it = inConns.begin(),
 													 endIt = inConns.end();
 		 it != endIt;
@@ -152,8 +152,8 @@ void Node::setValue(fl::scalar v)
 	val_ = v;
 }
 
-InputNode::InputNode(fl::InputVariable* p_var, Engine* p_model)
-: Node(p_model),
+InputNode::InputNode(fl::InputVariable* p_var, Engine* p_engine)
+: Node(p_engine),
   p_var_(p_var)
 {
 }
@@ -172,18 +172,18 @@ fl::scalar InputNode::doEval()
 // Term Node
 /////////////
 
-TermNode::TermNode(fl::Term* p_term, Engine* p_model)
-: Node(p_model),
+FuzzificationNode::FuzzificationNode(fl::Term* p_term, Engine* p_engine)
+: Node(p_engine),
   p_term_(p_term)
 {
 }
 
-fl::Term* TermNode::getTerm() const
+fl::Term* FuzzificationNode::getTerm() const
 {
 	return p_term_;
 }
 
-fl::scalar TermNode::doEval()
+fl::scalar FuzzificationNode::doEval()
 {
 	std::vector<fl::scalar> inputs = this->inputs();
 
@@ -196,18 +196,18 @@ fl::scalar TermNode::doEval()
 }
 
 
-HedgeNode::HedgeNode(fl::Hedge* p_hedge, Engine* p_model)
-: Node(p_model),
+InputHedgeNode::InputHedgeNode(fl::Hedge* p_hedge, Engine* p_engine)
+: Node(p_engine),
   p_hedge_(p_hedge)
 {
 }
 
-fl::Hedge* HedgeNode::getHedge() const
+fl::Hedge* InputHedgeNode::getHedge() const
 {
 	return p_hedge_;
 }
 
-fl::scalar HedgeNode::doEval()
+fl::scalar InputHedgeNode::doEval()
 {
 	std::vector<fl::scalar> inputs = this->inputs();
 
@@ -219,18 +219,18 @@ fl::scalar HedgeNode::doEval()
 	return p_hedge_->hedge(inputs.front());
 }
 
-RuleFiringStrengthNode::RuleFiringStrengthNode(fl::Norm* p_norm, Engine* p_model)
-: Node(p_model),
+AntecedentNode::AntecedentNode(fl::Norm* p_norm, Engine* p_engine)
+: Node(p_engine),
   p_norm_(p_norm)
 {
 }
 
-fl::Norm* RuleFiringStrengthNode::getNorm() const
+fl::Norm* AntecedentNode::getNorm() const
 {
 	return p_norm_;
 }
 
-fl::scalar RuleFiringStrengthNode::doEval()
+fl::scalar AntecedentNode::doEval()
 {
 	std::vector<fl::scalar> inputs = this->inputs();
 
@@ -253,7 +253,7 @@ fl::scalar RuleFiringStrengthNode::doEval()
 }
 
 /*
-private: std::vector<fl::scalar> RuleFiringStrengthNode::doEvalDerivativeWrtInput(ForwardIterator inputFirst, ForwardIterator inputLast,
+private: std::vector<fl::scalar> AntecedentNode::doEvalDerivativeWrtInput(ForwardIterator inputFirst, ForwardIterator inputLast,
 														  ForwardIterator weightFirst, ForwardIterator weightLast) const
 {
 	if (dynamic_cast<fl::Minimum*>(p_norm_)
@@ -371,24 +371,24 @@ private: std::vector<fl::scalar> RuleFiringStrengthNode::doEvalDerivativeWrtInpu
 }
 */
 
-RuleImplicationNode::RuleImplicationNode(fl::Term* p_term, fl::TNorm* p_tnorm, Engine* p_model)
-: Node(p_model),
+ConsequentNode::ConsequentNode(fl::Term* p_term, fl::TNorm* p_tnorm, Engine* p_engine)
+: Node(p_engine),
   p_term_(p_term),
   p_tnorm_(p_tnorm)
 {
 }
 
-fl::Term* RuleImplicationNode::getTerm() const
+fl::Term* ConsequentNode::getTerm() const
 {
 	return p_term_;
 }
 
-fl::TNorm* RuleImplicationNode::getTNorm() const
+fl::TNorm* ConsequentNode::getTNorm() const
 {
 	return p_tnorm_;
 }
 
-fl::scalar RuleImplicationNode::doEval()
+fl::scalar ConsequentNode::doEval()
 {
 	std::vector<fl::scalar> inputs = this->inputs();
 
@@ -400,12 +400,12 @@ fl::scalar RuleImplicationNode::doEval()
 	return p_tnorm_->compute(inputs.front(), p_term_->membership(1.0));
 }
 
-SumNode::SumNode(Engine* p_model)
-: Node(p_model)
+AccumulationNode::AccumulationNode(Engine* p_engine)
+: Node(p_engine)
 {
 }
 
-fl::scalar SumNode::doEval()
+fl::scalar AccumulationNode::doEval()
 {
 	std::vector<fl::scalar> inputs = this->inputs();
 
@@ -422,12 +422,12 @@ fl::scalar SumNode::doEval()
 	return sum;
 }
 
-NormalizationNode::NormalizationNode(Engine* p_model)
-: Node(p_model)
+OutputNode::OutputNode(Engine* p_engine)
+: Node(p_engine)
 {
 }
 
-fl::scalar NormalizationNode::doEval()
+fl::scalar OutputNode::doEval()
 {
 	std::vector<fl::scalar> inputs = this->inputs();
 
@@ -476,7 +476,7 @@ Engine* Engine::clone() const
 //TODO
 std::string Engine::toString() const
 {
-	throw std::runtime_error("Engine::toString to be implemented");
+	return FllExporter().toString(this);
 }
 
 //TODO
@@ -961,6 +961,41 @@ void Engine::restart()
 	throw std::runtime_error("Engine::restart to be implemented");
 }
 
+std::vector<InputNode*> Engine::getInputLayer() const
+{
+	return inputNodes_;
+}
+
+std::vector<FuzzificationNode*> Engine::getFuzzificationLayer() const
+{
+	return fuzzificationNodes_;
+}
+
+std::vector<InputHedgeNode*> Engine::getInputHedgeLayer() const
+{
+	return inputHedgeNodes_;
+}
+
+std::vector<AntecedentNode*> Engine::getAntecedentLayer() const
+{
+	return antecedentNodes_;
+}
+
+std::vector<ConsequentNode*> Engine::getConsequentLayer() const
+{
+	return consequentNodes_;
+}
+
+std::vector<AccumulationNode*> Engine::getAccumulationLayer() const
+{
+	return sumNodes_;
+}
+
+std::vector<OutputNode*> Engine::getOutputLayer() const
+{
+	return outputNodes_;
+}
+
 std::vector<fl::scalar> Engine::evalInputLayer()
 {
 	return this->evalLayer(inputNodes_.begin(), inputNodes_.end());
@@ -968,10 +1003,10 @@ std::vector<fl::scalar> Engine::evalInputLayer()
 
 std::vector<fl::scalar> Engine::evalFuzzificationLayer()
 {
-	return this->evalLayer(inputTermNodes_.begin(), inputTermNodes_.end());
+	return this->evalLayer(fuzzificationNodes_.begin(), fuzzificationNodes_.end());
 }
 
-std::vector<fl::scalar> Engine::evalHedgeLayer()
+std::vector<fl::scalar> Engine::evalInputHedgeLayer()
 {
 	return this->evalLayer(inputHedgeNodes_.begin(), inputHedgeNodes_.end());
 }
@@ -991,9 +1026,9 @@ std::vector<fl::scalar> Engine::evalAccumulationLayer()
 	return this->evalLayer(sumNodes_.begin(), sumNodes_.end());
 }
 
-std::vector<fl::scalar> Engine::evalNormalizationLayer()
+std::vector<fl::scalar> Engine::evalOutputLayer()
 {
-	return this->evalLayer(inferenceNodes_.begin(), inferenceNodes_.end());
+	return this->evalLayer(outputNodes_.begin(), outputNodes_.end());
 }
 
 std::vector<fl::scalar> Engine::eval()
@@ -1003,7 +1038,7 @@ std::vector<fl::scalar> Engine::eval()
 	// Eval fuzzification layer
 	this->evalFuzzificationLayer();
 	// Eval hedge layer
-	this->evalHedgeLayer();
+	this->evalInputHedgeLayer();
 	// Eval rule antecedent layer
 	this->evalAntecedentLayer();
 	// Eval rule consequent layer
@@ -1011,7 +1046,85 @@ std::vector<fl::scalar> Engine::eval()
 	// Eval rule accumulation layer
 	this->evalAccumulationLayer();
 	// Eval rule strength normalization layer
-	return this->evalNormalizationLayer();
+	return this->evalOutputLayer();
+}
+
+std::vector<fl::scalar> Engine::evalTo(Engine::LayerCategory layer)
+{
+	std::vector<fl::scalar> res;
+
+	// Eval input layer
+	res = this->evalInputLayer();
+	if (layer == Engine::InputLayer)
+	{	
+		return res;
+	}
+	// Eval fuzzification layer
+	res = this->evalFuzzificationLayer();
+	if (layer == Engine::FuzzificationLayer)
+	{
+		return res;
+	}
+	// Eval hedge layer
+	res = this->evalInputHedgeLayer();
+	if (layer == Engine::InputHedgeLayer)
+	{
+		return res;
+	}
+	// Eval rule antecedent layer
+	res = this->evalAntecedentLayer();
+	if (layer == Engine::AntecedentLayer)
+	{
+		return res;
+	}
+	// Eval rule consequent layer
+	res = this->evalConsequentLayer();
+	if (layer == Engine::ConsequentLayer)
+	{
+		return res;
+	}
+	// Eval rule accumulation layer
+	res = this->evalAccumulationLayer();
+	if (layer == Engine::AccumulationLayer)
+	{
+		return res;
+	}
+	// Eval rule strength normalization layer
+	return this->evalOutputLayer();
+}
+
+std::vector<fl::scalar> Engine::evalFrom(Engine::LayerCategory layer)
+{
+	while (layer < Engine::OutputLayer)
+	{
+		this->evalLayer(layer);
+		//layer = static_cast<int>(layer)+1;
+		layer = static_cast<Engine::LayerCategory>(layer+1);
+	}
+	return this->evalOutputLayer();
+}
+
+std::vector<fl::scalar> Engine::evalLayer(Engine::LayerCategory layer)
+{
+	switch (layer)
+	{
+		case Engine::InputLayer:
+			return this->evalInputLayer();
+		case Engine::FuzzificationLayer:
+			return this->evalFuzzificationLayer();
+		case Engine::InputHedgeLayer:
+			return this->evalInputHedgeLayer();
+		case Engine::AntecedentLayer:
+			return this->evalAntecedentLayer();
+		case Engine::ConsequentLayer:
+			return this->evalConsequentLayer();
+		case Engine::AccumulationLayer:
+			return this->evalAccumulationLayer();
+		case Engine::OutputLayer:
+			return this->evalOutputLayer();
+	}
+
+	FL_THROW2(std::runtime_error, "Unexpected behavior");
 }
 
 void Engine::clear()
@@ -1029,13 +1142,13 @@ void Engine::clear()
 	inputNodes_.clear();
 
 	for (std::size_t i = 0,
-					 n = inputTermNodes_.size();
+					 n = fuzzificationNodes_.size();
 		 i < n;
 		 ++i)
 	{
-		delete inputTermNodes_[i];
+		delete fuzzificationNodes_[i];
 	}
-	inputTermNodes_.clear();
+	fuzzificationNodes_.clear();
 
 	for (std::size_t i = 0,
 					 n = inputHedgeNodes_.size();
@@ -1074,13 +1187,13 @@ void Engine::clear()
 	sumNodes_.clear();
 
 	for (std::size_t i = 0,
-					 n = inferenceNodes_.size();
+					 n = outputNodes_.size();
 		 i < n;
 		 ++i)
 	{
-		delete inferenceNodes_[i];
+		delete outputNodes_[i];
 	}
-	inferenceNodes_.clear();
+	outputNodes_.clear();
 }
 
 std::vector<Node*> Engine::inputConnections(const Node* p_node) const
@@ -1141,7 +1254,7 @@ void Engine::build()
 
 	std::map<const fl::Variable*,Node*> varNodeMap;
 	std::map<const fl::Term*,Node*> termNodeMap;
-	std::map<const fl::Term*,Node*> notTermNodeMap;
+	std::map<const fl::Term*,Node*> notFuzzificationNodeMap;
 	std::map<const fl::Rule*,Node*> ruleAntecedentNodeMap;
 
 	// Layer 0 (the input layer): input linguistic variables
@@ -1184,8 +1297,8 @@ void Engine::build()
 			// check: null
 			FL_DEBUG_ASSERT( p_term );
 
-			TermNode* p_node = new TermNode(p_term, this);
-			inputTermNodes_.push_back(p_node);
+			FuzzificationNode* p_node = new FuzzificationNode(p_term, this);
+			fuzzificationNodes_.push_back(p_node);
 
 			termNodeMap[p_term] = p_node;
 
@@ -1216,10 +1329,10 @@ void Engine::build()
 			// check: null
 			FL_DEBUG_ASSERT( p_term );
 
-			HedgeNode* p_node = new HedgeNode(fl::FactoryManager::instance()->hedge()->constructObject(Not().name()), this);
+			InputHedgeNode* p_node = new InputHedgeNode(fl::FactoryManager::instance()->hedge()->constructObject(Not().name()), this);
 			inputHedgeNodes_.push_back(p_node);
 
-			notTermNodeMap[p_term] = p_node;
+			notFuzzificationNodeMap[p_term] = p_node;
 
 			// Connect the term node with its negation
 			this->connect(termNodeMap.at(p_term), p_node);
@@ -1260,14 +1373,14 @@ void Engine::build()
 
 			detail::flattenRuleAntecedent(p_rule->getAntecedent(), ruleVars, ruleTerms, ruleNots, opKeyword);
 
-			RuleFiringStrengthNode* p_node = fl::null;
+			AntecedentNode* p_node = fl::null;
 			if (opKeyword == fl::Rule::andKeyword())
 			{
-				p_node = new RuleFiringStrengthNode(p_ruleBlock->getConjunction(), this);
+				p_node = new AntecedentNode(p_ruleBlock->getConjunction(), this);
 			}
 			else
 			{
-				p_node = new RuleFiringStrengthNode(p_ruleBlock->getDisjunction(), this);
+				p_node = new AntecedentNode(p_ruleBlock->getDisjunction(), this);
 			}
 			antecedentNodes_.push_back(p_node);
 
@@ -1286,7 +1399,7 @@ void Engine::build()
 
 				if (ruleNots[t])
 				{
-					this->connect(notTermNodeMap.at(p_term), p_node);
+					this->connect(notFuzzificationNodeMap.at(p_term), p_node);
 				}
 				else
 				{
@@ -1328,7 +1441,7 @@ void Engine::build()
 
 			fl::Term* p_term = p_rule->getConsequent()->conclusions().front()->term;
 
-			RuleImplicationNode* p_node = new RuleImplicationNode(p_term, p_ruleBlock->getActivation(), this);
+			ConsequentNode* p_node = new ConsequentNode(p_term, p_ruleBlock->getActivation(), this);
 			consequentNodes_.push_back(p_node);
 
 			// Connect every input node to this node
@@ -1353,13 +1466,13 @@ void Engine::build()
 	// The second one computes the sum of the rule firing strengths (i.e., the outputs of
 	// Layer 4).
 	{
-		SumNode* p_node = fl::null;
+		AccumulationNode* p_node = fl::null;
 
 		// Create a first summation node to compute the sum of the implication outputs
-		p_node = new SumNode(this);
+		p_node = new AccumulationNode(this);
 		sumNodes_.push_back(p_node);
 		// Connect every rule implication node to this node
-		for (typename std::vector<RuleImplicationNode*>::iterator nodeIt = consequentNodes_.begin(),
+		for (typename std::vector<ConsequentNode*>::iterator nodeIt = consequentNodes_.begin(),
 																  nodeEndIt = consequentNodes_.end();
 			 nodeIt != nodeEndIt;
 			 ++nodeIt)
@@ -1370,10 +1483,10 @@ void Engine::build()
 		}
 
 		// Create a second summation node to compute the sum of all the antecedents' firing strength
-		p_node = new SumNode(this);
+		p_node = new AccumulationNode(this);
 		sumNodes_.push_back(p_node);
 		// Connect every antecedent node to this node
-		for (typename std::vector<RuleFiringStrengthNode*>::iterator nodeIt = antecedentNodes_.begin(),
+		for (typename std::vector<AntecedentNode*>::iterator nodeIt = antecedentNodes_.begin(),
 												   nodeEndIt = antecedentNodes_.end();
 			 nodeIt != nodeEndIt;
 			 ++nodeIt)
@@ -1390,11 +1503,11 @@ void Engine::build()
 	// implications (i.e., the output of the first node of Layer 5) and the
 	// sum of rules' firing strenghts (i.e., the output of the second node of Layer 5).
 	{
-		NormalizationNode* p_node = new NormalizationNode(this);
-		inferenceNodes_.push_back(p_node);
+		OutputNode* p_node = new OutputNode(this);
+		outputNodes_.push_back(p_node);
 
 		// Connect every summation node to this node
-		for (typename std::vector<SumNode*>::iterator nodeIt = sumNodes_.begin(),
+		for (typename std::vector<AccumulationNode*>::iterator nodeIt = sumNodes_.begin(),
 												   nodeEndIt = sumNodes_.end();
 			 nodeIt != nodeEndIt;
 			 ++nodeIt)

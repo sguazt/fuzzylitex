@@ -23,11 +23,11 @@ class Engine;
 class Node: boost::noncopyable
 {
 public:
-	Node(Engine* p_model);
+	Node(Engine* p_engine);
 
 	virtual ~Node();
 
-	void setEngine(Engine* p_model);
+	void setEngine(Engine* p_engine);
 
 	Engine* getEngine() const;
 
@@ -49,14 +49,14 @@ private:
 
 
 private:
-	Engine* p_model_;
+	Engine* p_engine_;
 	fl::scalar val_;
 }; // Node
 
 class InputNode: public Node
 {
 public:
-	InputNode(fl::InputVariable* p_var, Engine* p_model);
+	InputNode(fl::InputVariable* p_var, Engine* p_engine);
 
 	fl::InputVariable* getInputVariable() const;
 
@@ -68,10 +68,10 @@ private:
 	fl::InputVariable* p_var_;
 }; // InputNode
 
-class TermNode: public Node
+class FuzzificationNode: public Node
 {
 public:
-	TermNode(fl::Term* p_term, Engine* p_model);
+	FuzzificationNode(fl::Term* p_term, Engine* p_engine);
 
 	fl::Term* getTerm() const;
 
@@ -81,12 +81,12 @@ private:
 
 private:
 	fl::Term* p_term_;
-}; // TermNode
+}; // FuzzificationNode
 
-class HedgeNode: public Node
+class InputHedgeNode: public Node
 {
 public:
-	HedgeNode(fl::Hedge* p_hedge, Engine* p_model);
+	InputHedgeNode(fl::Hedge* p_hedge, Engine* p_engine);
 
 	fl::Hedge* getHedge() const;
 
@@ -96,12 +96,12 @@ private:
 
 private:
 	fl::Hedge* p_hedge_;
-}; // HedgeNode
+}; // InputHedgeNode
 
-class RuleFiringStrengthNode: public Node
+class AntecedentNode: public Node
 {
 public:
-	RuleFiringStrengthNode(fl::Norm* p_norm, Engine* p_model);
+	AntecedentNode(fl::Norm* p_norm, Engine* p_engine);
 
 	fl::Norm* getNorm() const;
 
@@ -119,10 +119,10 @@ private:
 }; // AntecedentNode
 
 
-class RuleImplicationNode: public Node
+class ConsequentNode: public Node
 {
 public:
-	RuleImplicationNode(fl::Term* p_term, fl::TNorm* p_tnorm, Engine* p_model);
+	ConsequentNode(fl::Term* p_term, fl::TNorm* p_tnorm, Engine* p_engine);
 
 	fl::Term* getTerm() const;
 
@@ -137,37 +137,49 @@ private:
 	fl::TNorm* p_tnorm_;
 };
 
-class SumNode: public Node
+class AccumulationNode: public Node
 {
 public:
-	explicit SumNode(Engine* p_model);
+	explicit AccumulationNode(Engine* p_engine);
 
 private:
 	fl::scalar doEval();
-}; // SumNode
+}; // AccumulationNode
 
-class NormalizationNode: public Node
+class OutputNode: public Node
 {
 public:
-	explicit NormalizationNode(Engine* p_model);
+	explicit OutputNode(Engine* p_engine);
 
 private:
 	fl::scalar doEval();
-}; // NormalizationNode
+}; // OutputNode
 
 
 class Engine: public fl::Engine
 {
 public:
+	enum LayerCategory
+	{
+		InputLayer,
+		FuzzificationLayer,
+		InputHedgeLayer,
+		AntecedentLayer,
+		ConsequentLayer,
+		AccumulationLayer,
+		OutputLayer
+	};
+
+
 	explicit Engine(const std::string& name = "");
 
 	template <typename InputIterT,
 			  typename OutputIterT,
 			  typename RuleBlockIterT>
 	Engine(InputIterT inputFirst, InputIterT inputLast,
-		  OutputIterT outputFirst, OutputIterT outputLast,
-		  RuleBlockIterT ruleBlockFirst, RuleBlockIterT ruleBlockLast,
-		  const std::string& name = "")
+		   OutputIterT outputFirst, OutputIterT outputLast,
+		   RuleBlockIterT ruleBlockFirst, RuleBlockIterT ruleBlockLast,
+		   const std::string& name = "")
 	: inputs_(inputFirst, inputLast),
 	  outputs_(outputFirst, outputLast),
 	  ruleBlocks_(ruleBlockFirst, ruleBlockLast),
@@ -341,7 +353,7 @@ public:
 	std::vector<Node*> outputConnections(const Node* p_node) const;
 
 	template <typename IterT>
-	void setInput(IterT first, IterT last)
+	void setInputs(IterT first, IterT last)
 	{
 		std::vector<InputNode*>::iterator nodeIt = inputNodes_.begin();
 		std::vector<InputNode*>::iterator nodeEndIt = inputNodes_.end();
@@ -360,13 +372,40 @@ public:
 		}
 	}
 
+	std::vector<InputNode*> getInputLayer() const;
+
+	std::vector<FuzzificationNode*> getFuzzificationLayer() const;
+
+	std::vector<InputHedgeNode*> getInputHedgeLayer() const;
+
+	std::vector<AntecedentNode*> getAntecedentLayer() const;
+
+	std::vector<ConsequentNode*> getConsequentLayer() const;
+
+	std::vector<AccumulationNode*> getAccumulationLayer() const;
+
+	std::vector<OutputNode*> getOutputLayer() const;
+
+	//std::vector<Node*> getLayer(LayerCategory layer) const;
+
 	std::vector<fl::scalar> eval();
+
+	std::vector<fl::scalar> evalTo(LayerCategory layer);
+
+	std::vector<fl::scalar> evalFrom(LayerCategory layer);
 
 	template <typename IterT>
 	std::vector<fl::scalar> eval(IterT first, IterT last)
 	{
-		this->setInput(first, last);
+		this->setInputs(first, last);
 		return this->eval();
+	}
+
+	template <typename IterT>
+	std::vector<fl::scalar> evalTo(IterT first, IterT last, LayerCategory layer)
+	{
+		this->setInputs(first, last);
+		return this->evalTo(layer);
 	}
 
 	void clear();
@@ -375,6 +414,8 @@ private:
 	void check();
 
 	void connect(Node* p_from, Node* p_to);
+
+	std::vector<fl::scalar> evalLayer(LayerCategory layer);
 
 	template <typename IterT>
 	std::vector<fl::scalar> evalLayer(IterT first, IterT last)
@@ -397,7 +438,7 @@ private:
 
 	std::vector<fl::scalar> evalFuzzificationLayer();
 
-	std::vector<fl::scalar> evalHedgeLayer();
+	std::vector<fl::scalar> evalInputHedgeLayer();
 
 	std::vector<fl::scalar> evalAntecedentLayer();
 
@@ -405,7 +446,7 @@ private:
 
 	std::vector<fl::scalar> evalAccumulationLayer();
 
-	std::vector<fl::scalar> evalNormalizationLayer();
+	std::vector<fl::scalar> evalOutputLayer();
 
 private:
 	std::string name_; ///< The mnemonic name for this FIS engine
@@ -414,12 +455,12 @@ private:
 	std::vector<fl::RuleBlock*> ruleBlocks_; ///< Collection of (pointer to) rule blocks
 	//std::size_t order_;
 	std::vector<InputNode*> inputNodes_; ///< Nodes in the input layer
-	std::vector<TermNode*> inputTermNodes_; ///< Nodes in the fuzzification layer for linguistic terms
-	std::vector<HedgeNode*> inputHedgeNodes_; ///< Additional nodes in the fuzzification layer for linguistic hedges
-	std::vector<RuleFiringStrengthNode*> antecedentNodes_; ///< Nodes in the antecedent layer
-	std::vector<RuleImplicationNode*> consequentNodes_; ///< Nodes in the consequent layer
-	std::vector<SumNode*> sumNodes_; ///< Nodes in the summation layer
-	std::vector<NormalizationNode*> inferenceNodes_; ///< Nodes in the inference layer
+	std::vector<FuzzificationNode*> fuzzificationNodes_; ///< Nodes in the fuzzification layer for linguistic terms
+	std::vector<InputHedgeNode*> inputHedgeNodes_; ///< Additional nodes in the fuzzification layer for linguistic hedges
+	std::vector<AntecedentNode*> antecedentNodes_; ///< Nodes in the antecedent layer
+	std::vector<ConsequentNode*> consequentNodes_; ///< Nodes in the consequent layer
+	std::vector<AccumulationNode*> sumNodes_; ///< Nodes in the summation layer
+	std::vector<OutputNode*> outputNodes_; ///< Nodes in the inference layer
 	std::map< const Node*, std::vector<Node*> > inConns_; ///< Input connection to a given node
 	std::map< const Node*, std::vector<Node*> > outConns_; ///< Output connection from a given node
 }; // Engine
