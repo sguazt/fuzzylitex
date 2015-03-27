@@ -156,8 +156,8 @@ class GridPartitionFisBuilder
 
 				if (termClass == fl::Bell().className())
 				{
-					const fl::scalar center = 0.5*(maxs[i]-mins[i])/(numTerms-1);
-					const fl::scalar width = fl::detail::LinSpace(mins[i], maxs[i], numTerms)[j];
+					const fl::scalar center = fl::detail::LinSpace(mins[i], maxs[i], numTerms)[j];
+					const fl::scalar width = 0.5*(maxs[i]-mins[i])/(numTerms-1);
 					const fl::scalar slope = 2;
 
 					p_iv->addTerm(new fl::Bell(oss.str(), center, width, slope));
@@ -300,6 +300,30 @@ class GridPartitionFisBuilder
 			oss << fl::Rule::ifKeyword() << " ";
 
 			std::size_t tmp = r;
+#ifdef FL_DEBUG
+			// Generates rule in the same order of MATLAB
+			std::vector<std::size_t> ruleTerms(numInputs);
+			for (std::size_t j = numInputs; j > 0; --j)
+			{
+				std::size_t jj = j-1;
+				const std::size_t termIdx = tmp % numInTerms_[jj];
+
+				ruleTerms[jj] = termIdx;
+
+				tmp = static_cast<std::size_t>(std::floor(tmp/static_cast<double>(numInTerms_[jj])));
+			}
+			for (std::size_t j = 0; j < numInputs; ++j)
+			{
+				const fl::InputVariable* p_iv = p_fis->getInputVariable(j);
+
+				oss << p_iv->getName() << " " << fl::Rule::isKeyword() << " " << p_iv->getTerm(ruleTerms[j])->getName() << " ";
+
+				if (j < (numInputs-1))
+				{
+					oss << fl::Rule::andKeyword() << " ";
+				}
+			}
+#else // FL_DEBUG
 			for (std::size_t j = 0; j < numInputs; ++j)
 			{
 				const fl::InputVariable* p_iv = p_fis->getInputVariable(j);
@@ -314,6 +338,7 @@ class GridPartitionFisBuilder
 
 				tmp = static_cast<std::size_t>(std::floor(tmp/static_cast<double>(numInTerms_[j])));
 			}
+#endif // FL_DEBUG
 
 			oss << fl::Rule::thenKeyword();
 
