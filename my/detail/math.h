@@ -16,6 +16,37 @@ T Sqr(T x)
 	return x*x;
 }
 
+template <typename T, typename IterT>
+T AlgebraicSum(IterT first, IterT last, bool minus)
+{
+	T sum = 0;
+	while (first != last)
+	{
+		if (minus)
+		{
+			sum -= *first;
+		}
+		else
+		{
+			sum += *first;
+		}
+		++first;
+	}
+	return sum;
+}
+
+template <typename T, typename IterT>
+T Sum(IterT first, IterT last)
+{
+	return AlgebraicSum<T>(first, last, false);
+}
+
+template <typename T, typename IterT>
+T Diff(IterT first, IterT last)
+{
+	return AlgebraicSum<T>(first, last, true);
+}
+
 /// Returns evenly \a spaced values over the given interval [\a start, \a stop]. The end-point of the interval can be optionally excluded.
 template <typename ValueT>
 std::vector<ValueT> LinSpace(ValueT start, ValueT stop, std::size_t num, bool endPoint = true)
