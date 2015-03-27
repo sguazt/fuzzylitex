@@ -35,15 +35,64 @@ class RecursiveLeastSquaresEstimator
 	private: typedef std::vector< std::vector<ValueT> > MatrixType;
 
 
+	public: RecursiveLeastSquaresEstimator()
+	: p_(0),
+	  nu_(0),
+	  ny_(0),
+	  lambda_(0),
+	  count_(0)
+	{
+	}
+
 	/// Constructs a RLS estimator where \a na is the filter order, \a ni is the input dimension, and \a no is the output dimension
 	public: RecursiveLeastSquaresEstimator(std::size_t p, std::size_t nu, std::size_t ny, ValueT lambda)
-	: p_(p),
+	: p_(p+1),
 	  nu_(nu),
 	  ny_(ny),
 	  lambda_(lambda),
 	  count_(0)
 	{
 		this->reset();
+	}
+
+	public: void setModelOrder(std::size_t order)
+	{
+		p_ = order+1;
+	}
+
+	public: std::size_t getModelOrder() const
+	{
+		return p_-1;
+	}
+
+	public: void setInputDimension(std::size_t n)
+	{
+		nu_ = n;
+	}
+
+	public: std::size_t getInputDimension() const
+	{
+		return nu_;
+	}
+
+	public: void setOutputDimension(std::size_t n)
+	{
+		ny_ = n;
+	}
+
+	public: std::size_t getOutputDimension() const
+	{
+		return ny_;
+	}
+
+	public: void setForgettingFactor(ValueT lambda)
+	{
+		return lambda_ = lambda;
+	}
+
+	public: ValueT getForgettingFactor() const
+	{
+		return lambda_;
 	}
 
 	public: void reset(ValueT delta = 1e+4)
@@ -85,72 +134,30 @@ class RecursiveLeastSquaresEstimator
 		{
 			FL_THROW2(std::invalid_argument, "Output dimension does not match");
 		}
+		if (nu_ == 0)
+		{
+			FL_THROW2(std::logic_error, "Wrong input dimension");
+		}
+		if (ny_ == 0)
+		{
+			FL_THROW2(std::logic_error, "Wrong output dimension");
+		}
+		if (p_ == 0)
+		{
+			FL_THROW2(std::logic_error, "Wrong model order");
+		}
 
 		++count_;
 
 		const std::size_t n = phi_.size();
 
-std::cerr << "phi(k)="; fl::detail::VectorOutput(std::cerr, phi_); std::cerr << std::endl; //XXX
-std::cerr << "P(k)="; fl::detail::MatrixOutput(std::cerr, P_); std::cerr << std::endl; //XXX
-std::cerr << "Theta(k)="; fl::detail::MatrixOutput(std::cerr, Theta_); std::cerr << std::endl; //XXX
-	VectorType yhat;
-
-if (count_ > p_)
-{
-		// Compute the Gain:
-		//  $l(k+1) = \frac{P(k)\phi(k+1)}{\lambda(k)+\phi^T(k+1)P(k)\phi(k+1)}$
-		const VectorType l = fl::detail::VectorScalarProduct(
-								fl::detail::MatrixVectorProduct(P_, phi_),
-								1.0/(lambda_
-									 + fl::detail::VectorInnerProduct(
-									   fl::detail::VectorMatrixProduct(phi_, P_), phi_)));
-std::cerr << "l="; fl::detail::VectorOutput(std::cerr, l); std::cerr << std::endl; //XXX
-
-		// Update the covariance matrix by means of the matrix inversion lemma (use the Woodbury's identity: A=B^{-1}+CD^{-1}C^T ==> A^{-1}=B-BC(D+C^TBC)^{-1}C^TB)
-		//  $P(k+1) = \frac{1}{\lambda(k)}\left[I-l(k+1)\Phi^T(k+1)\right]P(k)$
-		P_ = fl::detail::MatrixScalarProduct(
-				fl::detail::MatrixProduct(
-					fl::detail::MatrixDiff(
-						fl::detail::MatrixIdentity<MatrixType>(n, n),
-						fl::detail::VectorOuterProduct<MatrixType>(l, phi_)),
-					P_),
-				1.0/lambda_);
-
-		// Computes the output estimate
-		//  $\hat{y}(k) = (\phi^T(k)\Theta(k))^T = \Theta^T(k)\phi(k)$
-		yhat = fl::detail::VectorMatrixProduct(phi_, Theta_);
-
-		// Update parameters estimate
-		//  $\hat{\Theta}(k+1) = \hat{\Theta}(k)+l^T(k+1)(y^T(k+1)-\phi^T(k+1)\hat{\Theta}(k))$
-		Theta_ = fl::detail::MatrixSum(
-					Theta_,
-					fl::detail::VectorOuterProduct<MatrixType>(
-						l,
-						fl::detail::VectorDiff(y, yhat)));
-}
-else
-{
-	yhat.resize(ny_, 0);
-}
+//std::cerr << "COUNT=" << count_ << std::endl;//XXX
+//std::cerr << "phi(k)="; fl::detail::VectorOutput(std::cerr, phi_); std::cerr << std::endl; //XXX
+//std::cerr << "P(k)="; fl::detail::MatrixOutput(std::cerr, P_); std::cerr << std::endl; //XXX
+//std::cerr << "Theta(k)="; fl::detail::MatrixOutput(std::cerr, Theta_); std::cerr << std::endl; //XXX
+		VectorType yhat;
 
 		// Update the regressor vector
-//		//  $\phi(k+1) = [y_1(k) ... y_1(k-n_a+1) ... y_{n_y}(k) ... y_{n_y}(k-n_a+1)]^T$
-//		VectorType phiNew(n, 0);
-//		// - Copy the new y into the regressor vector: \phi(k+1) = [y_1(k) 0 ... 0 y_2(k) 0 ... 0 y_{n_y}(k) 0 ... 0]^T
-//		for (std::size_t i = 0; i < ny_; ++i)
-//		{
-//			phiNew[i*p_] = y[i];
-//		}
-//		// - Append the old na-1 y values into the regressor vector: \phi(k+1) = [y_1(k) y_1(k-1) ... y_1(k-n_a+1) y_2(k) y_2(k-1) ... y_{n_y}(k-n_a+1)]^T
-//		for (std::size_t i = 1; i < p_; ++i)
-//		{
-//			for (std::size_t j = 0; j < nu_; ++j)
-//			{
-//				const std::size_t jna = j*p_;
-//
-//				phiNew[i+jna] = phi_[(i-1)+jna];
-//			}
-//		}
 		//  $\phi(k+1) = [u_1(k) ... u_1(k-p+1) ... u_{n_u}(k) ... u_{n_u}(k-p+1)]^T$
 		VectorType phiNew(n, 0);
 		// - Copy the new u into the regressor vector: \phi(k+1) = [u_1(k) 0 ... 0 u_2(k) 0 ... 0 u_{n_u}(k) 0 ... 0]^T
@@ -158,7 +165,7 @@ else
 		{
 			phiNew[i*p_] = u[i];
 		}
-		// - Append the old na-1 y values into the regressor vector: \phi(k+1) = [u_1(k) u_1(k-1) ... u_1(k-p+1) u_2(k) u_2(k-1) ... u_{n_u}(k-p+1)]^T
+		// - Append the old na-1 u values into the regressor vector: \phi(k+1) = [u_1(k) u_1(k-1) ... u_1(k-p+1) u_2(k) u_2(k-1) ... u_{n_u}(k-p+1)]^T
 		for (std::size_t i = 1; i < p_; ++i)
 		{
 			for (std::size_t j = 0; j < nu_; ++j)
@@ -168,14 +175,64 @@ else
 				phiNew[i+jna] = phi_[(i-1)+jna];
 			}
 		}
-
 		phi_ = phiNew;
 
-std::cerr << "phi(k+1)="; fl::detail::VectorOutput(std::cerr, phi_); std::cerr << std::endl; //XXX
-std::cerr << "P(k+1)="; fl::detail::MatrixOutput(std::cerr, P_); std::cerr << std::endl; //XXX
-std::cerr << "Theta(k+1)="; fl::detail::MatrixOutput(std::cerr, Theta_); std::cerr << std::endl; //XXX
+		// Update parameter and covariance matrices (to be done only after enough observations have been seen)
+		if (count_ >= p_)
+		{
+				// Compute the Gain:
+				//  $l(k+1) = \frac{P(k)\phi(k+1)}{\lambda(k)+\phi^T(k+1)P(k)\phi(k+1)}$
+				const VectorType l = fl::detail::VectorScalarProduct(
+										fl::detail::MatrixVectorProduct(P_, phi_),
+										1.0/(lambda_
+											 + fl::detail::VectorInnerProduct(
+											   fl::detail::VectorMatrixProduct(phi_, P_), phi_)));
+//std::cerr << "l="; fl::detail::VectorOutput(std::cerr, l); std::cerr << std::endl; //XXX
+
+				// Update the covariance matrix by means of the matrix inversion lemma (use the Woodbury's identity: A=B^{-1}+CD^{-1}C^T ==> A^{-1}=B-BC(D+C^TBC)^{-1}C^TB)
+				//  $P(k+1) = \frac{1}{\lambda(k)}\left[I-l(k+1)\Phi^T(k+1)\right]P(k)$
+				P_ = fl::detail::MatrixScalarProduct(
+						fl::detail::MatrixProduct(
+							fl::detail::MatrixDiff(
+								fl::detail::MatrixIdentity<MatrixType>(n, n),
+								fl::detail::VectorOuterProduct<MatrixType>(l, phi_)),
+							P_),
+						1.0/lambda_);
+
+				// Computes the output estimate
+				//  $\hat{y}(k) = (\phi^T(k)\Theta(k))^T$
+				yhat = fl::detail::VectorMatrixProduct(phi_, Theta_);
+//std::cerr << "yhat(k)="; fl::detail::VectorOutput(std::cerr, yhat); std::cerr << std::endl; //XXX
+
+				// Update parameters estimate
+				//  $\hat{\Theta}(k+1) = \hat{\Theta}(k)+l^T(k+1)(y^T(k+1)-\phi^T(k+1)\hat{\Theta}(k))$
+//std::cerr << "xi(k)="; fl::detail::VectorOutput(std::cerr, fl::detail::VectorDiff(y,yhat)); std::cerr << std::endl; //XXX
+				Theta_ = fl::detail::MatrixSum(
+							Theta_,
+							fl::detail::VectorOuterProduct<MatrixType>(
+								l,
+								fl::detail::VectorDiff(y, yhat)));
+		}
+		else
+		{
+			yhat.resize(ny_, 0);
+		}
+
+//std::cerr << "phi(k+1)="; fl::detail::VectorOutput(std::cerr, phi_); std::cerr << std::endl; //XXX
+//std::cerr << "P(k+1)="; fl::detail::MatrixOutput(std::cerr, P_); std::cerr << std::endl; //XXX
+//std::cerr << "Theta(k+1)="; fl::detail::MatrixOutput(std::cerr, Theta_); std::cerr << std::endl; //XXX
 
 		return yhat;
+	}
+
+	public: std::vector< std::vector<ValueT> > getEstimatedParameters() const
+	{
+		return Theta_;
+	}
+
+	public: std::size_t numberOfIterations() const
+	{
+		return count_;
 	}
 
 
