@@ -2,18 +2,127 @@
 #define FL_ANFIS_TRAINING_H
 
 
-#include <boost/noncopyable.hpp>
+//#include <boost/noncopyable.hpp>
 #include <cstddef>
+#include <fl/anfis/engine.h>
 #include <fl/fuzzylite.h>
-#include <my/dataset.h>
-#include <my/detail/traits.h>
-#include <my/detail/iterators.h>
-#include <my/ann/error_functions.h>
-#include <my/ann/networks.h>
+#include <fl/Headers.h>
+#include <fl/dataset.h>
+#include <fl/detail/math.h>
+#include <fl/detail/rls.h>
+#include <fl/detail/traits.h>
 #include <vector>
 
 
 namespace fl { namespace anfis {
+
+namespace detail {
+
+std::vector<fl::scalar> GetTermParameters(const fl::Term* p_term)
+{
+	//FIXME: it would be a good idea to add a pure virtual method in fl::Term
+	//       class that returns the vector of parameters, like:
+	//         virtual std::vector<fl::scalar> getParameters() = 0;
+
+	std::vector<fl::scalar> params;
+
+	if (dynamic_cast<const fl::Concave*>(p_term))
+	{
+		const fl::Concave* p_realTerm = dynamic_cast<const fl::Concave*>(p_term);
+		params.push_back(p_realTerm->getInflection());
+		params.push_back(p_realTerm->getEnd());
+	}
+	else if (dynamic_cast<const fl::Constant*>(p_term))
+	{
+		const fl::Constant* p_realTerm = dynamic_cast<const fl::Constant*>(p_term);
+		params.push_back(p_realTerm->getValue());
+	}
+	else if (dynamic_cast<const fl::Linear*>(p_term))
+	{
+		const fl::Linear* p_realTerm = dynamic_cast<const fl::Linear*>(p_term);
+		params = p_realTerm->coefficients();
+	}
+	if (dynamic_cast<const fl::Ramp*>(p_term))
+	{
+		const fl::Ramp* p_realTerm = dynamic_cast<const fl::Ramp*>(p_term);
+		params.push_back(p_realTerm->getStart());
+		params.push_back(p_realTerm->getEnd());
+	}
+	if (dynamic_cast<const fl::Sigmoid*>(p_term))
+	{
+		const fl::Sigmoid* p_realTerm = dynamic_cast<const fl::Sigmoid*>(p_term);
+		params.push_back(p_realTerm->getInflection());
+		params.push_back(p_realTerm->getSlope());
+	}
+	else if (dynamic_cast<const fl::SShape*>(p_term))
+	{
+		const fl::SShape* p_realTerm = dynamic_cast<const fl::SShape*>(p_term);
+		params.push_back(p_realTerm->getStart());
+		params.push_back(p_realTerm->getEnd());
+	}
+	else if (dynamic_cast<const fl::ZShape*>(p_term))
+	{
+		const fl::ZShape* p_realTerm = dynamic_cast<const fl::ZShape*>(p_term);
+		params.push_back(p_realTerm->getStart());
+		params.push_back(p_realTerm->getEnd());
+	}
+
+	return params;
+}
+
+template <typename IterT>
+void SetTermParameters(fl::Term* p_term, IterT first, IterT last)
+{
+	//FIXME: it would be a good idea to add a pure virtual method in fl::Term
+	//       class that returns the vector of parameters, like:
+	//         virtual std::vector<fl::scalar> getParameters() = 0;
+
+	std::vector<fl::scalar> params(first, last);
+
+	if (dynamic_cast<const fl::Concave*>(p_term))
+	{
+		fl::Concave* p_realTerm = dynamic_cast<fl::Concave*>(p_term);
+		p_realTerm->setInflection(params[0]);
+		p_realTerm->setEnd(params[1]);
+	}
+	else if (dynamic_cast<fl::Constant*>(p_term))
+	{
+		fl::Constant* p_realTerm = dynamic_cast<fl::Constant*>(p_term);
+		p_realTerm->setValue(params[0]);
+	}
+	else if (dynamic_cast<fl::Linear*>(p_term))
+	{
+		fl::Linear* p_realTerm = dynamic_cast<fl::Linear*>(p_term);
+		p_realTerm->setCoefficients(params);
+	}
+	if (dynamic_cast<fl::Ramp*>(p_term))
+	{
+		fl::Ramp* p_realTerm = dynamic_cast<fl::Ramp*>(p_term);
+		p_realTerm->setStart(params[0]);
+		p_realTerm->setEnd(params[1]);
+	}
+	if (dynamic_cast<fl::Sigmoid*>(p_term))
+	{
+		fl::Sigmoid* p_realTerm = dynamic_cast<fl::Sigmoid*>(p_term);
+		p_realTerm->setInflection(params[0]);
+		p_realTerm->setSlope(params[1]);
+	}
+	else if (dynamic_cast<fl::SShape*>(p_term))
+	{
+		fl::SShape* p_realTerm = dynamic_cast<fl::SShape*>(p_term);
+		p_realTerm->setStart(params[0]);
+		p_realTerm->setEnd(params[1]);
+	}
+	else if (dynamic_cast<fl::ZShape*>(p_term))
+	{
+		fl::ZShape* p_realTerm = dynamic_cast<fl::ZShape*>(p_term);
+		p_realTerm->setStart(params[0]);
+		p_realTerm->setEnd(params[1]);
+	}
+}
+
+} // Namespace detail
+
 
 /**
  * Hybrid learning algorithm using Gradient-Descent and Least-Squares Estimation by (J.-S.R. Jang,1993)
@@ -25,51 +134,209 @@ namespace fl { namespace anfis {
  *
  * \author Marco Guazzone (marco.guazzone@gmail.com)
  */
-class Jang1993HybridLearningAlgorithm: public fl::ann::TrainingAlgorithm<fl::scalar>
+class Jang1993HybridLearningAlgorithm
 {
-    public: Jang1993HybridLearningAlgorithm()
+    public: explicit Jang1993HybridLearningAlgorithm(Engine* p_anfis, fl::scalar ff = 1)
+	: p_anfis_(p_anfis),
+	  rls_(0,0,0,ff)
     {
-    }
+		this->init();
+	}
 
     /// Training for a single epoch
-    private: void doTrainSingleEpoch(const DataSet<ValueT>& data)
+    public: void trainSingleEpoch(const DataSet<fl::scalar>& data)
     {
-		Network<ValueT>* p_nnet = this->getNetwork();
+		rls_.reset();
 
-		// check: null
-		FL_DEBUG_ASSERT( p_nnet );
-
-		ErrorFunction<ValueT>* p_errFunc = this->getErrorFunction();
-
-		// check: null
-		FL_DEBUG_ASSERT( p_errFunc );
-
-        for (typename DataSet<ValueT>::ConstEntryIterator dseIt = data.entryBegin(),
-                                                          dseEndIt = data.entryEnd();
-             dseIt != dseEndIt;
-             ++dseIt)
+        for (typename DataSet<fl::scalar>::ConstEntryIterator entryIt = data.entryBegin(),
+															  entryEndIt = data.entryEnd();
+             entryIt != entryEndIt;
+             ++entryIt)
         {
-            const DataSetEntry<ValueT>& entry = *dseIt;
+            const DataSetEntry<fl::scalar>& entry = *entryIt;
 
-////[XXX]
-#ifdef FL_DEBUG
-std::cerr << "Input: [";
-std::copy(entry.inputBegin(), entry.inputEnd(), std::ostream_iterator<ValueT>(std::cerr, ", "));
-std::cerr << "]," << std::endl;
-std::cerr << "Target Output: [";
-std::copy(entry.outputBegin(), entry.outputEnd(), std::ostream_iterator<ValueT>(std::cerr, ", "));
-std::cerr << "]" << std::endl;
-#endif // FL_DEBUG
-////[/XXX]
             const std::size_t nout = entry.numOfOutputs();
 
-            if (nout != p_nnet->numOfOutputs())
+            if (nout != p_anfis_->numberOfOutputVariables())
             {
                 FL_THROW2(std::invalid_argument, "Incorrect output dimension");
             }
 
-            const std::vector<ValueT> targetOut(entry.outputBegin(), entry.outputEnd());
+            const std::vector<fl::scalar> targetOut(entry.outputBegin(), entry.outputEnd());
 
+			// Compute current rule firing strengths
+			const std::vector<fl::scalar> ruleFiringStrengths = p_anfis_->evalTo(entry.inputBegin(), entry.inputEnd(), fl::anfis::Engine::AntecedentLayer);
+std::cerr << "Entry input: "; fl::detail::VectorOutput(std::cerr, std::vector<fl::scalar>(entry.inputBegin(), entry.inputEnd())); std::cerr << std::endl;//XXX
+//std::cerr << "Rule firing strength: "; fl::detail::VectorOutput(std::cerr, ruleFiringStrengths); std::cerr << std::endl;//XXX
+//{
+//	std::cerr << "Layer 0: [";
+//	std::vector<InputNode*> nodes0 = p_anfis_->getInputLayer();
+//	for (std::size_t i = 0; i < nodes0.size(); ++i)
+//	{
+//		std::cerr << nodes0[i]->getValue() << " ";
+//	}
+//	std::cerr << "]" << std::endl;
+//	std::cerr << "Layer 1: [";
+//	std::vector<FuzzificationNode*> nodes1 = p_anfis_->getFuzzificationLayer();
+//	for (std::size_t i = 0; i < nodes1.size(); ++i)
+//	{
+//		std::cerr << nodes1[i]->getValue() << " ";
+//	}
+//	std::cerr << "]" << std::endl;
+//	std::cerr << "Layer 2: ";
+//	std::vector<InputHedgeNode*> nodes2 = p_anfis_->getInputHedgeLayer();
+//	for (std::size_t i = 0; i < nodes2.size(); ++i)
+//	{
+//		std::cerr << nodes2[i]->getValue() << " ";
+//	}
+//	std::cerr << "]" << std::endl;
+//	std::cerr << "Layer 3: ";
+//	std::vector<AntecedentNode*> nodes3 = p_anfis_->getAntecedentLayer();
+//	for (std::size_t i = 0; i < nodes3.size(); ++i)
+//	{
+//		std::cerr << nodes3[i]->getValue() << " ";
+//	}
+//	std::cerr << "]" << std::endl;
+//}
+			// Compute normalization factor
+			const fl::scalar totRuleFiringStrength = fl::detail::Sum<fl::scalar>(ruleFiringStrengths.begin(), ruleFiringStrengths.end());
+//{//[XXX]
+//std::cerr << "Total Rule firing strength: " << totRuleFiringStrength << std::endl;
+//std::cerr << "Normalized Rule firing strength: ";
+//for (std::size_t i = 0; i < ruleFiringStrengths.size(); ++i)
+//{
+//	std::cerr << ruleFiringStrengths[i]/totRuleFiringStrength << " ";
+//}
+//std::cerr << std::endl;
+//}//[XXX]
+			// Compute input to RLS algorithm
+			std::vector<fl::scalar> rlsInputs(rls_.getInputDimension());
+			{
+				std::size_t k = 0;
+				std::size_t r = 0;
+				for (std::size_t i = 0,
+								 nv = p_anfis_->numberOfOutputVariables();
+					 i < nv;
+					 ++i)
+				{
+					fl::OutputVariable* p_var = p_anfis_->getOutputVariable(i);
+
+					FL_DEBUG_ASSERT( p_var );
+
+					for (std::size_t j = 0,
+									 nt = p_var->numberOfTerms();
+						 j < nt;
+						 ++j)
+					{
+						fl::Term* p_term = p_var->getTerm(j);
+
+						FL_DEBUG_ASSERT( p_term );
+
+						const std::size_t numParams = detail::GetTermParameters(p_term).size();
+						for (std::size_t p = 1; p < numParams; ++p)
+						{
+							rlsInputs[k] = ruleFiringStrengths[r]*entry.getField(p-1)/totRuleFiringStrength;
+							++k;
+						}
+						rlsInputs[k] = ruleFiringStrengths[r]/totRuleFiringStrength;
+						++k;
+						++r;
+					}
+				}
+			}
+std::cerr << "Num inputs: " << rls_.getInputDimension() << " - Num Outputs: " << rls_.getOutputDimension() << " - Order: " << rls_.getModelOrder() << std::endl;//XXX
+std::cerr << "RLS Input: "; fl::detail::VectorOutput(std::cerr, rlsInputs); std::cerr << std::endl;///XXX
+			// Estimate parameters
+			std::vector<fl::scalar> actualOut;
+			actualOut = rls_.estimate(rlsInputs.begin(), rlsInputs.end(), targetOut.begin(), targetOut.end());
+std::cerr << "Target: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - Actual: ";fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << std::endl;///XXX
+		}
+
+		// Put estimated parameters in the ANFIS model
+		{
+			const std::vector< std::vector<fl::scalar> > rlsParamMatrix = rls_.getEstimatedParameters();
+std::cerr << "Estimated RLS params: "; fl::detail::MatrixOutput(std::cerr, rlsParamMatrix); std::cerr << std::endl;//XXX
+			std::size_t k = 0;
+			std::size_t r = 0;
+			for (std::size_t i = 0,
+							 nv = p_anfis_->numberOfOutputVariables();
+				 i < nv;
+				 ++i)
+			{
+				fl::OutputVariable* p_var = p_anfis_->getOutputVariable(i);
+
+				FL_DEBUG_ASSERT( p_var );
+
+				for (std::size_t j = 0,
+								 nt = p_var->numberOfTerms();
+					 j < nt;
+					 ++j)
+				{
+					fl::Term* p_term = p_var->getTerm(j);
+
+					FL_DEBUG_ASSERT( p_term );
+
+					const std::size_t numParams = detail::GetTermParameters(p_term).size();
+					std::vector<fl::scalar> params(numParams);
+					for (std::size_t p = 0; p < numParams; ++p)
+					{
+						params[p] = rlsParamMatrix[k][i];
+						++k;
+					}
+					detail::SetTermParameters(p_term, params.begin(), params.end());
+					++r;
+				}
+			}
+		}
+		std::vector<fl::scalar> out = p_anfis_->evalFrom(fl::anfis::Engine::ConsequentLayer);
+std::cerr << "ANFIS output: "; fl::detail::VectorOutput(std::cerr, out); std::cerr << std::endl; //XXX
+std::abort();//XXX
+	}
+
+	private: void init()
+	{
+		std::size_t numParams = 0;
+		//std::size_t numOutTerms = 0;
+		for (std::size_t i = 0,
+						 nv = p_anfis_->numberOfOutputVariables();
+			 i < nv;
+			 ++i)
+		{
+			fl::OutputVariable* p_var = p_anfis_->getOutputVariable(i);
+
+			FL_DEBUG_ASSERT( p_var );
+
+			for (std::size_t j = 0,
+							 nt = p_var->numberOfTerms();
+				 j < nt;
+				 ++j)
+			{
+				fl::Term* p_term = p_var->getTerm(j);
+
+				FL_DEBUG_ASSERT( p_term );
+
+				numParams += detail::GetTermParameters(p_term).size();
+
+				//++numOutTerms;
+			}
+		}
+		//numParams *= numOutTerms;
+
+		rls_.setModelOrder(0);
+		rls_.setInputDimension(numParams);
+		rls_.setOutputDimension(p_anfis_->numberOfOutputVariables());
+		rls_.reset();
+    }
+
+
+	private: Engine* p_anfis_;
+	private: fl::detail::RecursiveLeastSquaresEstimator<fl::scalar> rls_;
+}; // Jang1993HybridLearningAlgorithm
+
+#if 0
+
+
+---------------------------------
 //FL_DEBUG_TRACE("Feedforward step");//XXX
             // 1. Feedforward pass: propagates the input pattern to the network
             //    and computes the output
@@ -122,6 +389,11 @@ std::cerr << std::endl;
 			this->updateWeightsOffline();
 		}
     }
+
+	private: void forwardsInputs(std::vector<fl::scalar> const& inputs)
+	{
+		for (std::size_t i = 0; i < 
+	}
 
     private: void backpropagateErrors(const std::vector<ValueT>& targetOut, const std::vector<ValueT>& actualOut)
     {
@@ -862,6 +1134,7 @@ std::cerr << std::endl;
 	private: std::map<const Connection<ValueT>*,ValueT> dEdWs_; // Only for offline training
 	private: std::map<const Neuron<ValueT>*,ValueT> dEdBs_; // Only for offline training
 }; // Jang1993HybridLearningAlgorithm
+#endif
 
 }} // Namespace fl::anfis
 
