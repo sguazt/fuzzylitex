@@ -39,13 +39,17 @@ public:
 
 	fl::scalar eval();
 
+	std::vector<fl::scalar> evalDerivativeWrtInputs();
+
 	fl::scalar getValue() const;
 
-protected:
+//protected:
 	void setValue(fl::scalar v);
 
 private:
 	virtual fl::scalar doEval() = 0;
+
+	virtual std::vector<fl::scalar> doEvalDerivativeWrtInputs() = 0;
 
 
 private:
@@ -63,6 +67,8 @@ public:
 private:
 	fl::scalar doEval();
 
+	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
+
 
 private:
 	fl::InputVariable* p_var_;
@@ -75,8 +81,12 @@ public:
 
 	fl::Term* getTerm() const;
 
+	std::vector<fl::scalar> evalDerivativeWrtParams();
+
 private:
 	fl::scalar doEval();
+
+	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
 
 
 private:
@@ -93,6 +103,8 @@ public:
 private:
 	fl::scalar doEval();
 
+	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
+
 
 private:
 	fl::Hedge* p_hedge_;
@@ -108,10 +120,7 @@ public:
 private:
 	fl::scalar doEval();
 
-/*
-	std::vector<fl::scalar> doEvalDerivativeWrtInput(ForwardIterator inputFirst, ForwardIterator inputLast,
-															  ForwardIterator weightFirst, ForwardIterator weightLast) const;
-*/
+	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
 
 
 private:
@@ -131,6 +140,8 @@ public:
 private:
 	fl::scalar doEval();
 
+	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
+
 
 private:
 	fl::Term* p_term_;
@@ -144,6 +155,8 @@ public:
 
 private:
 	fl::scalar doEval();
+
+	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
 }; // AccumulationNode
 
 class OutputNode: public Node
@@ -153,6 +166,8 @@ public:
 
 private:
 	fl::scalar doEval();
+
+	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
 }; // OutputNode
 
 
@@ -386,7 +401,7 @@ public:
 
 	std::vector<OutputNode*> getOutputLayer() const;
 
-	//std::vector<Node*> getLayer(LayerCategory layer) const;
+	std::vector<Node*> getLayer(LayerCategory layer) const;
 
 	std::vector<fl::scalar> eval();
 
@@ -407,6 +422,10 @@ public:
 		this->setInputs(first, last);
 		return this->evalTo(layer);
 	}
+
+	LayerCategory getNextLayerCategory(LayerCategory cat) const;
+
+	LayerCategory getPreviousLayerCategory(LayerCategory cat) const;
 
 	void clear();
 
@@ -459,7 +478,7 @@ private:
 	std::vector<InputHedgeNode*> inputHedgeNodes_; ///< Additional nodes in the fuzzification layer for linguistic hedges
 	std::vector<AntecedentNode*> antecedentNodes_; ///< Nodes in the antecedent layer
 	std::vector<ConsequentNode*> consequentNodes_; ///< Nodes in the consequent layer
-	std::vector<AccumulationNode*> sumNodes_; ///< Nodes in the summation layer
+	std::vector<AccumulationNode*> accumulationNodes_; ///< Nodes in the summation layer
 	std::vector<OutputNode*> outputNodes_; ///< Nodes in the inference layer
 	std::map< const Node*, std::vector<Node*> > inConns_; ///< Input connection to a given node
 	std::map< const Node*, std::vector<Node*> > outConns_; ///< Output connection from a given node

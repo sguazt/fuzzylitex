@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <fl/anfis/engine.h>
 #include <fl/commons.h>
+#include <fl/detail/derivatives.h>
 #include <fl/detail/math.h>
 #include <fl/detail/traits.h>
 #include <fl/Headers.h>
@@ -142,6 +143,11 @@ fl::scalar Node::eval()
 	return val_;
 }
 
+std::vector<fl::scalar> Node::evalDerivativeWrtInputs()
+{
+	return this->doEvalDerivativeWrtInputs();
+}
+
 fl::scalar Node::getValue() const
 {
 	return val_;
@@ -151,6 +157,10 @@ void Node::setValue(fl::scalar v)
 {
 	val_ = v;
 }
+
+/////////////
+// Input Node
+/////////////
 
 InputNode::InputNode(fl::InputVariable* p_var, Engine* p_engine)
 : Node(p_engine),
@@ -168,8 +178,13 @@ fl::scalar InputNode::doEval()
 	return p_var_->getInputValue();
 }
 
+std::vector<fl::scalar> InputNode::doEvalDerivativeWrtInputs()
+{
+	FL_THROW2(std::logic_error, "Derivative wrt inputs should not be evaluated for input nodes ");
+}
+
 /////////////
-// Term Node
+// Fuzzification Node
 /////////////
 
 FuzzificationNode::FuzzificationNode(fl::Term* p_term, Engine* p_engine)
@@ -183,18 +198,38 @@ fl::Term* FuzzificationNode::getTerm() const
 	return p_term_;
 }
 
-fl::scalar FuzzificationNode::doEval()
+std::vector<fl::scalar> FuzzificationNode::evalDerivativeWrtParams()
 {
-	std::vector<fl::scalar> inputs = this->inputs();
+	const std::vector<fl::scalar> inputs = this->inputs();
 
 	if (inputs.size() != 1)
 	{
-		FL_THROW2(std::logic_error, "Term node must have exactly one input");
+		FL_THROW2(std::logic_error, "Fuzzification node must have exactly one input");
+	}
+
+	return fl::detail::EvalBellTermDerivativeWrtParams(dynamic_cast<fl::Bell&>(*p_term_), inputs.back());
+}
+
+fl::scalar FuzzificationNode::doEval()
+{
+	const std::vector<fl::scalar> inputs = this->inputs();
+
+	if (inputs.size() != 1)
+	{
+		FL_THROW2(std::logic_error, "Fuzzification node must have exactly one input");
 	}
 
 	return p_term_->membership(inputs.front());
 }
 
+std::vector<fl::scalar> FuzzificationNode::doEvalDerivativeWrtInputs()
+{
+	FL_THROW2(std::logic_error, "Derivative wrt inputs should not be evaluated for fuzzification nodes ");
+}
+
+/////////////
+// Input Hedge Node
+/////////////
 
 InputHedgeNode::InputHedgeNode(fl::Hedge* p_hedge, Engine* p_engine)
 : Node(p_engine),
@@ -209,7 +244,7 @@ fl::Hedge* InputHedgeNode::getHedge() const
 
 fl::scalar InputHedgeNode::doEval()
 {
-	std::vector<fl::scalar> inputs = this->inputs();
+	const std::vector<fl::scalar> inputs = this->inputs();
 
 	if (inputs.size() != 1)
 	{
@@ -218,6 +253,22 @@ fl::scalar InputHedgeNode::doEval()
 
 	return p_hedge_->hedge(inputs.front());
 }
+
+std::vector<fl::scalar> InputHedgeNode::doEvalDerivativeWrtInputs()
+{
+	std::vector<fl::scalar> inputs = this->inputs();
+
+	if (inputs.size() != 1)
+	{
+		FL_THROW2(std::logic_error, "Hedge node must have exactly one input");
+	}
+
+	return std::vector<fl::scalar>(inputs.size(), -1);
+}
+
+/////////////
+// Antecedent Node
+/////////////
 
 AntecedentNode::AntecedentNode(fl::Norm* p_norm, Engine* p_engine)
 : Node(p_engine),
@@ -232,7 +283,7 @@ fl::Norm* AntecedentNode::getNorm() const
 
 fl::scalar AntecedentNode::doEval()
 {
-	std::vector<fl::scalar> inputs = this->inputs();
+	const std::vector<fl::scalar> inputs = this->inputs();
 
 	fl::scalar res = fl::nan;
 
@@ -252,76 +303,60 @@ fl::scalar AntecedentNode::doEval()
 	return res;
 }
 
-/*
-private: std::vector<fl::scalar> AntecedentNode::doEvalDerivativeWrtInput(ForwardIterator inputFirst, ForwardIterator inputLast,
-														  ForwardIterator weightFirst, ForwardIterator weightLast) const
+std::vector<fl::scalar> AntecedentNode::doEvalDerivativeWrtInputs()
 {
+	std::vector<fl::scalar> res;
+
+	const std::vector<fl::scalar> inputs = this->inputs();
+
 	if (dynamic_cast<fl::Minimum*>(p_norm_)
 		|| dynamic_cast<fl::Maximum*>(p_norm_))
 	{
 		// The derivative is 0 for all inputs, excepts for the one
-		// corresponding to the min (or max) for which the derivative is the
-		// associated weight
+		// corresponding to the min (or max) for which the derivative is 1
 
-		const fl::scalar fx = this->eval(inputFirst, inputLast, weightFirst, weightLast);
+		const fl::scalar fx = this->eval();
 
-		std::vector<fl::scalar> res;
-		while (inputFirst != inputLast && weightFirst != weightLast)
+		for (std::size_t i = 0,
+						 n = inputs.size();
+			 i < n;
+			 ++i)
 		{
-			const fl::scalar in = *inputFirst;
-			const fl::scalar w = *weightFirst;
-			const fl::scalar val = w*in;
+			const fl::scalar in = inputs[i];
 
-			if (fl::detail::FloatTraits<fl::scalar>::EssentiallyEqual(fx, val))
+			if (fl::detail::FloatTraits<fl::scalar>::EssentiallyEqual(fx, in))
 			{
-				res.push_back(w);
+				res.push_back(1);
 			}
 			else
 			{
 				res.push_back(0);
 			}
-
-			++inputFirst;
-			++weightFirst;
 		}
-
-		return res;
 	}
 	else if (dynamic_cast<fl::AlgebraicProduct*>(p_norm_))
 	{
 		// The derivative for a certain input i is given by the product of
-		// all the weights and inputs but i
+		// all the inputs but i
 
-		std::vector<fl::scalar> res;
-
-		ForwardIterator inputIt = inputFirst;
-		ForwardIterator weightIt = weightFirst;
-		while (inputFirst != inputLast && weightFirst != weightLast)
+		for (std::size_t i = 0,
+						 n = inputs.size();
+			 i < n;
+			 ++i)
 		{
 			fl::scalar prod = 1;
-			while (inputIt != inputLast && weightIt != weightLast)
+			for (std::size_t j = 0; j < n; ++j)
 			{
-				const fl::scalar w = *weightIt;
-
-				if (inputIt != inputFirst)
+				if (j != i)
 				{
-					const fl::scalar in = *inputIt;
+					const fl::scalar in = inputs[j];
 
-					prod *= in
+					prod *= in;
 				}
-				prod *= w;
-
-				++inputIt;
-				++weightIt;
 			}
 
 			res.push_back(prod);
-
-			++inputFirst;
-			++weightFirst;
 		}
-
-		return res;
 	}
 	else if (dynamic_cast<fl::AlgebraicSum*>(p_norm_))
 	{
@@ -329,47 +364,37 @@ private: std::vector<fl::scalar> AntecedentNode::doEvalDerivativeWrtInput(Forwar
 		//  \frac{\partial [x_1 + x_2 - (x_1*x_2) + x_3 - (x_1 + x_2 - (x_1*x_2))*x_3 + x_4 - (x_1 + x_2 - (x_1*x_2) + x_3 - (x_1 + x_2 - (x_1*x_2))*x_3)*x_4 + ...]}{\partial x_1}
 		//  = 1 - x_2 - x_3 - x_2*x_3 - x_4 - x_2*x_4 - x_3*x_4 - x_2*x_3*x_4 + ...
 		//  = (1-x2)*(1-x3)*(1-x4)*...
-		// In order to keep into account weights we have:
-		//  \frac{\partial [w_1*x_1 + w_2*x_2 - (w_1*x_1*w_2*x_2) + w_3*x_3 - (w_1*x_1 + w_2*x_2 - (w_1*x_1*w_2*x_2))*w_3*x_3 + w_4*x_4 - (w_1*x_1 + w_2*x_2 - (w_1*x_1*w_2*x_2) + w_3*x_3 - (w_1*x_1 + w_2*x_2 - (w_1*x_1*w_2*x_2))*w_3*x_3)*w_4*x_4 + ...]}{\partial x_1}
-		//  = w_1*(1-w_2*x_2)*(1-w_3*x_3)*(1-w_4*x_4)*...
 
-		std::vector<fl::scalar> res;
-
-		ForwardIterator inputIt = inputFirst;
-		ForwardIterator weightIt = weightFirst;
-		while (inputFirst != inputLast && weightFirst != weightLast)
+		for (std::size_t i = 0,
+						 n = inputs.size();
+			 i < n;
+			 ++i)
 		{
 			fl::scalar prod = 1;
-			while (inputIt != inputLast && weightIt != weightLast)
+			for (std::size_t j = 0; j < n; ++j)
 			{
-				const fl::scalar w = *weightIt;
-
-				if (inputIt != inputFirst)
+				if (j != i)
 				{
-					const fl::scalar in = *inputIt;
+					const fl::scalar in = inputs[i];
 
 					prod *= (1-in);
 				}
-				prod *= w;
-
-				++inputIt;
-				++weightIt;
 			}
 
 			res.push_back(prod);
-
-			++inputFirst;
-			++weightFirst;
 		}
-
-		return res;
 	}
 	else
 	{
 		FL_THROW2(std::runtime_error, "Norm operator '" + p_norm_->className() + "' not yet implemented");
 	}
+
+	return res;
 }
-*/
+
+/////////////
+// Consequent Node
+/////////////
 
 ConsequentNode::ConsequentNode(fl::Term* p_term, fl::TNorm* p_tnorm, Engine* p_engine)
 : Node(p_engine),
@@ -390,15 +415,25 @@ fl::TNorm* ConsequentNode::getTNorm() const
 
 fl::scalar ConsequentNode::doEval()
 {
-	std::vector<fl::scalar> inputs = this->inputs();
+	const std::vector<fl::scalar> inputs = this->inputs();
 
 	if (inputs.size() != 1)
 	{
-		FL_THROW2(std::logic_error, "Rule implication node must have exactly one input");
+		FL_THROW2(std::logic_error, "Consequent node must have exactly one input");
 	}
 
-	return p_tnorm_->compute(inputs.front(), p_term_->membership(1.0));
+	// The last and only input is the one coming from the antecedent layer.
+	return p_tnorm_->compute(inputs.back(), p_term_->membership(1.0));
 }
+
+std::vector<fl::scalar> ConsequentNode::doEvalDerivativeWrtInputs()
+{
+	return std::vector<fl::scalar>(1, p_term_->membership(1.0));
+}
+
+/////////////
+// Accumulation Node
+/////////////
 
 AccumulationNode::AccumulationNode(Engine* p_engine)
 : Node(p_engine)
@@ -407,7 +442,7 @@ AccumulationNode::AccumulationNode(Engine* p_engine)
 
 fl::scalar AccumulationNode::doEval()
 {
-	std::vector<fl::scalar> inputs = this->inputs();
+	const std::vector<fl::scalar> inputs = this->inputs();
 
 	fl::scalar sum = 0;
 
@@ -422,6 +457,15 @@ fl::scalar AccumulationNode::doEval()
 	return sum;
 }
 
+std::vector<fl::scalar> AccumulationNode::doEvalDerivativeWrtInputs()
+{
+	return std::vector<fl::scalar>(this->inputs().size(), 1.0);
+}
+
+/////////////
+// Output Node
+/////////////
+
 OutputNode::OutputNode(Engine* p_engine)
 : Node(p_engine)
 {
@@ -433,10 +477,26 @@ fl::scalar OutputNode::doEval()
 
 	if (inputs.size() != 2)
 	{
-		FL_THROW2(std::logic_error, "Normalization node must have exactly two inputs");
+		FL_THROW2(std::logic_error, "Output node must have exactly two inputs");
 	}
 
 	return inputs[0]/inputs[1];
+}
+
+std::vector<fl::scalar> OutputNode::doEvalDerivativeWrtInputs()
+{
+	std::vector<fl::scalar> inputs = this->inputs();
+
+	if (inputs.size() != 2)
+	{
+		FL_THROW2(std::logic_error, "Output node must have exactly two inputs");
+	}
+
+	std::vector<fl::scalar> res(2);
+	res[0] = 1.0/inputs[1];
+	res[1] = -inputs[1]/fl::detail::Sqr(inputs[0]);
+
+	return res;
 }
 
 
@@ -988,12 +1048,35 @@ std::vector<ConsequentNode*> Engine::getConsequentLayer() const
 
 std::vector<AccumulationNode*> Engine::getAccumulationLayer() const
 {
-	return sumNodes_;
+	return accumulationNodes_;
 }
 
 std::vector<OutputNode*> Engine::getOutputLayer() const
 {
 	return outputNodes_;
+}
+
+std::vector<Node*> Engine::getLayer(Engine::LayerCategory layerCat) const
+{
+	switch (layerCat)
+	{
+		case Engine::InputLayer:
+			return std::vector<Node*>(inputNodes_.begin(), inputNodes_.end());
+		case Engine::FuzzificationLayer:
+			return std::vector<Node*>(fuzzificationNodes_.begin(), fuzzificationNodes_.end());
+		case Engine::InputHedgeLayer:
+			return std::vector<Node*>(inputHedgeNodes_.begin(), inputHedgeNodes_.end());
+		case Engine::AntecedentLayer:
+			return std::vector<Node*>(antecedentNodes_.begin(), antecedentNodes_.end());
+		case Engine::ConsequentLayer:
+			return std::vector<Node*>(consequentNodes_.begin(), consequentNodes_.end());
+		case Engine::AccumulationLayer:
+			return std::vector<Node*>(accumulationNodes_.begin(), accumulationNodes_.end());
+		case Engine::OutputLayer:
+			return std::vector<Node*>(outputNodes_.begin(), outputNodes_.end());
+	}
+
+	FL_THROW2(std::runtime_error, "Unexpected error");
 }
 
 std::vector<fl::scalar> Engine::evalInputLayer()
@@ -1023,7 +1106,7 @@ std::vector<fl::scalar> Engine::evalConsequentLayer()
 
 std::vector<fl::scalar> Engine::evalAccumulationLayer()
 {
-	return this->evalLayer(sumNodes_.begin(), sumNodes_.end());
+	return this->evalLayer(accumulationNodes_.begin(), accumulationNodes_.end());
 }
 
 std::vector<fl::scalar> Engine::evalOutputLayer()
@@ -1124,7 +1207,31 @@ std::vector<fl::scalar> Engine::evalLayer(Engine::LayerCategory layer)
 			return this->evalOutputLayer();
 	}
 
-	FL_THROW2(std::runtime_error, "Unexpected behavior");
+	FL_THROW2(std::runtime_error, "Unexpected error");
+}
+
+Engine::LayerCategory Engine::getNextLayerCategory(Engine::LayerCategory cat) const
+{
+	if (cat == Engine::OutputLayer)
+	{
+		return Engine::OutputLayer;
+	}
+
+	int nextCat = static_cast<int>(cat)+1;
+
+	return static_cast<Engine::LayerCategory>(nextCat);
+}
+
+Engine::LayerCategory Engine::getPreviousLayerCategory(Engine::LayerCategory cat) const
+{
+	if (cat == Engine::InputLayer)
+	{
+		return Engine::InputLayer;
+	}
+
+	int prevCat = static_cast<int>(cat)-1;
+
+	return static_cast<Engine::LayerCategory>(prevCat);
 }
 
 void Engine::clear()
@@ -1178,13 +1285,13 @@ void Engine::clear()
 	consequentNodes_.clear();
 
 	for (std::size_t i = 0,
-					 n = sumNodes_.size();
+					 n = accumulationNodes_.size();
 		 i < n;
 		 ++i)
 	{
-		delete sumNodes_[i];
+		delete accumulationNodes_[i];
 	}
-	sumNodes_.clear();
+	accumulationNodes_.clear();
 
 	for (std::size_t i = 0,
 					 n = outputNodes_.size();
@@ -1198,12 +1305,12 @@ void Engine::clear()
 
 std::vector<Node*> Engine::inputConnections(const Node* p_node) const
 {
-	return inConns_.at(p_node);
+	return inConns_.count(p_node) > 0 ? inConns_.at(p_node) : std::vector<Node*>();
 }
 
 std::vector<Node*> Engine::outputConnections(const Node* p_node) const
 {
-	return outConns_.at(p_node);
+	return outConns_.count(p_node) > 0 ? outConns_.at(p_node) : std::vector<Node*>();
 }
 
 void Engine::check()
@@ -1470,7 +1577,7 @@ void Engine::build()
 
 		// Create a first summation node to compute the sum of the implication outputs
 		p_node = new AccumulationNode(this);
-		sumNodes_.push_back(p_node);
+		accumulationNodes_.push_back(p_node);
 		// Connect every rule implication node to this node
 		for (typename std::vector<ConsequentNode*>::iterator nodeIt = consequentNodes_.begin(),
 																  nodeEndIt = consequentNodes_.end();
@@ -1484,7 +1591,7 @@ void Engine::build()
 
 		// Create a second summation node to compute the sum of all the antecedents' firing strength
 		p_node = new AccumulationNode(this);
-		sumNodes_.push_back(p_node);
+		accumulationNodes_.push_back(p_node);
 		// Connect every antecedent node to this node
 		for (typename std::vector<AntecedentNode*>::iterator nodeIt = antecedentNodes_.begin(),
 												   nodeEndIt = antecedentNodes_.end();
@@ -1507,14 +1614,14 @@ void Engine::build()
 		outputNodes_.push_back(p_node);
 
 		// Connect every summation node to this node
-		for (typename std::vector<AccumulationNode*>::iterator nodeIt = sumNodes_.begin(),
-												   nodeEndIt = sumNodes_.end();
+		for (typename std::vector<AccumulationNode*>::iterator nodeIt = accumulationNodes_.begin(),
+												   nodeEndIt = accumulationNodes_.end();
 			 nodeIt != nodeEndIt;
 			 ++nodeIt)
 		{
-			Node* p_sumNode = *nodeIt;
+			Node* p_accNode = *nodeIt;
 
-			this->connect(p_sumNode, p_node);
+			this->connect(p_accNode, p_node);
 		}
 	}
 
@@ -1528,6 +1635,28 @@ void Engine::build()
 //		{
 //			order_ = 1;
 //		}
+//[XXX]
+std::cerr << "ANFIS:" << std::endl;
+Engine::LayerCategory layerCat = Engine::InputLayer;
+while (1)
+{
+    std::vector<Node*> nodes = getLayer(layerCat);
+    std::cerr << "- Layer: " << layerCat << std::endl;
+    std::cerr << " - #Nodes: " << nodes.size() << std::endl;
+    for (std::size_t i = 0; i < nodes.size(); ++i)
+    {
+        std::cerr << " - Node #" << i << ", #inputs: " << nodes[i]->inputConnections().size() << ", #output: " << nodes[i]->outputConnections().size() << std::endl;
+    }
+    if (layerCat == Engine::OutputLayer)
+    {
+        break;
+    }
+    layerCat = getNextLayerCategory(layerCat);
+}
+//oss << std::endl << FllExporter().toString(this);
+std::cerr << std::endl;
+//[/XXX]
+
 }
 
 void Engine::connect(Node* p_from, Node* p_to)

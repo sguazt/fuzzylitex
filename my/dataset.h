@@ -135,6 +135,16 @@ class DataSet
 		return entries_.erase(pos);
 	}
 
+	public: const DataSetEntry<ValueT>& get(std::size_t idx) const
+	{
+		return entries_.at(idx);
+	}
+
+	public: void get(const DataSetEntry<ValueT>& entry, std::size_t idx) const
+	{
+		return entries_[idx] = entry;
+	}
+
 	public: std::size_t size() const
 	{
 		return entries_.size();
