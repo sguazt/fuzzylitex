@@ -98,6 +98,8 @@ class InputHedgeNode: public Node
 public:
 	InputHedgeNode(fl::Hedge* p_hedge, Engine* p_engine);
 
+	~InputHedgeNode();
+
 	fl::Hedge* getHedge() const;
 
 private:

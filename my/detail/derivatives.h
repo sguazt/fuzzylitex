@@ -38,13 +38,13 @@ std::vector<fl::scalar> EvalBellTermDerivativeWrtParams(const fl::Bell& term, fl
 	std::vector<fl::scalar> res(3);
 
 	// Center parameter
-	res[2] = (x != c)
+	res[0] = (x != c)
 			 ? 2.0*s*xnp/((x-c)*den)
 			 : 0;
 	// Width parameter
-	res[0] = 2.0*s*xnp/(w*den);
+	res[1] = 2.0*s*xnp/(w*den);
 	// Slope parameter
-	res[1] = (x != c && x != (c+w))
+	res[2] = (x != c && x != (c+w))
 			 ? -std::log(detail::Sqr(xn))*xnp/den
 			 : 0;
 

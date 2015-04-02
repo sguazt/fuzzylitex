@@ -95,7 +95,37 @@ class RecursiveLeastSquaresEstimator
 		return lambda_;
 	}
 
-	public: void reset(ValueT delta = 1e+4)
+	//public: void setCovarianceInverse(const std::vector< std::vector<ValueT> >& P)
+	//{
+	//	P_ = P;
+	//}
+
+	public: std::vector< std::vector<ValueT> > getCovarianceInverse() const
+	{
+		return P_;
+	}
+
+	//public: void setRegressor(const std::vector<ValueT>& phi)
+	//{
+	//	phi_ = phi;
+	//}
+
+	public: std::vector<ValueT> getRegressor() const
+	{
+		return phi_;
+	}
+
+	public: std::vector< std::vector<ValueT> > getEstimatedParameters() const
+	{
+		return Theta_;
+	}
+
+	public: std::size_t numberOfIterations() const
+	{
+		return count_;
+	}
+
+	public: void reset(ValueT delta = 1.0e+6)
 	{
 		//const std::size_t n = ny_+p_*nu_;
 		const std::size_t n = p_*nu_;
@@ -152,6 +182,7 @@ class RecursiveLeastSquaresEstimator
 		const std::size_t n = phi_.size();
 
 //std::cerr << "COUNT=" << count_ << std::endl;//XXX
+//std::cerr << "y(k)="; fl::detail::VectorOutput(std::cerr, y); std::cerr << std::endl; //XXX
 //std::cerr << "phi(k)="; fl::detail::VectorOutput(std::cerr, phi_); std::cerr << std::endl; //XXX
 //std::cerr << "P(k)="; fl::detail::MatrixOutput(std::cerr, P_); std::cerr << std::endl; //XXX
 //std::cerr << "Theta(k)="; fl::detail::MatrixOutput(std::cerr, Theta_); std::cerr << std::endl; //XXX
@@ -191,6 +222,7 @@ class RecursiveLeastSquaresEstimator
 
 				// Update the covariance matrix by means of the matrix inversion lemma (use the Woodbury's identity: A=B^{-1}+CD^{-1}C^T ==> A^{-1}=B-BC(D+C^TBC)^{-1}C^TB)
 				//  $P(k+1) = \frac{1}{\lambda(k)}\left[I-l(k+1)\Phi^T(k+1)\right]P(k)$
+				//P_ = fl::detail::MatrixScalarProduct(fl::detail::MatrixDiff(P_, fl::detail::MatrixScalarProduct(fl::detail::MatrixProduct(fl::detail::VectorOuterProduct<MatrixType>(fl::detail::MatrixVectorProduct(P_, phi_), phi_), P_), 1.0/(lambda_+fl::detail::VectorInnerProduct(fl::detail::VectorMatrixProduct(phi_, P_), phi_)))), 1.0/lambda_);
 				P_ = fl::detail::MatrixScalarProduct(
 						fl::detail::MatrixProduct(
 							fl::detail::MatrixDiff(
@@ -223,16 +255,6 @@ class RecursiveLeastSquaresEstimator
 //std::cerr << "Theta(k+1)="; fl::detail::MatrixOutput(std::cerr, Theta_); std::cerr << std::endl; //XXX
 
 		return yhat;
-	}
-
-	public: std::vector< std::vector<ValueT> > getEstimatedParameters() const
-	{
-		return Theta_;
-	}
-
-	public: std::size_t numberOfIterations() const
-	{
-		return count_;
 	}
 
 

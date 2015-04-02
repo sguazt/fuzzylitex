@@ -207,7 +207,7 @@ std::vector<fl::scalar> FuzzificationNode::evalDerivativeWrtParams()
 		FL_THROW2(std::logic_error, "Fuzzification node must have exactly one input");
 	}
 
-	return fl::detail::EvalBellTermDerivativeWrtParams(dynamic_cast<fl::Bell&>(*p_term_), inputs.back());
+	return fl::detail::EvalTermDerivativeWrtParams(p_term_, inputs.back());
 }
 
 fl::scalar FuzzificationNode::doEval()
@@ -235,6 +235,14 @@ InputHedgeNode::InputHedgeNode(fl::Hedge* p_hedge, Engine* p_engine)
 : Node(p_engine),
   p_hedge_(p_hedge)
 {
+}
+
+InputHedgeNode::~InputHedgeNode()
+{
+	if (p_hedge_)
+	{
+		delete p_hedge_;
+	}
 }
 
 fl::Hedge* InputHedgeNode::getHedge() const
@@ -428,6 +436,29 @@ fl::scalar ConsequentNode::doEval()
 
 std::vector<fl::scalar> ConsequentNode::doEvalDerivativeWrtInputs()
 {
+//{//[XXX]
+//std::cerr << "PHASE #1 - Backward pass for Consequent Node: ";
+//if (dynamic_cast<fl::Linear*>(p_term_))
+//{
+//	fl::Linear* p_linear = dynamic_cast<fl::Linear*>(p_term_);
+//	for (std::size_t i = 0; i < p_linear->getEngine()->inputVariables().size(); ++i) {
+//		if (i < p_linear->coefficients().size())
+//		{
+//			std::cerr << " + " << p_linear->getEngine()->inputVariables().at(i)->getInputValue() << "*" << p_linear->coefficients().at(i);
+//		}
+//	}
+//	if (p_linear->coefficients().size() > p_linear->getEngine()->inputVariables().size())
+//	{
+//		std::cerr << "+ " << p_linear->coefficients().back();
+//	}
+//}
+//else
+//{
+//	fl::Constant* p_const = dynamic_cast<fl::Constant*>(p_term_);
+//	std::cerr << p_const->getValue();
+//}
+//std::cerr << std::endl;
+//}//[/XXX]
 	return std::vector<fl::scalar>(1, p_term_->membership(1.0));
 }
 
@@ -480,6 +511,11 @@ fl::scalar OutputNode::doEval()
 		FL_THROW2(std::logic_error, "Output node must have exactly two inputs");
 	}
 
+	if (fl::detail::FloatTraits<fl::scalar>::ApproximatelyZero(inputs[1]))
+	{
+		return fl::nan;
+	}
+
 	return inputs[0]/inputs[1];
 }
 
@@ -492,9 +528,14 @@ std::vector<fl::scalar> OutputNode::doEvalDerivativeWrtInputs()
 		FL_THROW2(std::logic_error, "Output node must have exactly two inputs");
 	}
 
+	if (fl::detail::FloatTraits<fl::scalar>::ApproximatelyZero(inputs[1]))
+	{
+		return std::vector<fl::scalar>(inputs.size(), fl::nan);
+	}
+
 	std::vector<fl::scalar> res(2);
 	res[0] = 1.0/inputs[1];
-	res[1] = -inputs[1]/fl::detail::Sqr(inputs[0]);
+	res[1] = -inputs[0]/fl::detail::Sqr(inputs[1]);
 
 	return res;
 }
@@ -1238,6 +1279,33 @@ void Engine::clear()
 {
 	inConns_.clear();
 	outConns_.clear();
+
+	for (std::size_t i = 0,
+					 n = inputs_.size();
+		 i < n;
+		 ++i)
+	{
+		delete inputs_[i];
+	}
+	inputs_.clear();
+
+	for (std::size_t i = 0,
+					 n = outputs_.size();
+		 i < n;
+		 ++i)
+	{
+		delete outputs_[i];
+	}
+	outputs_.clear();
+
+	for (std::size_t i = 0,
+					 n = ruleBlocks_.size();
+		 i < n;
+		 ++i)
+	{
+		delete ruleBlocks_[i];
+	}
+	ruleBlocks_.clear();
 
 	for (std::size_t i = 0,
 					 n = inputNodes_.size();
