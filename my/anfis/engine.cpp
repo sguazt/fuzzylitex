@@ -1062,6 +1062,20 @@ void Engine::restart()
 	throw std::runtime_error("Engine::restart to be implemented");
 }
 
+std::vector<fl::scalar> Engine::getInputValues() const
+{
+	const std::size_t n = inputNodes_.size();
+
+	std::vector<fl::scalar> inputs(n);
+
+	for (std::size_t i = 0; i < n; ++i)
+	{
+		inputs[i] = inputNodes_[i]->getInputVariable()->getInputValue();
+	}
+
+	return inputs;
+}
+
 std::vector<InputNode*> Engine::getInputLayer() const
 {
 	return inputNodes_;
@@ -1157,6 +1171,32 @@ std::vector<fl::scalar> Engine::evalOutputLayer()
 
 std::vector<fl::scalar> Engine::eval()
 {
+/*
+std::cerr << "Evaluating ANFIS against input: "; fl::detail::VectorOutput(std::cerr, this->getInputValues()); std::cerr << std::endl;//XXX
+	std::vector<fl::scalar> out;
+	// Eval input layer
+	out = this->evalInputLayer();
+std::cerr << "- Output from Layer " << Engine::InputLayer << ": "; fl::detail::VectorOutput(std::cerr, out); std::cerr << std::endl;//XXX
+	// Eval fuzzification layer
+	out = this->evalFuzzificationLayer();
+std::cerr << "- Output from Layer " << Engine::FuzzificationLayer << ": "; fl::detail::VectorOutput(std::cerr, out); std::cerr << std::endl;//XXX
+	// Eval hedge layer
+	out = this->evalInputHedgeLayer();
+std::cerr << "- Output from Layer " << Engine::InputHedgeLayer << ": "; fl::detail::VectorOutput(std::cerr, out); std::cerr << std::endl;//XXX
+	// Eval rule antecedent layer
+	out = this->evalAntecedentLayer();
+std::cerr << "- Output from Layer " << Engine::AntecedentLayer << ": "; fl::detail::VectorOutput(std::cerr, out); std::cerr << std::endl;//XXX
+	// Eval rule consequent layer
+	out = this->evalConsequentLayer();
+std::cerr << "- Output from Layer " << Engine::ConsequentLayer << ": "; fl::detail::VectorOutput(std::cerr, out); std::cerr << std::endl;//XXX
+	// Eval rule accumulation layer
+	out = this->evalAccumulationLayer();
+std::cerr << "- Output from Layer " << Engine::AccumulationLayer << ": "; fl::detail::VectorOutput(std::cerr, out); std::cerr << std::endl;//XXX
+	// Eval rule strength normalization layer
+	out = this->evalOutputLayer();
+std::cerr << "- Output from Layer " << Engine::OutputLayer << ": "; fl::detail::VectorOutput(std::cerr, out); std::cerr << std::endl;//XXX
+	return out;
+*/
 	// Eval input layer
 	this->evalInputLayer();
 	// Eval fuzzification layer

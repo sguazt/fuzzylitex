@@ -370,7 +370,7 @@ public:
 	std::vector<Node*> outputConnections(const Node* p_node) const;
 
 	template <typename IterT>
-	void setInputs(IterT first, IterT last)
+	void setInputValues(IterT first, IterT last)
 	{
 		std::vector<InputNode*>::iterator nodeIt = inputNodes_.begin();
 		std::vector<InputNode*>::iterator nodeEndIt = inputNodes_.end();
@@ -388,6 +388,8 @@ public:
 			FL_THROW2(std::invalid_argument, "Wrong number of inputs");
 		}
 	}
+
+	std::vector<fl::scalar> getInputValues() const;
 
 	std::vector<InputNode*> getInputLayer() const;
 
@@ -414,14 +416,14 @@ public:
 	template <typename IterT>
 	std::vector<fl::scalar> eval(IterT first, IterT last)
 	{
-		this->setInputs(first, last);
+		this->setInputValues(first, last);
 		return this->eval();
 	}
 
 	template <typename IterT>
 	std::vector<fl::scalar> evalTo(IterT first, IterT last, LayerCategory layer)
 	{
-		this->setInputs(first, last);
+		this->setInputValues(first, last);
 		return this->evalTo(layer);
 	}
 

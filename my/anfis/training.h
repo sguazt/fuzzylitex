@@ -225,7 +225,7 @@ class Jang1993HybridLearningAlgorithm
 		//stepSize_ = stepSizeInit_;
 		//stepSizeErrWindow_.clear();
 
-		fl::scalar totErr = 0;
+		fl::scalar rmse = 0; // The Root Mean Squared Error (RMSE) for this epoch
 
 		// Forwards inputs from input layer to antecedent layer, and estimate parameters with RLS
 		//std::vector< std::vector<fl::scalar> > antecedentValues;
@@ -462,8 +462,8 @@ std::cerr << "]" << std::endl;//XXX
 
 				se += fl::detail::Sqr(targetOut[i]-out);
 			}
-			totErr += se;
-//std::cerr << "PHASE #1 - Current error: " <<  se << " - Total error: " << totErr << std::endl;//XXX
+			rmse += se;
+//std::cerr << "PHASE #1 - Current error: " <<  se << " - Total error: " << rmse << std::endl;//XXX
 
 			// Backward errors
 			std::map<const Node*,fl::scalar> dEdOs;
@@ -557,14 +557,13 @@ std::cerr << "]" << std::endl;//XXX
 			}
 		}
 
-		totErr /= data.size();
-		totErr = std::sqrt(totErr);
+		rmse = std::sqrt(rmse/data.size());
 
 		if (stepSizeErrWindow_.size() == stepSizeErrWindowLen_)
 		{
-			stepSizeErrWindow_.pop_front();
+			stepSizeErrWindow_.pop_back();
 		}
-		stepSizeErrWindow_.push_back(totErr);
+		stepSizeErrWindow_.push_front(rmse);
 
 		// Update parameters of input terms
 		{
@@ -595,7 +594,7 @@ std::cerr << "]" << std::endl;//XXX
 					FuzzificationNode* p_node = fuzzyLayer[i];
 					std::vector<fl::scalar> params = detail::GetTermParameters(p_node->getTerm());
 
-//std::cerr << "PHASE #2 - Node #" << i << ": " << p_node << " - Old Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;///XXX
+std::cerr << "PHASE #2 - Node #" << i << ": " << p_node << " - Old Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;///XXX
 //std::cerr << "PHASE #2 - Node #" << i << ": " << p_node << " - dEdPs: "; fl::detail::VectorOutput(std::cerr, dEdPs_.at(p_node)); std::cerr << std::endl;///XXX
 					for (std::size_t p = 0,
 									 np = dEdPs_.at(p_node).size();
@@ -604,64 +603,77 @@ std::cerr << "]" << std::endl;//XXX
 					{
 						params[p] -= stepSize_*dEdPs_.at(p_node).at(p)/errNorm;
 					}
-//std::cerr << "PHASE #2 - Node #" << i << ": " << p_node << " - New Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;///XXX
+std::cerr << "PHASE #2 - Node #" << i << ": " << p_node << " - New Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;///XXX
 					detail::SetTermParameters(p_node->getTerm(), params.begin(), params.end());
 				}
 			}
 		}
 
 		// Update step-size
-		if (stepSizeIncrRate_ != 1)
+//std::cerr << "STEP-SIZE error window: "; fl::detail::VectorOutput(std::cerr, stepSizeErrWindow_); std::cerr << std::endl;//XXX
+//std::cerr << "STEP-SIZE decr-counter: " << stepSizeDecrCounter_ << ", incr-counter: " << stepSizeIncrCounter_ << std::endl;//XXX
+		if (!fl::detail::FloatTraits<fl::scalar>::EssentiallyEqual(stepSizeDecrRate_, 1))
 		{
-			if (stepSizeIncrCounter_ == (stepSizeErrWindowLen_-1))
-			{
-				bool update = true;
-				for (std::size_t i = 0; i < (stepSizeErrWindowLen_-1); ++i)
-				{
-					update &= (stepSizeErrWindow_[stepSizeIncrCounter_-i] < stepSizeErrWindow_[stepSizeIncrCounter_-i-1]);
-				}
-				if (update)
-				{
-					stepSize_ *= stepSizeIncrRate_;
-				}
-
-				stepSizeIncrCounter_ = 0;
-			}
-			else
-			{
-				++stepSizeIncrCounter_;
-			}
-		}
-		if (stepSizeDecrRate_ != 1)
-		{
-			if (stepSizeDecrCounter_ == 4)
+			if (stepSizeDecrCounter_ == (stepSizeErrWindowLen_-1))
 			{
 				bool update = true;
 				for (std::size_t i = 0; i < (stepSizeErrWindowLen_-1); ++i)
 				{
 					if (i % 2)
 					{
-						update &= (stepSizeErrWindow_[stepSizeDecrCounter_-i] > stepSizeErrWindow_[stepSizeDecrCounter_-i-1]);
+						//update &= (stepSizeErrWindow_[stepSizeDecrCounter_-i] > stepSizeErrWindow_[stepSizeDecrCounter_-i-1]);
+						update &= (stepSizeErrWindow_[i] > stepSizeErrWindow_[i+1]);
 					}
 					else
 					{
-						update &= (stepSizeErrWindow_[stepSizeDecrCounter_-i] < stepSizeErrWindow_[stepSizeDecrCounter_-i-1]);
+						//update &= (stepSizeErrWindow_[stepSizeDecrCounter_-i] < stepSizeErrWindow_[stepSizeDecrCounter_-i-1]);
+						update &= (stepSizeErrWindow_[i] < stepSizeErrWindow_[i+1]);
 					}
 				}
-
 				if (update)
 				{
+//std::cerr << "STEP-SIZE (decreasing) - old: " << stepSize_ << ", new: " << (stepSize_*stepSizeDecrRate_) << std::endl;//XXX
 					stepSize_ *= stepSizeDecrRate_;
+					stepSizeDecrCounter_ = 1;
 				}
-				stepSizeDecrCounter_ = 0;
+				else
+				{
+					++stepSizeDecrCounter_;
+				}
 			}
 			else
 			{
 				++stepSizeDecrCounter_;
 			}
 		}
+		if (!fl::detail::FloatTraits<fl::scalar>::EssentiallyEqual(stepSizeIncrRate_, 1))
+		{
+			if (stepSizeIncrCounter_ == (stepSizeErrWindowLen_-1))
+			{
+				bool update = true;
+				for (std::size_t i = 0; i < (stepSizeErrWindowLen_-1); ++i)
+				{
+					//update &= (stepSizeErrWindow_[stepSizeIncrCounter_-i] < stepSizeErrWindow_[stepSizeIncrCounter_-i-1]);
+					update &= (stepSizeErrWindow_[i] < stepSizeErrWindow_[i+1]);
+				}
+				if (update)
+				{
+//std::cerr << "STEP-SIZE (increasing) - old: " << stepSize_ << ", new: " << (stepSize_*stepSizeIncrRate_) << std::endl;//XXX
+					stepSize_ *= stepSizeIncrRate_;
+					stepSizeIncrCounter_ = 1;
+				}
+				else
+				{
+					++stepSizeIncrCounter_;
+				}
+			}
+			else
+			{
+				++stepSizeIncrCounter_;
+			}
+		}
 
-		return totErr;
+		return rmse;
 	}
 
 	private: void init()
