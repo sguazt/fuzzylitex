@@ -1,5 +1,5 @@
-#ifndef FL_ANN_DETAIL_RANDOM_H
-#define FL_ANN_DETAIL_RANDOM_H
+#ifndef FL_DETAIL_RANDOM_H
+#define FL_DETAIL_RANDOM_H
 
 
 //#include <cstdlib>
@@ -143,4 +143,4 @@ RealT RandNormal(RealT mean, RealT sd, EngineT& eng)
 
 }} // Namespace fl::detail
 
-#endif // FL_ANN_DETAIL_RANDOM_H
+#endif // FL_DETAIL_RANDOM_H

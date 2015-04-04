@@ -1,5 +1,5 @@
-#ifndef FL_DETAIL_MATH_HPP
-#define FL_DETAIL_MATH_HPP
+#ifndef FL_DETAIL_MATH_H
+#define FL_DETAIL_MATH_H
 
 
 #include <cstddef>
@@ -398,4 +398,4 @@ VectorT VectorMatrixProduct(const VectorT& v, const MatrixT& A)
 }} // Namespace fl::detail
 
 
-#endif // FL_DETAIL_MATH_HPP
+#endif // FL_DETAIL_MATH_H

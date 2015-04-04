@@ -1,5 +1,5 @@
-#ifndef FL_FIS_GENERATORS_H
-#define FL_FIS_GENERATORS_H
+#ifndef FL_FIS_BUILDERS_H
+#define FL_FIS_BUILDERS_H
 
 #include <fl/commons.h>
 #include <fl/dataset.h>
@@ -379,4 +379,4 @@ const std::string GridPartitionFisBuilder<T>::DefaultOutputTerm = fl::Linear().c
 
 } // Namespace fl
 
-#endif // FL_FIS_GENERATORS_H
+#endif // FL_FIS_BUILDERS_H

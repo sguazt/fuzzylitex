@@ -87,7 +87,7 @@ class RecursiveLeastSquaresEstimator
 
 	public: void setForgettingFactor(ValueT lambda)
 	{
-		return lambda_ = lambda;
+		lambda_ = lambda;
 	}
 
 	public: ValueT getForgettingFactor() const
