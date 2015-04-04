@@ -2,194 +2,74 @@
 #define FL_ANFIS_TRAINING_H
 
 
-//#include <boost/noncopyable.hpp>
 #include <cstddef>
 #include <deque>
 #include <fl/anfis/engine.h>
-#include <fl/fuzzylite.h>
-#include <fl/Headers.h>
 #include <fl/dataset.h>
 #include <fl/detail/math.h>
 #include <fl/detail/rls.h>
+#include <fl/detail/terms.h>
 #include <fl/detail/traits.h>
+#include <fl/fuzzylite.h>
+#include <fl/Headers.h>
 #include <map>
 #include <vector>
 
 
 namespace fl { namespace anfis {
 
-namespace detail {
-
-std::vector<fl::scalar> GetTermParameters(const fl::Term* p_term)
-{
-	//FIXME: it would be a good idea to add a pure virtual method in fl::Term
-	//       class that returns the vector of parameters, like:
-	//         virtual std::vector<fl::scalar> getParameters() = 0;
-
-	std::vector<fl::scalar> params;
-
-	if (dynamic_cast<const fl::Bell*>(p_term))
-	{
-		const fl::Bell* p_realTerm = dynamic_cast<const fl::Bell*>(p_term);
-		params.push_back(p_realTerm->getCenter());
-		params.push_back(p_realTerm->getWidth());
-		params.push_back(p_realTerm->getSlope());
-	}
-	else if (dynamic_cast<const fl::Concave*>(p_term))
-	{
-		const fl::Concave* p_realTerm = dynamic_cast<const fl::Concave*>(p_term);
-		params.push_back(p_realTerm->getInflection());
-		params.push_back(p_realTerm->getEnd());
-	}
-	else if (dynamic_cast<const fl::Constant*>(p_term))
-	{
-		const fl::Constant* p_realTerm = dynamic_cast<const fl::Constant*>(p_term);
-		params.push_back(p_realTerm->getValue());
-	}
-	else if (dynamic_cast<const fl::Cosine*>(p_term))
-	{
-		const fl::Cosine* p_realTerm = dynamic_cast<const fl::Cosine*>(p_term);
-		params.push_back(p_realTerm->getCenter());
-		params.push_back(p_realTerm->getWidth());
-	}
-	else if (dynamic_cast<const fl::Discrete*>(p_term))
-	{
-		const fl::Discrete* p_realTerm = dynamic_cast<const fl::Discrete*>(p_term);
-		const std::vector<fl::Discrete::Pair> pairs = p_realTerm->xy();
-		const std::size_t np = pairs.size();
-		for (std::size_t p = 0; p < np; ++p)
-		{
-			params.push_back(pairs[p].first);
-			params.push_back(pairs[p].second);
-		}
-	}
-	else if (dynamic_cast<const fl::Linear*>(p_term))
-	{
-		const fl::Linear* p_realTerm = dynamic_cast<const fl::Linear*>(p_term);
-		params = p_realTerm->coefficients();
-	}
-	if (dynamic_cast<const fl::Ramp*>(p_term))
-	{
-		const fl::Ramp* p_realTerm = dynamic_cast<const fl::Ramp*>(p_term);
-		params.push_back(p_realTerm->getStart());
-		params.push_back(p_realTerm->getEnd());
-	}
-	if (dynamic_cast<const fl::Sigmoid*>(p_term))
-	{
-		const fl::Sigmoid* p_realTerm = dynamic_cast<const fl::Sigmoid*>(p_term);
-		params.push_back(p_realTerm->getInflection());
-		params.push_back(p_realTerm->getSlope());
-	}
-	else if (dynamic_cast<const fl::SShape*>(p_term))
-	{
-		const fl::SShape* p_realTerm = dynamic_cast<const fl::SShape*>(p_term);
-		params.push_back(p_realTerm->getStart());
-		params.push_back(p_realTerm->getEnd());
-	}
-	else if (dynamic_cast<const fl::Triangle*>(p_term))
-	{
-		const fl::Triangle* p_realTerm = dynamic_cast<const fl::Triangle*>(p_term);
-		params.push_back(p_realTerm->getVertexA());
-		params.push_back(p_realTerm->getVertexB());
-		params.push_back(p_realTerm->getVertexC());
-	}
-	else if (dynamic_cast<const fl::ZShape*>(p_term))
-	{
-		const fl::ZShape* p_realTerm = dynamic_cast<const fl::ZShape*>(p_term);
-		params.push_back(p_realTerm->getStart());
-		params.push_back(p_realTerm->getEnd());
-	}
-
-	return params;
-}
-
-template <typename IterT>
-void SetTermParameters(fl::Term* p_term, IterT first, IterT last)
-{
-	//FIXME: it would be a good idea to add a pure virtual method in fl::Term
-	//       class that returns the vector of parameters, like:
-	//         virtual std::vector<fl::scalar> getParameters() = 0;
-
-	const std::vector<fl::scalar> params(first, last);
-
-	if (dynamic_cast<fl::Bell*>(p_term))
-	{
-		fl::Bell* p_realTerm = dynamic_cast<fl::Bell*>(p_term);
-		p_realTerm->setCenter(params[0]);
-		p_realTerm->setWidth(params[1]);
-		p_realTerm->setSlope(params[2]);
-	}
-	else if (dynamic_cast<fl::Concave*>(p_term))
-	{
-		fl::Concave* p_realTerm = dynamic_cast<fl::Concave*>(p_term);
-		p_realTerm->setInflection(params[0]);
-		p_realTerm->setEnd(params[1]);
-	}
-	else if (dynamic_cast<fl::Constant*>(p_term))
-	{
-		fl::Constant* p_realTerm = dynamic_cast<fl::Constant*>(p_term);
-		p_realTerm->setValue(params[0]);
-	}
-	else if (dynamic_cast<fl::Cosine*>(p_term))
-	{
-		fl::Cosine* p_realTerm = dynamic_cast<fl::Cosine*>(p_term);
-		p_realTerm->setCenter(params[0]);
-		p_realTerm->setWidth(params[1]);
-	}
-	else if (dynamic_cast<fl::Discrete*>(p_term))
-	{
-		fl::Discrete* p_realTerm = dynamic_cast<fl::Discrete*>(p_term);
-		const std::size_t np = params.size();
-		std::vector<fl::Discrete::Pair> pairs;
-		for (std::size_t p = 0; p < (np-1); p += 2)
-		{
-			pairs.push_back(fl::Discrete::Pair(params[p], params[p+1]));
-		}
-		p_realTerm->setXY(pairs);
-	}
-	else if (dynamic_cast<fl::Linear*>(p_term))
-	{
-		fl::Linear* p_realTerm = dynamic_cast<fl::Linear*>(p_term);
-		p_realTerm->setCoefficients(params);
-	}
-	if (dynamic_cast<fl::Ramp*>(p_term))
-	{
-		fl::Ramp* p_realTerm = dynamic_cast<fl::Ramp*>(p_term);
-		p_realTerm->setStart(params[0]);
-		p_realTerm->setEnd(params[1]);
-	}
-	if (dynamic_cast<fl::Sigmoid*>(p_term))
-	{
-		fl::Sigmoid* p_realTerm = dynamic_cast<fl::Sigmoid*>(p_term);
-		p_realTerm->setInflection(params[0]);
-		p_realTerm->setSlope(params[1]);
-	}
-	else if (dynamic_cast<fl::SShape*>(p_term))
-	{
-		fl::SShape* p_realTerm = dynamic_cast<fl::SShape*>(p_term);
-		p_realTerm->setStart(params[0]);
-		p_realTerm->setEnd(params[1]);
-	}
-	else if (dynamic_cast<fl::Triangle*>(p_term))
-	{
-		fl::Triangle* p_realTerm = dynamic_cast<fl::Triangle*>(p_term);
-		p_realTerm->setVertexA(params[0]);
-		p_realTerm->setVertexB(params[1]);
-		p_realTerm->setVertexC(params[2]);
-	}
-	else if (dynamic_cast<fl::ZShape*>(p_term))
-	{
-		fl::ZShape* p_realTerm = dynamic_cast<fl::ZShape*>(p_term);
-		p_realTerm->setStart(params[0]);
-		p_realTerm->setEnd(params[1]);
-	}
-}
-
-} // Namespace detail
-
-
 /**
- * Hybrid learning algorithm using Gradient-Descent and Least-Squares Estimation by (J.-S.R. Jang,1993)
+ * Hybrid learning algorithm by (J.-S.R. Jang,1993)
+ *
+ * The hybrid learning algorithm uses a combination of the gradient-descent
+ * backpropagation algorithm and least-squares estimation to identify the
+ * parameters of the input and output membership functions of a single-output,
+ * Sugeno-type fuzzy inference system.
+ *
+ * The hybrid learning algorithm has been proposed by J.-S.R. Jang in [1] and is
+ * well explained in [2].
+ * What follows is an extert of the description of the hybrid algorithm as
+ * found in [2].
+ * In the batch mode of the hybrid learning algorithm, each epoch is composed of
+ * a <em>forward pass</em> and a <em>backward pass</em>.
+ * In the forward pass, after an input vector is presented, the outputs of the
+ * nodes in the ANFIS adaptive network are computed layer by layer in order to
+ * build a row for matrices \f$A\f$ and \f$y\f$.
+ * This process is repeated for all the training data pairs to form a complete
+ * \f$A\f$ and \f$y\f$.
+ * The the parameters \f$S_2\f$ of the output terms in the rule consequents are
+ * identified by a least-squares method (e.g., the recursive least-squares
+ * algorithm).
+ * After the parameters \f$S_2\f$ are identified, the error measure (i.e., the
+ * squared error) can be computed for each training data pair.
+ * In the backward pass, the error signals (i.e., the derivative of the error
+ * measure with respect to each node output) propagate from the output end
+ * toward the input end.
+ * The gradient vector is accumulated for each training data entry.
+ * At the end of the backward pass for all training data, the parameters
+ * \f$S_1\f$ of the input terms are updated according to the steepest descent.
+ * For given fixed values of parameters \f$S_1\f$, the parameters \f$S_2\f$ thus
+ * found are guaranteed to be the global optimum point in the \f$S_2\f$
+ * parameter space because of the choice of the squared error measure.
+ *
+ * In the backward step, parameters \f$\alpha\f$ are updated according to the
+ * generalized delta rule formula (typically used by the backpropagation
+ * algorithm):
+ * \f{align}
+ *   \alpha &= \alpha + \Delta\alpha,\\
+ *   \Delta\alpha &= -\eta\frac{\partial E}{\partial \alpha},\\
+ *   \eta &= \frac{\kappa}{\sqrt{\sum_\alpha \frac{\partial E}{\partial a}}}
+ * \f}
+ * where:
+ * - \f$\eta\f$ is the learning rate,
+ * - \f$\kappa\f$ is the step size, representing the length of each transition
+ *   along the gradient direction in the parameter space.
+ * - \f$E\f$ is the error measure which is typically the sum of squared errors:
+ *   \f[
+ *     E=\sum_{k=1}^N (d_k-o_k)^2
+ *   \f]
+ *   where \f$d_k\f$ is the desired value and \f$o_k\f$ is the actual output.
+ * .
  *
  * References
  * -# J.-S.R. Jang, "ANFIS: Adaptive-Network-based Fuzzy Inference Systems," IEEE Transactions on Systems, Man, and Cybernetics, 23:3(665-685), 1993.
@@ -200,21 +80,226 @@ void SetTermParameters(fl::Term* p_term, IterT first, IterT last)
  */
 class Jang1993HybridLearningAlgorithm
 {
-    public: explicit Jang1993HybridLearningAlgorithm(Engine* p_anfis, fl::scalar ff = 1)
+	/**
+	 * Constructor
+	 *
+	 * \param p_anfis Pointer to the ANFIS model to be trained
+	 * \param ss The initial step size used in the parameter update formula
+	 * \param ssDecrRate The step size decrease rate
+	 * \param ssIncrRate The step size increase rate
+	 * \param ff The forgetting factor used in the recursive least square algorithm
+	 */
+    public: explicit Jang1993HybridLearningAlgorithm(Engine* p_anfis,
+													 fl::scalar ss = 0.01,
+													 fl::scalar ssDecrRate = 0.9,
+													 fl::scalar ssIncrRate = 1.1,
+													 fl::scalar ff = 1)
 	: p_anfis_(p_anfis),
-	  stepSizeInit_(0.01),
-	  stepSizeDecrRate_(0.9),
-	  stepSizeIncrRate_(1.1),
+	  stepSizeInit_(ss),
+	  stepSizeDecrRate_(ssDecrRate),
+	  stepSizeIncrRate_(ssIncrRate),
 	  stepSizeErrWindowLen_(5),
-	  useBias_(true),
+	  //useBias_(true),
 	  rls_(0,0,0,ff)
     {
 		this->init();
 	}
 
-    /// Training for a single epoch
-    public: fl::scalar trainSingleEpoch(const DataSet<fl::scalar>& data)
+	/// Sets the initial step size
+	public: void setInitialStepSize(fl::scalar value)
+	{
+		stepSizeInit_ = value;
+	}
+
+	/// Gets the initial step size
+	public: fl::scalar getInitialStepSize() const
+	{
+		return stepSizeInit_;
+	}
+
+	/// Sets the step size decrease rate
+	public: void setStepSizeDecreaseRate(fl::scalar value)
+	{
+		stepSizeDecrRate_ = value;
+	}
+
+	/// Gets the step size decrease rate
+	public: fl::scalar getStepSizeDecreaseRate() const
+	{
+		return stepSizeDecrRate_;
+	}
+
+	/// Sets the step size increase rate
+	public: void setStepSizeIncreaseRate(fl::scalar value)
+	{
+		stepSizeIncrRate_ = value;
+	}
+
+	/// Gets the step size increase rate
+	public: fl::scalar getStepSizeIncreaseRate() const
+	{
+		return stepSizeIncrRate_;
+	}
+
+	/// Sets the forgetting factor
+	public: void setForgettingFactor(fl::scalar value)
+	{
+		rls_.setForgettingFactor(value);
+	}
+
+	/// Gets the forgetting factor
+	public: fl::scalar getForgettingFactor() const
+	{
+		return rls_.getForgettingFactor();
+	}
+
+	/**
+	 * Trains the ANFIS model
+	 *
+	 * \param data The training set
+	 * \param maxEpochs The maximum number of epochs
+	 * \param errorGoal The error to achieve
+	 *
+	 * The error measure is the Root Mean Squared Error (RMSE).
+	 *
+	 * \return The achieve error
+	 */
+	public: fl::scalar train(const fl::DataSet<fl::scalar>& data,
+							 std::size_t maxEpochs = 10,
+							 fl::scalar errorGoal = 0)
+	{
+		fl::scalar rmse = 0;
+		for (std::size_t epoch = 0; epoch < maxEpochs; ++epoch)
+		{
+			FL_DEBUG_TRACE("TRAINING - EPOCH #" << epoch);
+
+			rmse = this->trainSingleEpoch(data);
+
+			FL_DEBUG_TRACE("TRAINING - EPOCH #" << epoch << " -> RMSE: ");
+
+			if (fl::detail::FloatTraits<fl::scalar>::EssentiallyLessEqual(rmse, errorGoal))
+			{
+				break;
+			}
+		}
+		return rmse;
+	}
+
+    /// Trains the ANFIS model for a single epoch only using the given training set \a data
+    public: fl::scalar trainSingleEpoch(const fl::DataSet<fl::scalar>& data)
     {
+		//const bool oldHasBias = p_anfis_->hasBias();
+		//p_anfis_->setHasBias(false);
+		p_anfis_->setIsLearning(true);
+
+		// Update parameters of input terms
+		if (dEdPs_.size() > 0)
+		{
+			std::vector<FuzzificationNode*> fuzzyLayer = p_anfis_->getFuzzificationLayer();
+			const std::size_t ni = fuzzyLayer.size();
+
+			fl::scalar errNorm = 0;
+			for (std::size_t i = 0; i < ni; ++i)
+			{
+				FuzzificationNode* p_node = fuzzyLayer[i];
+
+//std::cerr << "PHASE #-1 - Computing Error Norm for node #" << i << " (" << p_node << ")... "<< std::endl;///XXX
+				for (std::size_t p = 0,
+								 np = dEdPs_.at(p_node).size();
+					 p < np;
+					 ++p)
+				{
+					errNorm += fl::detail::Sqr(dEdPs_.at(p_node).at(p));
+				}
+			}
+			errNorm = std::sqrt(errNorm);
+std::cerr << "PHASE #-1 - Error Norm: " << errNorm << std::endl;///XXX
+std::cerr << "PHASE #-1 - Step Size: " << stepSize_ << std::endl;///XXX
+			if (errNorm > 0)
+			{
+				for (std::size_t i = 0; i < ni; ++i)
+				{
+					FuzzificationNode* p_node = fuzzyLayer[i];
+					std::vector<fl::scalar> params = detail::GetTermParameters(p_node->getTerm());
+
+std::cerr << "PHASE #-1 - Node #" << i << ": " << p_node << " - Old Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;///XXX
+//std::cerr << "PHASE #2 - Node #" << i << ": " << p_node << " - dEdPs: "; fl::detail::VectorOutput(std::cerr, dEdPs_.at(p_node)); std::cerr << std::endl;///XXX
+					for (std::size_t p = 0,
+									 np = dEdPs_.at(p_node).size();
+						 p < np;
+						 ++p)
+					{
+						params[p] -= stepSize_*dEdPs_.at(p_node).at(p)/errNorm;
+					}
+std::cerr << "PHASE #-1 - Node #" << i << ": " << p_node << " - New Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;///XXX
+					detail::SetTermParameters(p_node->getTerm(), params.begin(), params.end());
+				}
+			}
+		}
+		// Update step-size
+//std::cerr << "STEP-SIZE error window: "; fl::detail::VectorOutput(std::cerr, stepSizeErrWindow_); std::cerr << std::endl;//XXX
+//std::cerr << "STEP-SIZE decr-counter: " << stepSizeDecrCounter_ << ", incr-counter: " << stepSizeIncrCounter_ << std::endl;//XXX
+		if (!fl::detail::FloatTraits<fl::scalar>::EssentiallyEqual(stepSizeDecrRate_, 1))
+		{
+			if (stepSizeDecrCounter_ == (stepSizeErrWindowLen_-1))
+			{
+				bool update = true;
+				for (std::size_t i = 0; i < (stepSizeErrWindowLen_-1); ++i)
+				{
+					if (i % 2)
+					{
+						//update &= (stepSizeErrWindow_[stepSizeDecrCounter_-i] > stepSizeErrWindow_[stepSizeDecrCounter_-i-1]);
+						update &= (stepSizeErrWindow_[i] > stepSizeErrWindow_[i+1]);
+					}
+					else
+					{
+						//update &= (stepSizeErrWindow_[stepSizeDecrCounter_-i] < stepSizeErrWindow_[stepSizeDecrCounter_-i-1]);
+						update &= (stepSizeErrWindow_[i] < stepSizeErrWindow_[i+1]);
+					}
+				}
+				if (update)
+				{
+//std::cerr << "STEP-SIZE (decreasing) - old: " << stepSize_ << ", new: " << (stepSize_*stepSizeDecrRate_) << std::endl;//XXX
+					stepSize_ *= stepSizeDecrRate_;
+					stepSizeDecrCounter_ = 1;
+				}
+				else
+				{
+					++stepSizeDecrCounter_;
+				}
+			}
+			else
+			{
+				++stepSizeDecrCounter_;
+			}
+		}
+		if (!fl::detail::FloatTraits<fl::scalar>::EssentiallyEqual(stepSizeIncrRate_, 1))
+		{
+			if (stepSizeIncrCounter_ == (stepSizeErrWindowLen_-1))
+			{
+				bool update = true;
+				for (std::size_t i = 0; i < (stepSizeErrWindowLen_-1); ++i)
+				{
+					//update &= (stepSizeErrWindow_[stepSizeIncrCounter_-i] < stepSizeErrWindow_[stepSizeIncrCounter_-i-1]);
+					update &= (stepSizeErrWindow_[i] < stepSizeErrWindow_[i+1]);
+				}
+				if (update)
+				{
+//std::cerr << "STEP-SIZE (increasing) - old: " << stepSize_ << ", new: " << (stepSize_*stepSizeIncrRate_) << std::endl;//XXX
+					stepSize_ *= stepSizeIncrRate_;
+					stepSizeIncrCounter_ = 1;
+				}
+				else
+				{
+					++stepSizeIncrCounter_;
+				}
+			}
+			else
+			{
+				++stepSizeIncrCounter_;
+			}
+		}
+
 		rls_.reset();
 		dEdPs_.clear();
 		//if (rlsPhi_.size() > 0)
@@ -349,7 +434,7 @@ class Jang1993HybridLearningAlgorithm
 //std::cerr << "PHASE #0 - Estimated RLS params: "; fl::detail::MatrixOutput(std::cerr, rlsParamMatrix); std::cerr << std::endl;//XXX
 
 			std::size_t k = 0;
-			std::size_t r = 0;
+			//std::size_t r = 0;
 			for (std::size_t v = 0,
 							 nv = p_anfis_->numberOfOutputVariables();
 				 v < nv;
@@ -376,7 +461,8 @@ class Jang1993HybridLearningAlgorithm
 						++k;
 					}
 					detail::SetTermParameters(p_term, params.begin(), params.end());
-					++r;
+std::cerr << "PHASE #0 - Estimated RLS params - Output #" << v << " - Term #" << t << " - Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;//XXX
+					//++r;
 				}
 			}
 
@@ -425,7 +511,7 @@ std::cerr << "]" << std::endl;//XXX
 			const std::vector<fl::scalar> actualOut = p_anfis_->eval(entry.inputBegin(), entry.inputEnd());
 
 			// Update bias in case of zero rule firing strength
-			if (useBias_)
+			if (p_anfis_->hasBias())
 			{
 				bool skip = false;
 
@@ -436,10 +522,18 @@ std::cerr << "]" << std::endl;//XXX
 				{
 					if (fl::Operation::isNaN(actualOut[i]))
 					{
-						bias_[i] += stepSize_*(targetOut[i]-bias_[i]);
+						OutputNode* p_outNode = p_anfis_->getOutputLayer().at(i);
+
+						FL_DEBUG_ASSERT( p_outNode );
+
+						//bias_[i] += stepSize_*(targetOut[i]-bias_[i]);
+						fl::scalar bias = p_outNode->getBias();
+						bias += stepSize_*(targetOut[i]-bias);
+						p_outNode->setBias(bias);
 						skip = true;
 					}
 				}
+				//p_anfis_->setBias(bias_);
 
 				if (skip)
 				{
@@ -565,7 +659,9 @@ std::cerr << "]" << std::endl;//XXX
 		}
 		stepSizeErrWindow_.push_front(rmse);
 
+#if 0
 		// Update parameters of input terms
+		if (dEdPs_.size() > 0)
 		{
 			std::vector<FuzzificationNode*> fuzzyLayer = p_anfis_->getFuzzificationLayer();
 			const std::size_t ni = fuzzyLayer.size();
@@ -672,10 +768,15 @@ std::cerr << "PHASE #2 - Node #" << i << ": " << p_node << " - New Params: "; fl
 				++stepSizeIncrCounter_;
 			}
 		}
+#endif // if 0
+
+		//p_anfis_->setHasBias(oldHasBias);
+		p_anfis_->setIsLearning(false);
 
 		return rmse;
 	}
 
+	/// Initialize the training algorithm
 	private: void init()
 	{
 		std::size_t numParams = 0;
@@ -716,25 +817,26 @@ std::cerr << "PHASE #2 - Node #" << i << ": " << p_node << " - New Params: "; fl
 		stepSizeIncrCounter_ = stepSizeDecrCounter_ = 0;
 		stepSizeErrWindow_.clear();
 
-		if (useBias_)
-		{
-			bias_.resize(p_anfis_->numberOfOutputVariables(), 0);
-		}
+		//bias_.clear();
+		//if (useBias_)
+		//{
+		//	bias_.resize(p_anfis_->numberOfOutputVariables(), 0);
+		//}
     }
 
 
-	private: Engine* p_anfis_;
-	private: fl::scalar stepSizeInit_;
-	private: fl::scalar stepSizeDecrRate_;
-	private: fl::scalar stepSizeIncrRate_;
-	private: fl::scalar stepSize_;
-	private: std::size_t stepSizeErrWindowLen_;
-	private: std::deque<fl::scalar> stepSizeErrWindow_;
-	private: std::size_t stepSizeIncrCounter_;
-	private: std::size_t stepSizeDecrCounter_;
-	private: bool useBias_;
-	private: std::vector<fl::scalar> bias_;
-	private: fl::detail::RecursiveLeastSquaresEstimator<fl::scalar> rls_;
+	private: Engine* p_anfis_; ///< The ANFIS model
+	private: fl::scalar stepSizeInit_; ///< The initial value of the step size
+	private: fl::scalar stepSizeDecrRate_; ///< The rate at which the step size must be decreased
+	private: fl::scalar stepSizeIncrRate_; ///< The rate at which the step size must be increased
+	private: fl::scalar stepSize_; ///< Step size to use in the parameter update formula representing the length of each transition along the gradient direction in the parameter space
+	private: std::size_t stepSizeErrWindowLen_; ///< Length of the RMSE window used to update the step size
+	private: std::deque<fl::scalar> stepSizeErrWindow_; ///< Window of RMSEs used to update the step size
+	private: std::size_t stepSizeIncrCounter_; ///< Counter used to check when to increase the step size
+	private: std::size_t stepSizeDecrCounter_; ///< Counter used to check when to decrease the step size
+	//private: bool useBias_; ///< if \c true, add a bias to handle zero-firing error
+	//private: std::vector<fl::scalar> bias_; ///< The bias to use in the output
+	private: fl::detail::RecursiveLeastSquaresEstimator<fl::scalar> rls_; ///< The recursive least-squares estimator
 	private: std::map< Node*, std::vector<fl::scalar> > dEdPs_; // Error derivatives wrt node parameters
 	//private: std::vector<fl::scalar> rlsPhi_; ///< RLS regressor of the last epoch
 }; // Jang1993HybridLearningAlgorithm

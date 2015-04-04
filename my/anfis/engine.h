@@ -1,12 +1,22 @@
 #ifndef FL_ANFIS_ENGINE_H
 #define FL_ANFIS_ENGINE_H
 
+
 #include <boost/noncopyable.hpp>
 #include <cstddef>
 #include <fl/commons.h>
 #include <fl/detail/math.h>
 #include <fl/detail/traits.h>
-#include <fl/Headers.h>
+#include <fl/Engine.h>
+#include <fl/fuzzylite.h>
+#include <fl/hedge/Hedge.h>
+#include <fl/norm/Norm.h>
+#include <fl/norm/TNorm.h>
+#include <fl/rule/RuleBlock.h>
+#include <fl/term/Term.h>
+#include <fl/variable/InputVariable.h>
+#include <fl/variable/OutputVariable.h>
+#include <map>
 #include <string>
 
 
@@ -164,17 +174,31 @@ private:
 class OutputNode: public Node
 {
 public:
-	explicit OutputNode(Engine* p_engine);
+	OutputNode(fl::OutputVariable* p_var, Engine* p_engine);
+
+	fl::OutputVariable* getOutputVariable() const;
+
+	void setBias(fl::scalar value);
+
+	fl::scalar getBias() const;
 
 private:
 	fl::scalar doEval();
 
 	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
+
+
+private:
+	fl::OutputVariable* p_var_;
+	fl::scalar bias_; /// The value to use in place of the output value in case of zero firing strength
 }; // OutputNode
 
 
-class Engine: public fl::Engine
+class FL_API Engine: public fl::Engine
 {
+private:
+	typedef fl::Engine BaseType;
+
 public:
 	enum LayerCategory
 	{
@@ -196,15 +220,18 @@ public:
 	Engine(InputIterT inputFirst, InputIterT inputLast,
 		   OutputIterT outputFirst, OutputIterT outputLast,
 		   RuleBlockIterT ruleBlockFirst, RuleBlockIterT ruleBlockLast,
-		   const std::string& name = "")
-	: inputs_(inputFirst, inputLast),
-	  outputs_(outputFirst, outputLast),
-	  ruleBlocks_(ruleBlockFirst, ruleBlockLast),
-	  name_(name)
-//	  order_(0)
+		   const std::string& name = "");
+/*
 	{
+		this->setInputVariables(inputFirst, inputLast);
+		this->setOutputVariables(outputFirst, outputLast);
+		this->setRuleBlocks(ruleBlockFirst, ruleBlockLast);
+		this->setName(name);
+		this->setHasBias(false);
+
 		this->build();
 	}
+*/
 
 	Engine(const Engine& other);
 
@@ -216,132 +243,156 @@ public:
 
 	Engine* clone() const;
 
-	std::string toString() const;
+	//std::string toString() const;
 
-	void configure(fl::TNorm* conjunction, fl::SNorm* disjunction,
-				   fl::TNorm* activation, fl::SNorm* accumulation,
-				   fl::Defuzzifier* defuzzifier);
+	//void configure(fl::TNorm* conjunction, fl::SNorm* disjunction,
+	//			   fl::TNorm* activation, fl::SNorm* accumulation,
+	//			   fl::Defuzzifier* defuzzifier);
 
-	void configure(const std::string& conjunctionT,
-				   const std::string& disjunctionS,
-				   const std::string& activationT,
-				   const std::string& accumulationS,
-				   const std::string& defuzzifier,
-				   int resolution = fl::IntegralDefuzzifier::defaultResolution());
+	//void configure(const std::string& conjunctionT,
+	//			   const std::string& disjunctionS,
+	//			   const std::string& activationT,
+	//			   const std::string& accumulationS,
+	//			   const std::string& defuzzifier,
+	//			   int resolution = fl::IntegralDefuzzifier::defaultResolution());
 
-	void setName(const std::string& name);
+	//void setName(const std::string& name);
 
-	std::string getName() const;
+	//std::string getName() const;
 
-	void addInputVariable(fl::InputVariable* p_var);
+	//void addInputVariable(fl::InputVariable* p_var);
 
-	//fl::InputVariable* setInputVariable(fl::InputVariable* p_var, std::size_t idx);
-	fl::InputVariable* setInputVariable(fl::InputVariable* p_var, int idx);
+	////fl::InputVariable* setInputVariable(fl::InputVariable* p_var, std::size_t idx);
+	//fl::InputVariable* setInputVariable(fl::InputVariable* p_var, int idx);
 
-	//void insertInputVariable(fl::InputVariable* p_var, std::size_t idx);
-	void insertInputVariable(fl::InputVariable* p_var, int idx);
+	////void insertInputVariable(fl::InputVariable* p_var, std::size_t idx);
+	//void insertInputVariable(fl::InputVariable* p_var, int idx);
 
-	//fl::InputVariable* getInputVariable(std::size_t idx) const;
-	fl::InputVariable* getInputVariable(int idx) const;
+	////fl::InputVariable* getInputVariable(std::size_t idx) const;
+	//fl::InputVariable* getInputVariable(int idx) const;
 
-	fl::InputVariable* getInputVariable(const std::string& name) const;
+	//fl::InputVariable* getInputVariable(const std::string& name) const;
 
-	//fl::InputVariable* removeInputVariable(std::size_t idx);
-	fl::InputVariable* removeInputVariable(int idx);
+	////fl::InputVariable* removeInputVariable(std::size_t idx);
+	//fl::InputVariable* removeInputVariable(int idx);
 
-	fl::InputVariable* removeInputVariable(const std::string& name);
+	//fl::InputVariable* removeInputVariable(const std::string& name);
 
-	bool hasInputVariable(const std::string& name) const;
-
-	void setInputVariables(const std::vector<fl::InputVariable*>& vars);
+	//bool hasInputVariable(const std::string& name) const;
 
 	template <typename IterT>
-	void setInputVariables(IterT first, IterT last)
+	void setInputVariables(IterT first, IterT last);
+/*
 	{
-		inputs_.clear();
-		inputs_.assign(first, last);
+		//inputs_.clear();
+		//inputs_.assign(first, last);
+		BaseType::setInputVariables(std::vector<fl::InputVariable*>());
+		while (first != last)
+		{
+			this->addInputVariable(*first);
+			++first;
+		}
 	}
+*/
 
-	std::vector<fl::InputVariable*> const& inputVariables() const;
+	//void setInputVariables(const std::vector<fl::InputVariable*>& vars);
 
-	//std::size_t numberOfInputVariables() const;
-	int numberOfInputVariables() const;
+	//std::vector<fl::InputVariable*> const& inputVariables() const;
 
-	void addOutputVariable(fl::OutputVariable* p_var);
+	////std::size_t numberOfInputVariables() const;
+	//int numberOfInputVariables() const;
 
-	//fl::OutputVariable* setOutputVariable(fl::OutputVariable* p_var, std::size_t idx);
-	fl::OutputVariable* setOutputVariable(fl::OutputVariable* p_var, int idx);
+	//void addOutputVariable(fl::OutputVariable* p_var);
 
-	//void insertOutputVariable(fl::OutputVariable* p_var, std::size_t idx);
-	void insertOutputVariable(fl::OutputVariable* p_var, int idx);
+	////fl::OutputVariable* setOutputVariable(fl::OutputVariable* p_var, std::size_t idx);
+	//fl::OutputVariable* setOutputVariable(fl::OutputVariable* p_var, int idx);
 
-	//fl::OutputVariable* getOutputVariable(std::size_t idx) const;
-	fl::OutputVariable* getOutputVariable(int idx) const;
+	////void insertOutputVariable(fl::OutputVariable* p_var, std::size_t idx);
+	//void insertOutputVariable(fl::OutputVariable* p_var, int idx);
 
-	fl::OutputVariable* getOutputVariable(const std::string& name) const;
+	////fl::OutputVariable* getOutputVariable(std::size_t idx) const;
+	//fl::OutputVariable* getOutputVariable(int idx) const;
 
-	//fl::OutputVariable* removeOutputVariable(std::size_t idx);
-	fl::OutputVariable* removeOutputVariable(int idx);
+	//fl::OutputVariable* getOutputVariable(const std::string& name) const;
 
-	fl::OutputVariable* removeOutputVariable(const std::string& name);
+	////fl::OutputVariable* removeOutputVariable(std::size_t idx);
+	//fl::OutputVariable* removeOutputVariable(int idx);
 
-	bool hasOutputVariable(const std::string& name) const;
+	//fl::OutputVariable* removeOutputVariable(const std::string& name);
 
-	void setOutputVariables(const std::vector<fl::OutputVariable*>& vars);
+	//bool hasOutputVariable(const std::string& name) const;
 
 	template <typename IterT>
-	void setOutputVariables(IterT first, IterT last)
+	void setOutputVariables(IterT first, IterT last);
+/*
 	{
-		outputs_.clear();
-		outputs_.assign(first, last);
+		//outputs_.clear();
+		//outputs_.assign(first, last);
+		BaseType::setOutputVariables(std::vector<fl::OutputVariable*>());
+		while (first != last)
+		{
+			this->addOutputVariable(*first);
+			++first;
+		}
 	}
+*/
 
-	std::vector<fl::OutputVariable*> const& outputVariables() const;
+	//void setOutputVariables(const std::vector<fl::OutputVariable*>& vars);
 
-	//std::size_t numberOfOutputVariables() const;
-	int numberOfOutputVariables() const;
+	//std::vector<fl::OutputVariable*> const& outputVariables() const;
 
-	std::vector<fl::Variable*> variables() const;
+	////std::size_t numberOfOutputVariables() const;
+	//int numberOfOutputVariables() const;
 
-	void addRuleBlock(fl::RuleBlock* p_block);
+	//std::vector<fl::Variable*> variables() const;
 
-	//fl::RuleBlock* setRuleBlock(fl::RuleBlock* p_block, std::size_t idx);
-	fl::RuleBlock* setRuleBlock(fl::RuleBlock* p_block, int idx);
+	//void addRuleBlock(fl::RuleBlock* p_block);
 
-	//void insertRuleBlock(fl::RuleBlock* p_block, std::size_t idx);
-	void insertRuleBlock(fl::RuleBlock* p_block, int idx);
+	////fl::RuleBlock* setRuleBlock(fl::RuleBlock* p_block, std::size_t idx);
+	//fl::RuleBlock* setRuleBlock(fl::RuleBlock* p_block, int idx);
 
-	//fl::RuleBlock* getRuleBlock(std::size_t idx) const;
-	fl::RuleBlock* getRuleBlock(int idx) const;
+	////void insertRuleBlock(fl::RuleBlock* p_block, std::size_t idx);
+	//void insertRuleBlock(fl::RuleBlock* p_block, int idx);
 
-	fl::RuleBlock* getRuleBlock(const std::string& name) const;
+	////fl::RuleBlock* getRuleBlock(std::size_t idx) const;
+	//fl::RuleBlock* getRuleBlock(int idx) const;
 
-	bool hasRuleBlock(const std::string& name) const;
+	//fl::RuleBlock* getRuleBlock(const std::string& name) const;
 
-	//fl::RuleBlock* removeRuleBlock(std::size_t idx);
-	fl::RuleBlock* removeRuleBlock(int idx);
+	//bool hasRuleBlock(const std::string& name) const;
 
-	fl::RuleBlock* removeRuleBlock(const std::string& name);
+	////fl::RuleBlock* removeRuleBlock(std::size_t idx);
+	//fl::RuleBlock* removeRuleBlock(int idx);
+
+	//fl::RuleBlock* removeRuleBlock(const std::string& name);
 
 	template <typename IterT>
-	void setRuleBlocks(IterT first, IterT last)
+	void setRuleBlocks(IterT first, IterT last);
+/*
 	{
-		ruleBlocks_.clear();
-		ruleBlocks_.assign(first, last);
+		//ruleBlocks_.clear();
+		//ruleBlocks_.assign(first, last);
+		BaseType::setRuleBlocks(std::vector<fl::RuleBlock*>());
+		while (first != last)
+		{
+			this->addRuleBlock(*first);
+			++first;
+		}
 	}
+*/
 
-	void setRuleBlocks(const std::vector<fl::RuleBlock*>& ruleBlocks);
+	//void setRuleBlocks(const std::vector<fl::RuleBlock*>& ruleBlocks);
 
-	std::vector<fl::RuleBlock*> const& ruleBlocks() const;
+	//std::vector<fl::RuleBlock*> const& ruleBlocks() const;
 
-	//std::size_t numberOfRuleBlocks() const;
-	int numberOfRuleBlocks() const;
+	////std::size_t numberOfRuleBlocks() const;
+	//int numberOfRuleBlocks() const;
 
-	void setInputValue(const std::string& name, fl::scalar value);
+	//void setInputValue(const std::string& name, fl::scalar value);
 
-	fl::scalar getOutputValue(const std::string& name) const;
+	//fl::scalar getOutputValue(const std::string& name) const;
 
-	bool isReady(std::string* status = fl::null) const;
+	//bool isReady(std::string* status = fl::null) const;
 
 	void process();
 
@@ -354,23 +405,50 @@ public:
 			  typename RuleBlockIterT>
 	void build(InputIterT inputFirst, InputIterT inputLast,
 			   OutputIterT outputFirst, OutputIterT outputLast,
-			   RuleBlockIterT ruleBlockFirst, RuleBlockIterT ruleBlockLast)
+			   RuleBlockIterT ruleBlockFirst, RuleBlockIterT ruleBlockLast);
+/*
 	{
 		this->clear();
 
-		inputs_.assign(inputFirst, inputLast);
-		outputs_.assign(outputFirst, outputLast);
-		ruleBlocks_.assign(ruleBlockFirst, ruleBlockLast);
+		//inputs_.assign(inputFirst, inputLast);
+		this->setInputVariables(inputFirst, inputLast);
+		//outputs_.assign(outputFirst, outputLast);
+		this->setOutputVariables(outputFirst, outputLast);
+		//ruleBlocks_.assign(ruleBlockFirst, ruleBlockLast);
+		this->setRuleBlocks(ruleBlockFirst, ruleBlockLast);
 
 		this->build();
 	}
+*/
+
+	void clear();
+
+	void setIsLearning(bool value);
+
+	bool isLearning() const;
+
+	void setHasBias(bool value);
+
+	bool hasBias() const;
+
+	//template <typename IterT>
+	//void setBias(IterT first, IterT last)
+	//{
+	//	bias_.clear();
+	//	bias_.assign(first, last);
+	//}
+
+	//void setBias(const std::vector<fl::scalar>& value);
+
+	//std::vector<fl::scalar> getBias() const;
 
 	std::vector<Node*> inputConnections(const Node* p_node) const;
 
 	std::vector<Node*> outputConnections(const Node* p_node) const;
 
 	template <typename IterT>
-	void setInputValues(IterT first, IterT last)
+	void setInputValues(IterT first, IterT last);
+/*
 	{
 		std::vector<InputNode*>::iterator nodeIt = inputNodes_.begin();
 		std::vector<InputNode*>::iterator nodeEndIt = inputNodes_.end();
@@ -388,6 +466,7 @@ public:
 			FL_THROW2(std::invalid_argument, "Wrong number of inputs");
 		}
 	}
+*/
 
 	std::vector<fl::scalar> getInputValues() const;
 
@@ -414,34 +493,42 @@ public:
 	std::vector<fl::scalar> evalFrom(LayerCategory layer);
 
 	template <typename IterT>
-	std::vector<fl::scalar> eval(IterT first, IterT last)
+	std::vector<fl::scalar> eval(IterT first, IterT last);
+/*
 	{
 		this->setInputValues(first, last);
 		return this->eval();
 	}
+*/
 
 	template <typename IterT>
-	std::vector<fl::scalar> evalTo(IterT first, IterT last, LayerCategory layer)
+	std::vector<fl::scalar> evalTo(IterT first, IterT last, LayerCategory layer);
+/*
 	{
 		this->setInputValues(first, last);
 		return this->evalTo(layer);
 	}
+*/
 
 	LayerCategory getNextLayerCategory(LayerCategory cat) const;
 
 	LayerCategory getPreviousLayerCategory(LayerCategory cat) const;
 
-	void clear();
+protected:
+	void updateReferences();
 
 private:
 	void check();
+
+	void clearAnfis();
 
 	void connect(Node* p_from, Node* p_to);
 
 	std::vector<fl::scalar> evalLayer(LayerCategory layer);
 
 	template <typename IterT>
-	std::vector<fl::scalar> evalLayer(IterT first, IterT last)
+	std::vector<fl::scalar> evalLayer(IterT first, IterT last);
+/*
 	{
 		std::vector<fl::scalar> res;
 		while (first != last)
@@ -456,6 +543,7 @@ private:
 		}
 		return res;
 	}
+*/
 
 	std::vector<fl::scalar> evalInputLayer();
 
@@ -472,10 +560,10 @@ private:
 	std::vector<fl::scalar> evalOutputLayer();
 
 private:
-	std::string name_; ///< The mnemonic name for this FIS engine
-	std::vector<fl::InputVariable*> inputs_; ///< Collection of (pointer to) input variables
-	std::vector<fl::OutputVariable*> outputs_; ///< Collection of (pointer to) output variables
-	std::vector<fl::RuleBlock*> ruleBlocks_; ///< Collection of (pointer to) rule blocks
+	//std::string name_; ///< The mnemonic name for this FIS engine
+	//std::vector<fl::InputVariable*> inputs_; ///< Collection of (pointer to) input variables
+	//std::vector<fl::OutputVariable*> outputs_; ///< Collection of (pointer to) output variables
+	//std::vector<fl::RuleBlock*> ruleBlocks_; ///< Collection of (pointer to) rule blocks
 	//std::size_t order_;
 	std::vector<InputNode*> inputNodes_; ///< Nodes in the input layer
 	std::vector<FuzzificationNode*> fuzzificationNodes_; ///< Nodes in the fuzzification layer for linguistic terms
@@ -486,8 +574,15 @@ private:
 	std::vector<OutputNode*> outputNodes_; ///< Nodes in the inference layer
 	std::map< const Node*, std::vector<Node*> > inConns_; ///< Input connection to a given node
 	std::map< const Node*, std::vector<Node*> > outConns_; ///< Output connection from a given node
+	bool hasBias_; ///< If \c true, the bias vector is used in place of the output values in case of zero firing strength
+	//std::vector<fl::scalar> bias_; /// The values to use in place of the output values in case of zero firing strength
+	bool isLearning_; ///< \c true if the ANFIS is in the learning modality
 }; // Engine
 
 }} // Namespace fl::anfis
+
+
+#include "fl/anfis/engine.tpp"
+
 
 #endif // FL_ANFIS_ENGINE_H

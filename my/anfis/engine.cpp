@@ -1,8 +1,9 @@
+#include <algorithm>
 #include <cstddef>
 #include <fl/anfis/engine.h>
 #include <fl/commons.h>
-#include <fl/detail/derivatives.h>
 #include <fl/detail/math.h>
+#include <fl/detail/terms.h>
 #include <fl/detail/traits.h>
 #include <fl/Headers.h>
 #include <map>
@@ -13,9 +14,7 @@
 
 namespace fl { namespace anfis {
 
-namespace detail {
-
-namespace /*<unnamed>*/ {
+namespace detail { namespace /*<unnamed>*/ {
 
 void flattenRuleAntecedentRec(fl::Expression* p_expr, std::vector<fl::Variable*>& vars, std::vector<fl::Term*>& terms, std::vector<bool>& nots, std::string& opKeyword)
 {
@@ -73,9 +72,7 @@ void flattenRuleAntecedent(fl::Antecedent* p_antecedent, std::vector<fl::Variabl
 	}
 }
 
-} // Namespace <unnamed>
-
-} // Namespace detail
+}} // Namespace detail::<unnamed>
 
 ////////////////////////////////////////////////////////////////////////////////
 // Nodes
@@ -497,9 +494,21 @@ std::vector<fl::scalar> AccumulationNode::doEvalDerivativeWrtInputs()
 // Output Node
 /////////////
 
-OutputNode::OutputNode(Engine* p_engine)
-: Node(p_engine)
+OutputNode::OutputNode(fl::OutputVariable* p_var, Engine* p_engine)
+: Node(p_engine),
+  p_var_(p_var),
+  bias_(0)
 {
+}
+
+void OutputNode::setBias(fl::scalar value)
+{
+	bias_ = value;
+}
+
+fl::scalar OutputNode::getBias() const
+{
+	return bias_;
 }
 
 fl::scalar OutputNode::doEval()
@@ -511,12 +520,36 @@ fl::scalar OutputNode::doEval()
 		FL_THROW2(std::logic_error, "Output node must have exactly two inputs");
 	}
 
+	fl::scalar res = 0;
+
 	if (fl::detail::FloatTraits<fl::scalar>::ApproximatelyZero(inputs[1]))
 	{
-		return fl::nan;
+		// Handle zero firing strength...
+
+		if (this->getEngine()->isLearning())
+		{
+			// The training algorithm will take care of this...
+			res = fl::nan;
+		}
+		else if (this->getEngine()->hasBias())
+		{
+			// Return the stored bias
+			res = bias_;
+		}
+		else
+		{
+			// Return the average value among all possible values
+			res = (p_var_->getMinimum()+p_var_->getMaximum())/2.0;
+		}
+	}
+	else
+	{
+		res = inputs[0]/inputs[1];
 	}
 
-	return inputs[0]/inputs[1];
+	p_var_->setOutputValue(res);
+
+	return res;
 }
 
 std::vector<fl::scalar> OutputNode::doEvalDerivativeWrtInputs()
@@ -546,14 +579,79 @@ std::vector<fl::scalar> OutputNode::doEvalDerivativeWrtInputs()
 /////////
 
 Engine::Engine(const std::string& name)
-: name_(name)
+: BaseType(name),
+  hasBias_(false),
+  isLearning_(false)
 {
 }
 
-//TODO
 Engine::Engine(const Engine& other)
+: BaseType(other),
+  hasBias_(other.hasBias_),
+  //bias_(other.bias_),
+  isLearning_(other.isLearning_)
 {
-	throw std::runtime_error("Engine Copy ctor to be implemented");
+	// Clears the current network structure
+	this->clearAnfis();
+
+	// Creates a new network structure
+	this->build();
+
+	// Copies MF params
+	// - Copies input MF params
+	for (std::size_t i = 0,
+					 ni = this->numberOfInputVariables();
+		 i < ni;
+		 ++i)
+	{
+		fl::InputVariable* p_var = this->getInputVariable(i);
+		const fl::InputVariable* p_otherVar = other.getInputVariable(i);
+
+		FL_DEBUG_ASSERT( p_var );
+		FL_DEBUG_ASSERT( p_otherVar );
+
+		for (std::size_t t = 0,
+						 nt = p_var->numberOfTerms();
+			 t < nt;
+			 ++t)
+		{
+			fl::Term* p_term = p_var->getTerm(t);
+			const fl::Term* p_otherTerm = p_otherVar->getTerm(t);
+
+			FL_DEBUG_ASSERT( p_term );
+			FL_DEBUG_ASSERT( p_otherTerm );
+
+			const std::vector<fl::scalar> params = fl::detail::GetTermParameters(p_otherTerm);
+			fl::detail::SetTermParameters(p_term, params.begin(), params.end());
+		}
+	}
+	// - Copies output MF params
+	for (std::size_t i = 0,
+					 ni = this->numberOfOutputVariables();
+		 i < ni;
+		 ++i)
+	{
+		fl::OutputVariable* p_var = this->getOutputVariable(i);
+		const fl::OutputVariable* p_otherVar = other.getOutputVariable(i);
+
+		FL_DEBUG_ASSERT( p_var );
+		FL_DEBUG_ASSERT( p_otherVar );
+
+		for (std::size_t t = 0,
+						 nt = p_var->numberOfTerms();
+			 t < nt;
+			 ++t)
+		{
+			fl::Term* p_term = p_var->getTerm(t);
+			const fl::Term* p_otherTerm = p_otherVar->getTerm(t);
+
+			FL_DEBUG_ASSERT( p_term );
+			FL_DEBUG_ASSERT( p_otherTerm );
+
+			const std::vector<fl::scalar> params = fl::detail::GetTermParameters(p_otherTerm);
+			fl::detail::SetTermParameters(p_term, params.begin(), params.end());
+		}
+	}
 }
 
 Engine::~Engine()
@@ -561,505 +659,563 @@ Engine::~Engine()
 	this->clear();
 }
 
-//TODO
 Engine& Engine::operator=(const Engine& rhs)
 {
-	throw std::runtime_error("Engine::operator= to be implemented");
+	if (this != &rhs)
+	{
+		this->clear();
+
+		Engine tmp(rhs);
+
+		std::swap(inputNodes_, tmp.inputNodes_);
+		std::swap(fuzzificationNodes_, tmp.fuzzificationNodes_);
+		std::swap(inputHedgeNodes_, tmp.inputHedgeNodes_);
+		std::swap(antecedentNodes_, tmp.antecedentNodes_);
+		std::swap(consequentNodes_, tmp.consequentNodes_);
+		std::swap(accumulationNodes_, tmp.accumulationNodes_);
+		std::swap(outputNodes_, tmp.outputNodes_);
+		std::swap(inConns_, tmp.inConns_);
+		std::swap(outConns_, tmp.outConns_);
+		std::swap(hasBias_, tmp.hasBias_);
+		//std::swap(bias_, tmp.bias_);
+		std::swap(isLearning_, tmp.isLearning_);
+
+		this->updateReferences();
+	}
+
 	return *this;
 }
 
-//TODO
 Engine* Engine::clone() const
 {
-	throw std::runtime_error("Engine::clone to be implemented");
+	return new Engine(*this);
 }
+
+//void Engine::swap(Engine& other)
+//{
+//	std::swap(inputNodes_, other.inputNodes_);
+//	std::swap(fuzzificationNodes_, other.fuzzificationNodes_);
+//	std::swap(inputHedgeNodes_, other.inputHedgeNodes_);
+//	std::swap(antecedentNodes_, other.antecedentNodes_);
+//	std::swap(consequentNodes_, other.consequentNodes_);
+//	std::swap(accumulationNodes_, other.accumulationNodes_);
+//	std::swap(outputNodes_, other.outputNodes_);
+//	std::swap(inConns_, other.inConns_);
+//	std::swap(outConns_, other.outConns_);
+//	this->updateReferences();
+//	other.updateReferences();
+//}
 
 //TODO
-std::string Engine::toString() const
-{
-	return FllExporter().toString(this);
-}
+//std::string Engine::toString() const
+//{
+//	return FllExporter().toString(this);
+//}
 
 //TODO
-void Engine::configure(fl::TNorm* conjunction, fl::SNorm* disjunction,
-					   fl::TNorm* activation, fl::SNorm* accumulation,
-					   fl::Defuzzifier* defuzzifier)
-{
-	throw std::runtime_error("Engine::configure to be implemented");
-} 
+//void Engine::configure(fl::TNorm* conjunction, fl::SNorm* disjunction,
+//					   fl::TNorm* activation, fl::SNorm* accumulation,
+//					   fl::Defuzzifier* defuzzifier)
+//{
+//	throw std::runtime_error("Engine::configure to be implemented");
+//} 
 
 //TODO
-void Engine::configure(const std::string& conjunctionT,
-					   const std::string& disjunctionS,
-					   const std::string& activationT,
-					   const std::string& accumulationS,
-					   const std::string& defuzzifier,
-					   int resolution)
-{
-	throw std::runtime_error("Engine::configure to be implemented");
-}
-
-void Engine::setName(const std::string& name)
-{
-	name_ = name;
-}
-
-std::string Engine::getName() const
-{
-	return name_;
-}
-
-void Engine::addInputVariable(fl::InputVariable* p_var)
-{
-	if (!p_var)
-	{
-		FL_THROW2(std::invalid_argument, "Input variable cannot be null");
-	}
-
-	inputs_.push_back(p_var);
-}
-
-//fl::InputVariable* setInputVariable(fl::InputVariable* p_var, std::size_t idx);
-fl::InputVariable* Engine::setInputVariable(fl::InputVariable* p_var, int idx)
-{
-	if (idx >= inputs_.size())
-	{
-		FL_THROW2(std::invalid_argument, "Index to input variable is out of range");
-	}
-
-	fl::InputVariable* p_oldVar = inputs_[idx];
-
-	inputs_[idx] = p_var;
-
-	return p_oldVar;
-}
-
-//void insertInputVariable(fl::InputVariable* p_var, std::size_t idx);
-void Engine::insertInputVariable(fl::InputVariable* p_var, int idx)
-{
-	if (!p_var)
-	{
-		FL_THROW2(std::invalid_argument, "Input variable cannot be null")
-	}
-
-	inputs_.insert(inputs_.begin()+idx, p_var);
-}
-
-//fl::InputVariable* Engine::getInputVariable(std::size_t idx) const
-fl::InputVariable* Engine::getInputVariable(int idx) const
-{
-	if (idx >= inputs_.size())
-	{
-		FL_THROW2(std::invalid_argument, "Index to input variable is out of range");
-	}
-
-	return inputs_[idx];
-}
-
-fl::InputVariable* Engine::getInputVariable(const std::string& name) const
-{
-	for (std::size_t i = 0,
-					 n = inputs_.size();
-		 i < n;
-		 ++i)
-	{
-		fl::InputVariable* p_input = inputs_[i];
-
-		//check: null
-		FL_DEBUG_ASSERT( p_input );
-
-		if (p_input->getName() == name)
-		{
-			return p_input;
-		}
-	}
-
-	FL_THROW("Input variable <" + name + "> not found");
-}
-
-//fl::InputVariable* Engine::removeInputVariable(std::size_t idx)
-fl::InputVariable* Engine::removeInputVariable(int idx)
-{
-	if (idx >= inputs_.size())
-	{
-		FL_THROW2(std::invalid_argument, "Index to input variable is out of range");
-	}
-
-	fl::InputVariable* p_var = inputs_[idx];
-
-	inputs_.erase(inputs_.begin()+idx);
-
-	return p_var;
-}
-
-fl::InputVariable* Engine::removeInputVariable(const std::string& name)
-{
-	for (typename std::vector<fl::InputVariable*>::iterator it = inputs_.begin(),
-															endIt = inputs_.end();
-		 it != endIt;
-		 ++it)
-	{
-		fl::InputVariable* p_var = *it;
-
-		if (p_var->getName() == name)
-		{
-			inputs_.erase(it);
-			return p_var;
-		}
-	}
-
-	FL_THROW("Input variable <" + name + "> not found");
-}
-
-bool Engine::hasInputVariable(const std::string& name) const
-{
-	for (std::size_t i =0,
-					 n = inputs_.size();
-		 i < n;
-		 ++i)
-	{
-		fl::InputVariable* p_var = inputs_[i];
-
-		if (p_var->getName() == name)
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
-void Engine::setInputVariables(const std::vector<fl::InputVariable*>& vars)
-{
-	this->setInputVariables(vars.begin(), vars.end());
-}
-
-std::vector<fl::InputVariable*> const& Engine::inputVariables() const
-{
-	return inputs_;
-}
-
-//std::size_t Engine::numberOfInputVariables() const
-int Engine::numberOfInputVariables() const
-{
-	return inputs_.size();
-}
-
-void Engine::addOutputVariable(fl::OutputVariable* p_var)
-{
-	if (!p_var)
-	{
-		FL_THROW2(std::invalid_argument, "Output variable cannot be null");
-	}
-
-	outputs_.push_back(p_var);
-}
-
-//fl::OutputVariable* setOutputVariable(fl::OutputVariable* p_var, std::size_t idx);
-fl::OutputVariable* Engine::setOutputVariable(fl::OutputVariable* p_var, int idx)
-{
-	if (idx >= outputs_.size())
-	{
-		FL_THROW2(std::invalid_argument, "Index to output variable is out of range");
-	}
-
-	fl::OutputVariable* p_oldVar = outputs_[idx];
-
-	outputs_[idx] = p_var;
-
-	return p_oldVar;
-}
-
-//void insertOutputVariable(fl::OutputVariable* p_var, std::size_t idx);
-void Engine::insertOutputVariable(fl::OutputVariable* p_var, int idx)
-{
-	if (!p_var)
-	{
-		FL_THROW2(std::invalid_argument, "Output variable cannot be null")
-	}
-
-	outputs_.insert(outputs_.begin()+idx, p_var);
-}
-
-//fl::OutputVariable* Engine::getOutputVariable(std::size_t idx) const
-fl::OutputVariable* Engine::getOutputVariable(int idx) const
-{
-	if (idx >= outputs_.size())
-	{
-		FL_THROW2(std::invalid_argument, "Index to output variable is out of range");
-	}
-
-	return outputs_[idx];
-}
-
-fl::OutputVariable* Engine::getOutputVariable(const std::string& name) const
-{
-	for (std::size_t i = 0,
-					 n = outputs_.size();
-		 i < n;
-		 ++i)
-	{
-		fl::OutputVariable* p_output = outputs_[i];
-
-		//check: null
-		FL_DEBUG_ASSERT( p_output );
-
-		if (p_output->getName() == name)
-		{
-			return p_output;
-		}
-	}
-
-	FL_THROW("Output variable <" + name + "> not found");
-}
-
-//fl::OutputVariable* Engine::removeOutputVariable(std::size_t idx)
-fl::OutputVariable* Engine::removeOutputVariable(int idx)
-{
-	if (idx >= outputs_.size())
-	{
-		FL_THROW2(std::invalid_argument, "Index to output variable is out of range");
-	}
-
-	fl::OutputVariable* p_var = outputs_[idx];
-
-	outputs_.erase(outputs_.begin()+idx);
-
-	return p_var;
-}
-
-fl::OutputVariable* Engine::removeOutputVariable(const std::string& name)
-{
-	for (typename std::vector<fl::OutputVariable*>::iterator it = outputs_.begin(),
-															 endIt = outputs_.end();
-		 it != endIt;
-		 ++it)
-	{
-		fl::OutputVariable* p_var = *it;
-
-		if (p_var->getName() == name)
-		{
-			outputs_.erase(it);
-			return p_var;
-		}
-	}
-
-	FL_THROW("Output variable <" + name + "> not found");
-}
-
-bool Engine::hasOutputVariable(const std::string& name) const
-{
-	for (std::size_t i =0,
-					 n = outputs_.size();
-		 i < n;
-		 ++i)
-	{
-		fl::OutputVariable* p_var = outputs_[i];
-
-		if (p_var->getName() == name)
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
-void Engine::setOutputVariables(const std::vector<fl::OutputVariable*>& vars)
-{
-	this->setOutputVariables(vars.begin(), vars.end());
-}
-
-std::vector<fl::OutputVariable*> const& Engine::outputVariables() const
-{
-	return outputs_;
-}
-
-//std::size_t Engine::numberOfOutputVariables() const
-int Engine::numberOfOutputVariables() const
-{
-	return outputs_.size();
-}
-
-std::vector<fl::Variable*> Engine::variables() const
-{
-	std::vector<fl::Variable*> vars;
-
-	vars.insert(vars.begin(), inputs_.begin(), inputs_.end());
-	vars.insert(vars.end(), outputs_.begin(), outputs_.end());
-
-	return vars;
-}
-
-void Engine::addRuleBlock(fl::RuleBlock* p_block)
-{
-	//FIXME: what does it happens if multiple rule blocks are enabled and share the same output variables?
-
-	if (!p_block)
-	{
-		FL_THROW2(std::invalid_argument, "Rule block cannot be null");
-	}
-
-	ruleBlocks_.push_back(p_block);
-}
-
-//fl::RuleBlock* Engine::setRuleBlock(fl::RuleBlock* p_block, std::size_t idx)
-fl::RuleBlock* Engine::setRuleBlock(fl::RuleBlock* p_block, int idx)
-{
-	if (idx >= ruleBlocks_.size())
-	{
-		FL_THROW2(std::invalid_argument, "Index to rule block is out of range");
-	}
-
-	fl::RuleBlock* p_oldBlock = ruleBlocks_[idx];
-
-	ruleBlocks_.erase(ruleBlocks_.begin()+idx);
-
-	return p_oldBlock;
-}
-
-//void Engine::insertRuleBlock(fl::RuleBlock* p_block, std::size_t idx)
-void Engine::insertRuleBlock(fl::RuleBlock* p_block, int idx)
-{
-	if (!p_block)
-	{
-		FL_THROW2(std::invalid_argument, "Rule block cannot be null")
-	}
-
-
-	ruleBlocks_.insert(ruleBlocks_.begin()+idx, p_block);
-}
-
-//fl::RuleBlock* Engine::getRuleBlock(std::size_t idx) const
-fl::RuleBlock* Engine::getRuleBlock(int idx) const
-{
-	if (idx >= ruleBlocks_.size())
-	{
-		FL_THROW2(std::invalid_argument, "Index to rule block is out of range");
-	}
-
-	return ruleBlocks_[idx];
-}
-
-fl::RuleBlock* Engine::getRuleBlock(const std::string& name) const
-{
-	for (std::size_t i = 0,
-					 n = ruleBlocks_.size();
-		 i < n;
-		 ++i)
-	{
-		fl::RuleBlock* p_block = ruleBlocks_[i];
-
-		//check: null
-		FL_DEBUG_ASSERT( p_block );
-
-		if (p_block->getName() == name)
-		{
-			return p_block;
-		}
-	}
-
-	FL_THROW("Rule block <" + name + "> not found");
-}
-
-//fl::RuleBlock* Engine::removeRuleBlock(std::size_t idx)
-fl::RuleBlock* Engine::removeRuleBlock(int idx)
-{
-	if (idx >= ruleBlocks_.size())
-	{
-		FL_THROW2(std::invalid_argument, "Index to rule block is out of range");
-	}
-
-	fl::RuleBlock* p_block = ruleBlocks_[idx];
-
-	ruleBlocks_.erase(ruleBlocks_.begin()+idx);
-
-	return p_block;
-}
-
-fl::RuleBlock* Engine::removeRuleBlock(const std::string& name)
-{
-	for (typename std::vector<fl::RuleBlock*>::iterator it = ruleBlocks_.begin(),
-															 endIt = ruleBlocks_.end();
-		 it != endIt;
-		 ++it)
-	{
-		fl::RuleBlock* p_block = *it;
-
-		if (p_block->getName() == name)
-		{
-			ruleBlocks_.erase(it);
-			return p_block;
-		}
-	}
-
-	FL_THROW("Rule block <" + name + "> not found");
-}
-
-bool Engine::hasRuleBlock(const std::string& name) const
-{
-	for (std::size_t i =0,
-					 n = ruleBlocks_.size();
-		 i < n;
-		 ++i)
-	{
-		fl::RuleBlock* p_block = ruleBlocks_[i];
-
-		if (p_block->getName() == name)
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
-void Engine::setRuleBlocks(const std::vector<fl::RuleBlock*>& ruleBlocks)
-{
-	this->setRuleBlocks(ruleBlocks.begin(), ruleBlocks.end());
-}
-
-std::vector<fl::RuleBlock*> const& Engine::ruleBlocks() const
-{
-	return ruleBlocks_;
-}
-
-//std::size_t Engine::numberOfRuleBlocks() const
-int Engine::numberOfRuleBlocks() const
-{
-	return ruleBlocks_.size();
-}
-
-void Engine::setInputValue(const std::string& name, fl::scalar value)
-{
-	fl::InputVariable* p_iv = this->getInputVariable(name);
-
-	p_iv->setInputValue(value);
-}
-
-fl::scalar Engine::getOutputValue(const std::string& name) const
-{
-	const fl::OutputVariable* p_ov = this->getOutputVariable(name);
-
-	return p_ov->getOutputValue();
-}
-
-//TODO
-bool Engine::isReady(std::string* status) const
-{
-	throw std::runtime_error("Engine::isReady to be implemented");
-}
-
-//TODO
+//void Engine::configure(const std::string& conjunctionT,
+//					   const std::string& disjunctionS,
+//					   const std::string& activationT,
+//					   const std::string& accumulationS,
+//					   const std::string& defuzzifier,
+//					   int resolution)
+//{
+//	throw std::runtime_error("Engine::configure to be implemented");
+//}
+
+//void Engine::setName(const std::string& name)
+//{
+//	name_ = name;
+//}
+
+//std::string Engine::getName() const
+//{
+//	return name_;
+//}
+
+//void Engine::addInputVariable(fl::InputVariable* p_var)
+//{
+//	if (!p_var)
+//	{
+//		FL_THROW2(std::invalid_argument, "Input variable cannot be null");
+//	}
+//
+//	inputs_.push_back(p_var);
+//}
+
+////fl::InputVariable* setInputVariable(fl::InputVariable* p_var, std::size_t idx);
+//fl::InputVariable* Engine::setInputVariable(fl::InputVariable* p_var, int idx)
+//{
+//	if (idx >= inputs_.size())
+//	{
+//		FL_THROW2(std::invalid_argument, "Index to input variable is out of range");
+//	}
+//
+//	fl::InputVariable* p_oldVar = inputs_[idx];
+//
+//	inputs_[idx] = p_var;
+//
+//	return p_oldVar;
+//}
+
+////void insertInputVariable(fl::InputVariable* p_var, std::size_t idx);
+//void Engine::insertInputVariable(fl::InputVariable* p_var, int idx)
+//{
+//	if (!p_var)
+//	{
+//		FL_THROW2(std::invalid_argument, "Input variable cannot be null")
+//	}
+//
+//	inputs_.insert(inputs_.begin()+idx, p_var);
+//}
+
+////fl::InputVariable* Engine::getInputVariable(std::size_t idx) const
+//fl::InputVariable* Engine::getInputVariable(int idx) const
+//{
+//	if (idx >= inputs_.size())
+//	{
+//		FL_THROW2(std::invalid_argument, "Index to input variable is out of range");
+//	}
+//
+//	return inputs_[idx];
+//}
+
+//fl::InputVariable* Engine::getInputVariable(const std::string& name) const
+//{
+//	for (std::size_t i = 0,
+//					 n = inputs_.size();
+//		 i < n;
+//		 ++i)
+//	{
+//		fl::InputVariable* p_input = inputs_[i];
+//
+//		//check: null
+//		FL_DEBUG_ASSERT( p_input );
+//
+//		if (p_input->getName() == name)
+//		{
+//			return p_input;
+//		}
+//	}
+//
+//	FL_THROW("Input variable <" + name + "> not found");
+//}
+
+////fl::InputVariable* Engine::removeInputVariable(std::size_t idx)
+//fl::InputVariable* Engine::removeInputVariable(int idx)
+//{
+//	if (idx >= inputs_.size())
+//	{
+//		FL_THROW2(std::invalid_argument, "Index to input variable is out of range");
+//	}
+//
+//	fl::InputVariable* p_var = inputs_[idx];
+//
+//	inputs_.erase(inputs_.begin()+idx);
+//
+//	return p_var;
+//}
+
+//fl::InputVariable* Engine::removeInputVariable(const std::string& name)
+//{
+//	for (typename std::vector<fl::InputVariable*>::iterator it = inputs_.begin(),
+//															endIt = inputs_.end();
+//		 it != endIt;
+//		 ++it)
+//	{
+//		fl::InputVariable* p_var = *it;
+//
+//		if (p_var->getName() == name)
+//		{
+//			inputs_.erase(it);
+//			return p_var;
+//		}
+//	}
+//
+//	FL_THROW("Input variable <" + name + "> not found");
+//}
+
+//bool Engine::hasInputVariable(const std::string& name) const
+//{
+//	for (std::size_t i =0,
+//					 n = inputs_.size();
+//		 i < n;
+//		 ++i)
+//	{
+//		fl::InputVariable* p_var = inputs_[i];
+//
+//		if (p_var->getName() == name)
+//		{
+//			return true;
+//		}
+//	}
+//
+//	return false;
+//}
+
+//void Engine::setInputVariables(const std::vector<fl::InputVariable*>& vars)
+//{
+//	this->setInputVariables(vars.begin(), vars.end());
+//}
+
+//std::vector<fl::InputVariable*> const& Engine::inputVariables() const
+//{
+//	return inputs_;
+//}
+
+////std::size_t Engine::numberOfInputVariables() const
+//int Engine::numberOfInputVariables() const
+//{
+//	return inputs_.size();
+//}
+
+//void Engine::addOutputVariable(fl::OutputVariable* p_var)
+//{
+//	if (!p_var)
+//	{
+//		FL_THROW2(std::invalid_argument, "Output variable cannot be null");
+//	}
+//
+//	outputs_.push_back(p_var);
+//}
+
+////fl::OutputVariable* setOutputVariable(fl::OutputVariable* p_var, std::size_t idx);
+//fl::OutputVariable* Engine::setOutputVariable(fl::OutputVariable* p_var, int idx)
+//{
+//	if (idx >= outputs_.size())
+//	{
+//		FL_THROW2(std::invalid_argument, "Index to output variable is out of range");
+//	}
+//
+//	fl::OutputVariable* p_oldVar = outputs_[idx];
+//
+//	outputs_[idx] = p_var;
+//
+//	return p_oldVar;
+//}
+
+////void insertOutputVariable(fl::OutputVariable* p_var, std::size_t idx);
+//void Engine::insertOutputVariable(fl::OutputVariable* p_var, int idx)
+//{
+//	if (!p_var)
+//	{
+//		FL_THROW2(std::invalid_argument, "Output variable cannot be null")
+//	}
+//
+//	outputs_.insert(outputs_.begin()+idx, p_var);
+//}
+
+////fl::OutputVariable* Engine::getOutputVariable(std::size_t idx) const
+//fl::OutputVariable* Engine::getOutputVariable(int idx) const
+//{
+//	if (idx >= outputs_.size())
+//	{
+//		FL_THROW2(std::invalid_argument, "Index to output variable is out of range");
+//	}
+//
+//	return outputs_[idx];
+//}
+
+//fl::OutputVariable* Engine::getOutputVariable(const std::string& name) const
+//{
+//	for (std::size_t i = 0,
+//					 n = outputs_.size();
+//		 i < n;
+//		 ++i)
+//	{
+//		fl::OutputVariable* p_output = outputs_[i];
+//
+//		//check: null
+//		FL_DEBUG_ASSERT( p_output );
+//
+//		if (p_output->getName() == name)
+//		{
+//			return p_output;
+//		}
+//	}
+//
+//	FL_THROW("Output variable <" + name + "> not found");
+//}
+
+////fl::OutputVariable* Engine::removeOutputVariable(std::size_t idx)
+//fl::OutputVariable* Engine::removeOutputVariable(int idx)
+//{
+//	if (idx >= outputs_.size())
+//	{
+//		FL_THROW2(std::invalid_argument, "Index to output variable is out of range");
+//	}
+//
+//	fl::OutputVariable* p_var = outputs_[idx];
+//
+//	outputs_.erase(outputs_.begin()+idx);
+//
+//	return p_var;
+//}
+
+//fl::OutputVariable* Engine::removeOutputVariable(const std::string& name)
+//{
+//	for (typename std::vector<fl::OutputVariable*>::iterator it = outputs_.begin(),
+//															 endIt = outputs_.end();
+//		 it != endIt;
+//		 ++it)
+//	{
+//		fl::OutputVariable* p_var = *it;
+//
+//		if (p_var->getName() == name)
+//		{
+//			outputs_.erase(it);
+//			return p_var;
+//		}
+//	}
+//
+//	FL_THROW("Output variable <" + name + "> not found");
+//}
+
+//bool Engine::hasOutputVariable(const std::string& name) const
+//{
+//	for (std::size_t i =0,
+//					 n = outputs_.size();
+//		 i < n;
+//		 ++i)
+//	{
+//		fl::OutputVariable* p_var = outputs_[i];
+//
+//		if (p_var->getName() == name)
+//		{
+//			return true;
+//		}
+//	}
+//
+//	return false;
+//}
+
+//void Engine::setOutputVariables(const std::vector<fl::OutputVariable*>& vars)
+//{
+//	this->setOutputVariables(vars.begin(), vars.end());
+//}
+
+//std::vector<fl::OutputVariable*> const& Engine::outputVariables() const
+//{
+//	return outputs_;
+//}
+
+////std::size_t Engine::numberOfOutputVariables() const
+//int Engine::numberOfOutputVariables() const
+//{
+//	return outputs_.size();
+//}
+
+//std::vector<fl::Variable*> Engine::variables() const
+//{
+//	std::vector<fl::Variable*> vars;
+//
+//	vars.insert(vars.begin(), inputs_.begin(), inputs_.end());
+//	vars.insert(vars.end(), outputs_.begin(), outputs_.end());
+//
+//	return vars;
+//}
+
+//void Engine::addRuleBlock(fl::RuleBlock* p_block)
+//{
+//	//FIXME: what does it happens if multiple rule blocks are enabled and share the same output variables?
+//
+//	if (!p_block)
+//	{
+//		FL_THROW2(std::invalid_argument, "Rule block cannot be null");
+//	}
+//
+//	ruleBlocks_.push_back(p_block);
+//}
+
+////fl::RuleBlock* Engine::setRuleBlock(fl::RuleBlock* p_block, std::size_t idx)
+//fl::RuleBlock* Engine::setRuleBlock(fl::RuleBlock* p_block, int idx)
+//{
+//	if (idx >= ruleBlocks_.size())
+//	{
+//		FL_THROW2(std::invalid_argument, "Index to rule block is out of range");
+//	}
+//
+//	fl::RuleBlock* p_oldBlock = ruleBlocks_[idx];
+//
+//	ruleBlocks_.erase(ruleBlocks_.begin()+idx);
+//
+//	return p_oldBlock;
+//}
+
+////void Engine::insertRuleBlock(fl::RuleBlock* p_block, std::size_t idx)
+//void Engine::insertRuleBlock(fl::RuleBlock* p_block, int idx)
+//{
+//	if (!p_block)
+//	{
+//		FL_THROW2(std::invalid_argument, "Rule block cannot be null")
+//	}
+//
+//	ruleBlocks_.insert(ruleBlocks_.begin()+idx, p_block);
+//}
+
+////fl::RuleBlock* Engine::getRuleBlock(std::size_t idx) const
+//fl::RuleBlock* Engine::getRuleBlock(int idx) const
+//{
+//	if (idx >= ruleBlocks_.size())
+//	{
+//		FL_THROW2(std::invalid_argument, "Index to rule block is out of range");
+//	}
+//
+//	return ruleBlocks_[idx];
+//}
+
+//fl::RuleBlock* Engine::getRuleBlock(const std::string& name) const
+//{
+//	for (std::size_t i = 0,
+//					 n = ruleBlocks_.size();
+//		 i < n;
+//		 ++i)
+//	{
+//		fl::RuleBlock* p_block = ruleBlocks_[i];
+//
+//		//check: null
+//		FL_DEBUG_ASSERT( p_block );
+//
+//		if (p_block->getName() == name)
+//		{
+//			return p_block;
+//		}
+//	}
+//
+//	FL_THROW("Rule block <" + name + "> not found");
+//}
+
+////fl::RuleBlock* Engine::removeRuleBlock(std::size_t idx)
+//fl::RuleBlock* Engine::removeRuleBlock(int idx)
+//{
+//	if (idx >= ruleBlocks_.size())
+//	{
+//		FL_THROW2(std::invalid_argument, "Index to rule block is out of range");
+//	}
+//
+//	fl::RuleBlock* p_block = ruleBlocks_[idx];
+//
+//	ruleBlocks_.erase(ruleBlocks_.begin()+idx);
+//
+//	return p_block;
+//}
+
+//fl::RuleBlock* Engine::removeRuleBlock(const std::string& name)
+//{
+//	for (typename std::vector<fl::RuleBlock*>::iterator it = ruleBlocks_.begin(),
+//															 endIt = ruleBlocks_.end();
+//		 it != endIt;
+//		 ++it)
+//	{
+//		fl::RuleBlock* p_block = *it;
+//
+//		if (p_block->getName() == name)
+//		{
+//			ruleBlocks_.erase(it);
+//			return p_block;
+//		}
+//	}
+//
+//	FL_THROW("Rule block <" + name + "> not found");
+//}
+
+//bool Engine::hasRuleBlock(const std::string& name) const
+//{
+//	for (std::size_t i =0,
+//					 n = ruleBlocks_.size();
+//		 i < n;
+//		 ++i)
+//	{
+//		fl::RuleBlock* p_block = ruleBlocks_[i];
+//
+//		if (p_block->getName() == name)
+//		{
+//			return true;
+//		}
+//	}
+//
+//	return false;
+//}
+
+//void Engine::setRuleBlocks(const std::vector<fl::RuleBlock*>& ruleBlocks)
+//{
+//	this->setRuleBlocks(ruleBlocks.begin(), ruleBlocks.end());
+//}
+
+//std::vector<fl::RuleBlock*> const& Engine::ruleBlocks() const
+//{
+//	return ruleBlocks_;
+//}
+
+////std::size_t Engine::numberOfRuleBlocks() const
+//int Engine::numberOfRuleBlocks() const
+//{
+//	return ruleBlocks_.size();
+//}
+
+//void Engine::setInputValue(const std::string& name, fl::scalar value)
+//{
+//	fl::InputVariable* p_iv = this->getInputVariable(name);
+//
+//	p_iv->setInputValue(value);
+//}
+
+//fl::scalar Engine::getOutputValue(const std::string& name) const
+//{
+//	const fl::OutputVariable* p_ov = this->getOutputVariable(name);
+//
+//	return p_ov->getOutputValue();
+//}
+
 void Engine::process()
 {
-	throw std::runtime_error("Engine::process to be implemented");
+	this->eval();
 }
 
-//TODO
 void Engine::restart()
 {
-	throw std::runtime_error("Engine::restart to be implemented");
+	// Invalidate input and output variables
+	BaseType::restart();
+	// Invalidate ANFIS nodes
+	this->eval();
+}
+
+void Engine::setHasBias(bool value)
+{
+	hasBias_ = value;
+}
+
+bool Engine::hasBias() const
+{
+	return hasBias_;
+}
+
+//void Engine::setBias(const std::vector<fl::scalar>& value)
+//{
+//	bias_ = bias;
+//}
+
+//std::vector<fl::scalar> getBias() const
+//{
+//	return bias_;
+//}
+
+void Engine::setIsLearning(bool value)
+{
+	isLearning_ = value;
+}
+
+bool Engine::isLearning() const
+{
+	return isLearning_;
 }
 
 std::vector<fl::scalar> Engine::getInputValues() const
@@ -1317,35 +1473,56 @@ Engine::LayerCategory Engine::getPreviousLayerCategory(Engine::LayerCategory cat
 
 void Engine::clear()
 {
+	this->clearAnfis();
+
+//	for (std::size_t i = 0,
+//					 n = inputs_.size();
+//		 i < n;
+//		 ++i)
+//	{
+//		delete inputs_[i];
+//	}
+//	inputs_.clear();
+	while (this->numberOfInputVariables() > 0)
+	{
+		this->removeInputVariable(0);
+	}
+
+//	for (std::size_t i = 0,
+//					 n = outputs_.size();
+//		 i < n;
+//		 ++i)
+//	{
+//		delete outputs_[i];
+//	}
+//	outputs_.clear();
+	while (this->numberOfOutputVariables() > 0)
+	{
+		this->removeOutputVariable(0);
+	}
+
+//	for (std::size_t i = 0,
+//					 n = ruleBlocks_.size();
+//		 i < n;
+//		 ++i)
+//	{
+//		delete ruleBlocks_[i];
+//	}
+//	ruleBlocks_.clear();
+	while (this->numberOfRuleBlocks() > 0)
+	{
+		this->removeRuleBlock(0);
+	}
+}
+
+void Engine::clearAnfis()
+{
+	//hasBias_ = false;
+	//bias_.clear();
+	//isLearning_ = false;
+
 	inConns_.clear();
 	outConns_.clear();
-
-	for (std::size_t i = 0,
-					 n = inputs_.size();
-		 i < n;
-		 ++i)
-	{
-		delete inputs_[i];
-	}
-	inputs_.clear();
-
-	for (std::size_t i = 0,
-					 n = outputs_.size();
-		 i < n;
-		 ++i)
-	{
-		delete outputs_[i];
-	}
-	outputs_.clear();
-
-	for (std::size_t i = 0,
-					 n = ruleBlocks_.size();
-		 i < n;
-		 ++i)
-	{
-		delete ruleBlocks_[i];
-	}
-	ruleBlocks_.clear();
 
 	for (std::size_t i = 0,
 					 n = inputNodes_.size();
@@ -1411,6 +1588,61 @@ void Engine::clear()
 	outputNodes_.clear();
 }
 
+void Engine::updateReferences()
+{
+	BaseType::updateReferences();
+
+	for (std::size_t i = 0,
+					 n = inputNodes_.size();
+		 i < n;
+		 ++i)
+	{
+		inputNodes_[i]->setEngine(this);
+	}
+	for (std::size_t i = 0,
+					 n = fuzzificationNodes_.size();
+		 i < n;
+		 ++i)
+	{
+		fuzzificationNodes_[i]->setEngine(this);
+	}
+	for (std::size_t i = 0,
+					 n = inputHedgeNodes_.size();
+		 i < n;
+		 ++i)
+	{
+		inputHedgeNodes_[i]->setEngine(this);
+	}
+	for (std::size_t i = 0,
+					 n = antecedentNodes_.size();
+		 i < n;
+		 ++i)
+	{
+		antecedentNodes_[i]->setEngine(this);
+	}
+	for (std::size_t i = 0,
+					 n = consequentNodes_.size();
+		 i < n;
+		 ++i)
+	{
+		consequentNodes_[i]->setEngine(this);
+	}
+	for (std::size_t i = 0,
+					 n = accumulationNodes_.size();
+		 i < n;
+		 ++i)
+	{
+		accumulationNodes_[i]->setEngine(this);
+	}
+	for (std::size_t i = 0,
+					 n = outputNodes_.size();
+		 i < n;
+		 ++i)
+	{
+		outputNodes_[i]->setEngine(this);
+	}
+}
+
 std::vector<Node*> Engine::inputConnections(const Node* p_node) const
 {
 	return inConns_.count(p_node) > 0 ? inConns_.at(p_node) : std::vector<Node*>();
@@ -1423,8 +1655,10 @@ std::vector<Node*> Engine::outputConnections(const Node* p_node) const
 
 void Engine::check()
 {
+	//TODO: to be completed
+
 	// Check output var
-	if (outputs_.size() != 1)
+	if (this->numberOfOutputVariables() != 1)
 	{
 		FL_THROW2(std::logic_error, "There must be exactly one output variable");
 	}
@@ -1475,11 +1709,11 @@ void Engine::build()
 	// Layer 0 (the input layer): input linguistic variables
 	// There is one node for each input variable
 	for (std::size_t i = 0,
-					 n = inputs_.size();
+					 n = this->numberOfInputVariables();
 		 i < n;
 		 ++i)
 	{
-		fl::InputVariable* p_input = inputs_[i];
+		fl::InputVariable* p_input = this->getInputVariable(i);
 
 		// check: null
 		FL_DEBUG_ASSERT( p_input );
@@ -1493,11 +1727,11 @@ void Engine::build()
 	// Layer 1: linguistic terms layer
 	// There is one node for each linguistic term of each input variable
 	for (std::size_t i = 0,
-					 ni = inputs_.size();
+					 ni = this->numberOfInputVariables();
 		 i < ni;
 		 ++i)
 	{
-		fl::InputVariable* p_input = inputs_[i];
+		fl::InputVariable* p_input = this->getInputVariable(i);
 
 		// check: null
 		FL_DEBUG_ASSERT( p_input );
@@ -1525,11 +1759,11 @@ void Engine::build()
 	// Layer 2: complement terms layer
 	// There is one node for each linguistic term of each input variable
 	for (std::size_t i = 0,
-					 ni = inputs_.size();
+					 ni = this->numberOfInputVariables();
 		 i < ni;
 		 ++i)
 	{
-		fl::InputVariable* p_input = inputs_[i];
+		fl::InputVariable* p_input = this->getInputVariable(i);
 
 		// check: null
 		FL_DEBUG_ASSERT( p_input );
@@ -1557,11 +1791,11 @@ void Engine::build()
 	// Layer 3: firing strength of fuzzy rules
 	// There is one node for each rule
 	for (std::size_t b = 0,
-					 nb = ruleBlocks_.size();
+					 nb = this->numberOfRuleBlocks();
 		 b < nb;
 		 ++b)
 	{
-		const fl::RuleBlock* p_ruleBlock = ruleBlocks_[b];
+		const fl::RuleBlock* p_ruleBlock = this->getRuleBlock(b);
 
 		// check: null
 		FL_DEBUG_ASSERT( p_ruleBlock );
@@ -1627,11 +1861,11 @@ void Engine::build()
 	// Layer 4: implication of fuzzy rules
 	// There is one node for each rule
 	for (std::size_t b = 0,
-					 nb = ruleBlocks_.size();
+					 nb = this->numberOfRuleBlocks();
 		 b < nb;
 		 ++b)
 	{
-		const fl::RuleBlock* p_ruleBlock = ruleBlocks_[b];
+		const fl::RuleBlock* p_ruleBlock = this->getRuleBlock(b);
 
 		// check: null
 		FL_DEBUG_ASSERT( p_ruleBlock );
@@ -1717,8 +1951,17 @@ void Engine::build()
 	// This node computes the ratio between the weighted sum of rules'
 	// implications (i.e., the output of the first node of Layer 5) and the
 	// sum of rules' firing strenghts (i.e., the output of the second node of Layer 5).
+	for (std::size_t i = 0,
+					 n = this->numberOfOutputVariables();
+		 i < n;
+		 ++i)
 	{
-		OutputNode* p_node = new OutputNode(this);
+		fl::OutputVariable* p_output = this->getOutputVariable(i);
+
+		// check: null
+		FL_DEBUG_ASSERT( p_output );
+
+		OutputNode* p_node = new OutputNode(p_output, this);
 		outputNodes_.push_back(p_node);
 
 		// Connect every summation node to this node
@@ -1744,25 +1987,25 @@ void Engine::build()
 //			order_ = 1;
 //		}
 //[XXX]
-std::cerr << "ANFIS:" << std::endl;
-Engine::LayerCategory layerCat = Engine::InputLayer;
-while (1)
-{
-    std::vector<Node*> nodes = getLayer(layerCat);
-    std::cerr << "- Layer: " << layerCat << std::endl;
-    std::cerr << " - #Nodes: " << nodes.size() << std::endl;
-    for (std::size_t i = 0; i < nodes.size(); ++i)
-    {
-        std::cerr << " - Node #" << i << ", #inputs: " << nodes[i]->inputConnections().size() << ", #output: " << nodes[i]->outputConnections().size() << std::endl;
-    }
-    if (layerCat == Engine::OutputLayer)
-    {
-        break;
-    }
-    layerCat = getNextLayerCategory(layerCat);
-}
-//oss << std::endl << FllExporter().toString(this);
-std::cerr << std::endl;
+//std::cerr << "ANFIS:" << std::endl;
+//Engine::LayerCategory layerCat = Engine::InputLayer;
+//while (1)
+//{
+//    std::vector<Node*> nodes = getLayer(layerCat);
+//    std::cerr << "- Layer: " << layerCat << std::endl;
+//    std::cerr << " - #Nodes: " << nodes.size() << std::endl;
+//    for (std::size_t i = 0; i < nodes.size(); ++i)
+//    {
+//        std::cerr << " - Node #" << i << ", #inputs: " << nodes[i]->inputConnections().size() << ", #output: " << nodes[i]->outputConnections().size() << std::endl;
+//    }
+//    if (layerCat == Engine::OutputLayer)
+//    {
+//        break;
+//    }
+//    layerCat = getNextLayerCategory(layerCat);
+//}
+////oss << std::endl << FllExporter().toString(this);
+//std::cerr << std::endl;
 //[/XXX]
 
 }
