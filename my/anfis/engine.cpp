@@ -1475,17 +1475,23 @@ void Engine::clear()
 {
 	this->clearAnfis();
 
+	//TODO: it would be great if fl::Engine provide a 'clear' method as well...
+
 //	for (std::size_t i = 0,
-//					 n = inputs_.size();
+//					 n = ruleBlocks_.size();
 //		 i < n;
 //		 ++i)
 //	{
-//		delete inputs_[i];
+//		delete ruleBlocks_[i];
 //	}
-//	inputs_.clear();
-	while (this->numberOfInputVariables() > 0)
+//	ruleBlocks_.clear();
+	while (this->numberOfRuleBlocks() > 0)
 	{
-		this->removeInputVariable(0);
+		fl::RuleBlock* p_block = this->removeRuleBlock(0);
+		if (p_block)
+		{
+			delete p_block;
+		}
 	}
 
 //	for (std::size_t i = 0,
@@ -1498,20 +1504,28 @@ void Engine::clear()
 //	outputs_.clear();
 	while (this->numberOfOutputVariables() > 0)
 	{
-		this->removeOutputVariable(0);
+		fl::OutputVariable* p_var = this->removeOutputVariable(0);
+		if (p_var)
+		{
+			delete p_var;
+		}
 	}
 
 //	for (std::size_t i = 0,
-//					 n = ruleBlocks_.size();
+//					 n = inputs_.size();
 //		 i < n;
 //		 ++i)
 //	{
-//		delete ruleBlocks_[i];
+//		delete inputs_[i];
 //	}
-//	ruleBlocks_.clear();
-	while (this->numberOfRuleBlocks() > 0)
+//	inputs_.clear();
+	while (this->numberOfInputVariables() > 0)
 	{
-		this->removeRuleBlock(0);
+		fl::InputVariable* p_var = this->removeInputVariable(0);
+		if (p_var)
+		{
+			delete p_var;
+		}
 	}
 }
 
