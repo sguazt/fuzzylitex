@@ -3,14 +3,15 @@
 
 
 #include <cstddef>
-#include <my/commons.h>
+#include <fl/commons.h>
+#include <fl/fuzzylite.h>
 #include <stdexcept>
 #include <vector>
 
 
 namespace fl {
 
-template <typename ValueT>
+template <typename ValueT = fl::scalar>
 class DataSetEntry
 {
 	private: typedef std::vector<ValueT> Container;
@@ -19,12 +20,30 @@ class DataSetEntry
 	FL_MAKE_ITERATORS(public, Container, Output, output, out_) 
 
 
+	public: DataSetEntry()
+	{
+	}
+
 	public: template <typename InIterT, typename OutIterT>
 			DataSetEntry(InIterT inFirst, InIterT inLast,
 						 OutIterT outFirst, OutIterT outLast)
 	: in_(inFirst, inLast),
 	  out_(outFirst, outLast)
 	{
+	}
+
+	public: template <typename IterT>
+			void setInputs(IterT first, IterT last)
+	{
+		in_.clear();
+		in_.assign(first, last);
+	}
+
+	public: template <typename IterT>
+			void setOutputs(IterT first, IterT last)
+	{
+		out_.clear();
+		out_.assign(first, last);
 	}
 
 	public: std::size_t numOfInputs() const
@@ -54,7 +73,7 @@ class DataSetEntry
 }; // DataSetEntry
 
 
-template <typename ValueT>
+template <typename ValueT = fl::scalar>
 class DataSet
 {
 	private: typedef std::vector< DataSetEntry<ValueT> > EntryContainer;
@@ -63,7 +82,7 @@ class DataSet
 	//FL_MAKE_STL_ITERATORS(public, EntryContainer, entries_) 
 
 
-	public: DataSet(std::size_t ni, std::size_t no)
+	public: explicit DataSet(std::size_t ni = 0, std::size_t no = 0)
 	: ni_(ni),
 	  no_(no)
 	{
@@ -150,9 +169,19 @@ class DataSet
 		return entries_.size();
 	}
 
+	public: void setNumOfInputs(std::size_t val)
+	{
+		ni_ = val;
+	}
+
 	public: std::size_t numOfInputs() const
 	{
 		return ni_;
+	}
+
+	public: void setNumOfOutputs(std::size_t val)
+	{
+		no_ = val;
 	}
 
 	public: std::size_t numOfOutputs() const
