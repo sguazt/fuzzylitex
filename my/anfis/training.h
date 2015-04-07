@@ -87,11 +87,17 @@ public:
 	 * \param ff The forgetting factor used in the recursive least square
 	 *  algorithm
 	 */
-    explicit Jang1993HybridLearningAlgorithm(Engine* p_anfis,
+    explicit Jang1993HybridLearningAlgorithm(Engine* p_anfis = fl::null,
 											 fl::scalar ss = 0.01,
 											 fl::scalar ssDecrRate = 0.9,
 											 fl::scalar ssIncrRate = 1.1,
 											 fl::scalar ff = 1);
+
+	/// Sets the ANFIS model to be trained
+	void setEngine(Engine* p_anfis);
+
+	/// Gets the ANFIS model to be trained
+	Engine* getEngine() const;
 
 	/// Sets the initial step size
 	void setInitialStepSize(fl::scalar value);
@@ -135,9 +141,15 @@ public:
     /// Trains the ANFIS model for a single epoch only using the given training set \a data
     fl::scalar trainSingleEpoch(const fl::DataSet<fl::scalar>& data);
 
+	/// Resets the state of the learning algorithm
+	void reset();
+
 private:
 	/// Initialize the training algorithm
 	void init();
+
+	/// Check the correctness of the parameters of the training algorithm
+	void check();
 
 
 private:

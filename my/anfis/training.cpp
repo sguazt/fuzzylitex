@@ -34,6 +34,16 @@ Jang1993HybridLearningAlgorithm::Jang1993HybridLearningAlgorithm(Engine* p_anfis
 	this->init();
 }
 
+void Jang1993HybridLearningAlgorithm::setEngine(Engine* p_anfis)
+{
+	p_anfis_ = p_anfis;
+}
+
+Engine* Jang1993HybridLearningAlgorithm::getEngine() const
+{
+	return p_anfis_;
+}
+
 void Jang1993HybridLearningAlgorithm::setInitialStepSize(fl::scalar value)
 {
 	stepSizeInit_ = value;
@@ -78,6 +88,8 @@ fl::scalar Jang1993HybridLearningAlgorithm::train(const fl::DataSet<fl::scalar>&
 												  std::size_t maxEpochs,
 												  fl::scalar errorGoal)
 {
+	this->reset();
+
 	fl::scalar rmse = 0;
 	for (std::size_t epoch = 0; epoch < maxEpochs; ++epoch)
 	{
@@ -97,6 +109,8 @@ fl::scalar Jang1993HybridLearningAlgorithm::train(const fl::DataSet<fl::scalar>&
 
 fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpoch(const fl::DataSet<fl::scalar>& data)
 {
+	this->check();
+
 	//const bool oldHasBias = p_anfis_->hasBias();
 	//p_anfis_->setHasBias(false);
 	p_anfis_->setIsLearning(true);
@@ -112,7 +126,7 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpoch(const fl::DataSet<f
 		{
 			FuzzificationNode* p_node = fuzzyLayer[i];
 
-std::cerr << "PHASE #-1 - Computing Error Norm for node #" << i << " (" << p_node << ")... "<< std::endl;///XXX
+//std::cerr << "PHASE #-1 - Computing Error Norm for node #" << i << " (" << p_node << ")... "<< std::endl;///XXX
 
 			for (std::size_t p = 0,
 							 np = dEdPs_.at(p_node).size();
@@ -124,7 +138,7 @@ std::cerr << "PHASE #-1 - Computing Error Norm for node #" << i << " (" << p_nod
 		}
 		errNorm = std::sqrt(errNorm);
 std::cerr << "PHASE #-1 - Error Norm: " << errNorm << std::endl;///XXX
-std::cerr << "PHASE #-1 - Step Size: " << stepSize_ << std::endl;///XXX
+std::cerr << "PHASE #-1 - STEP-SIZE: " << stepSize_ << std::endl;///XXX
 		if (errNorm > 0)
 		{
 			for (std::size_t i = 0; i < ni; ++i)
@@ -147,29 +161,41 @@ std::cerr << "PHASE #-1 - Node #" << i << ": " << p_node << " - New Params: "; f
 		}
 	}
 	// Update step-size
-//std::cerr << "STEP-SIZE error window: "; fl::detail::VectorOutput(std::cerr, stepSizeErrWindow_); std::cerr << std::endl;//XXX
-//std::cerr << "STEP-SIZE decr-counter: " << stepSizeDecrCounter_ << ", incr-counter: " << stepSizeIncrCounter_ << std::endl;//XXX
+std::cerr << "STEP-SIZE error window: "; fl::detail::VectorOutput(std::cerr, stepSizeErrWindow_); std::cerr << std::endl;//XXX
+std::cerr << "STEP-SIZE decr-counter: " << stepSizeDecrCounter_ << ", incr-counter: " << stepSizeIncrCounter_ << std::endl;//XXX
 	if (!fl::detail::FloatTraits<fl::scalar>::EssentiallyEqual(stepSizeDecrRate_, 1))
 	{
-		if (stepSizeDecrCounter_ == (stepSizeErrWindowLen_-1))
+		const std::size_t maxCounter = stepSizeErrWindowLen_-1;
+
+		if (stepSizeErrWindow_.size() >= stepSizeErrWindowLen_
+			&& stepSizeDecrCounter_ >= maxCounter)
 		{
+std::cerr << "STEP-SIZE decrease checking..." << std::endl;//XXX
 			bool update = true;
-			for (std::size_t i = 0; i < (stepSizeErrWindowLen_-1); ++i)
+			for (std::size_t i = 0; i < maxCounter && update; ++i)
 			{
-				if (i % 2)
+				if ((i % 2) != 0)
 				{
-					//update &= (stepSizeErrWindow_[stepSizeDecrCounter_-i] > stepSizeErrWindow_[stepSizeDecrCounter_-i-1]);
-					update &= (stepSizeErrWindow_[i] > stepSizeErrWindow_[i+1]);
+					////update &= (stepSizeErrWindow_[stepSizeDecrCounter_-i] > stepSizeErrWindow_[stepSizeDecrCounter_-i-1]);
+					//update &= (stepSizeErrWindow_[i] > stepSizeErrWindow_[i+1]);
+					if (stepSizeErrWindow_[i] <= stepSizeErrWindow_[i+1])
+					{
+						update = false;
+					}
 				}
 				else
 				{
-					//update &= (stepSizeErrWindow_[stepSizeDecrCounter_-i] < stepSizeErrWindow_[stepSizeDecrCounter_-i-1]);
-					update &= (stepSizeErrWindow_[i] < stepSizeErrWindow_[i+1]);
+					////update &= (stepSizeErrWindow_[stepSizeDecrCounter_-i] < stepSizeErrWindow_[stepSizeDecrCounter_-i-1]);
+					//update &= (stepSizeErrWindow_[i] < stepSizeErrWindow_[i+1]);
+					if (stepSizeErrWindow_[i] >= stepSizeErrWindow_[i+1])
+					{
+						update = false;
+					}
 				}
 			}
 			if (update)
 			{
-//std::cerr << "STEP-SIZE (decreasing) - old: " << stepSize_ << ", new: " << (stepSize_*stepSizeDecrRate_) << std::endl;//XXX
+std::cerr << "STEP-SIZE (decreasing) - old: " << stepSize_ << ", new: " << (stepSize_*stepSizeDecrRate_) << std::endl;//XXX
 				stepSize_ *= stepSizeDecrRate_;
 				stepSizeDecrCounter_ = 1;
 			}
@@ -185,17 +211,24 @@ std::cerr << "PHASE #-1 - Node #" << i << ": " << p_node << " - New Params: "; f
 	}
 	if (!fl::detail::FloatTraits<fl::scalar>::EssentiallyEqual(stepSizeIncrRate_, 1))
 	{
-		if (stepSizeIncrCounter_ == (stepSizeErrWindowLen_-1))
+		const std::size_t maxCounter = stepSizeErrWindowLen_-1;
+
+		if (stepSizeErrWindow_.size() >= stepSizeErrWindowLen_
+			&& stepSizeIncrCounter_ >= maxCounter)
 		{
 			bool update = true;
-			for (std::size_t i = 0; i < (stepSizeErrWindowLen_-1); ++i)
+			for (std::size_t i = 0; i < maxCounter && update; ++i)
 			{
-				//update &= (stepSizeErrWindow_[stepSizeIncrCounter_-i] < stepSizeErrWindow_[stepSizeIncrCounter_-i-1]);
-				update &= (stepSizeErrWindow_[i] < stepSizeErrWindow_[i+1]);
+				////update &= (stepSizeErrWindow_[stepSizeIncrCounter_-i] < stepSizeErrWindow_[stepSizeIncrCounter_-i-1]);
+				//update &= (stepSizeErrWindow_[i] < stepSizeErrWindow_[i+1]);
+				if (stepSizeErrWindow_[i] >= stepSizeErrWindow_[i+1])
+				{
+					update = false;
+				}
 			}
 			if (update)
 			{
-//std::cerr << "STEP-SIZE (increasing) - old: " << stepSize_ << ", new: " << (stepSize_*stepSizeIncrRate_) << std::endl;//XXX
+std::cerr << "STEP-SIZE (increasing) - old: " << stepSize_ << ", new: " << (stepSize_*stepSizeIncrRate_) << std::endl;//XXX
 				stepSize_ *= stepSizeIncrRate_;
 				stepSizeIncrCounter_ = 1;
 			}
@@ -371,7 +404,7 @@ std::cerr << "PHASE #-1 - Node #" << i << ": " << p_node << " - New Params: "; f
 					++k;
 				}
 				detail::SetTermParameters(p_term, params.begin(), params.end());
-std::cerr << "PHASE #0 - Estimated RLS params - Output #" << v << " - Term #" << t << " - Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;//XXX
+//std::cerr << "PHASE #0 - Estimated RLS params - Output #" << v << " - Term #" << t << " - Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;//XXX
 				//++r;
 			}
 		}
@@ -566,8 +599,10 @@ std::cerr << "]" << std::endl;//XXX
 	if (stepSizeErrWindow_.size() == stepSizeErrWindowLen_)
 	{
 		stepSizeErrWindow_.pop_back();
+		//stepSizeErrWindow_.pop_front();
 	}
 	stepSizeErrWindow_.push_front(rmse);
+	//stepSizeErrWindow_.push_back(rmse);
 
 #if 0
 	// Update parameters of input terms
@@ -686,38 +721,44 @@ std::cerr << "PHASE #2 - Node #" << i << ": " << p_node << " - New Params: "; fl
 	return rmse;
 }
 
+void Jang1993HybridLearningAlgorithm::reset()
+{
+	this->init();
+}
+
 void Jang1993HybridLearningAlgorithm::init()
 {
 	std::size_t numParams = 0;
-	//std::size_t numOutTerms = 0;
-	for (std::size_t i = 0,
-					 nv = p_anfis_->numberOfOutputVariables();
-		 i < nv;
-		 ++i)
+	std::size_t numOutVars = 0;
+	if (p_anfis_)
 	{
-		fl::OutputVariable* p_var = p_anfis_->getOutputVariable(i);
-
-		FL_DEBUG_ASSERT( p_var );
-
-		for (std::size_t j = 0,
-						 nt = p_var->numberOfTerms();
-			 j < nt;
-			 ++j)
+		for (std::size_t i = 0,
+						 nv = p_anfis_->numberOfOutputVariables();
+			 i < nv;
+			 ++i)
 		{
-			fl::Term* p_term = p_var->getTerm(j);
+			fl::OutputVariable* p_var = p_anfis_->getOutputVariable(i);
 
-			FL_DEBUG_ASSERT( p_term );
+			FL_DEBUG_ASSERT( p_var );
 
-			numParams += detail::GetTermParameters(p_term).size();
+			for (std::size_t j = 0,
+							 nt = p_var->numberOfTerms();
+				 j < nt;
+				 ++j)
+			{
+				fl::Term* p_term = p_var->getTerm(j);
 
-			//++numOutTerms;
+				FL_DEBUG_ASSERT( p_term );
+
+				numParams += detail::GetTermParameters(p_term).size();
+			}
 		}
+		numOutVars = p_anfis_->numberOfOutputVariables();
 	}
-	//numParams *= numOutTerms;
 
 	rls_.setModelOrder(0);
 	rls_.setInputDimension(numParams);
-	rls_.setOutputDimension(p_anfis_->numberOfOutputVariables());
+	rls_.setOutputDimension(numOutVars);
 	rls_.reset();
 	//rlsPhi_.clear();
 
@@ -731,6 +772,30 @@ void Jang1993HybridLearningAlgorithm::init()
 	//{
 	//	bias_.resize(p_anfis_->numberOfOutputVariables(), 0);
 	//}
+}
+
+void Jang1993HybridLearningAlgorithm::check()
+{
+	if (p_anfis_ == fl::null)
+	{
+		FL_THROW2(std::logic_error, "Invalid ANFIS engine");
+	}
+	if (stepSizeInit_ <= 0)
+	{
+		FL_THROW2(std::logic_error, "Invalid step-size");
+	}
+	if (stepSizeDecrRate_ <= 0)
+	{
+		FL_THROW2(std::logic_error, "Invalid step-size decreasing rate");
+	}
+	if (stepSizeIncrRate_ <= 0)
+	{
+		FL_THROW2(std::logic_error, "Invalid step-size increasing rate");
+	}
+	if (stepSizeErrWindowLen_ == 0)
+	{
+		FL_THROW2(std::logic_error, "Invalid length for the step-size error window");
+	}
 }
 
 }} // Namespace fl::anfis

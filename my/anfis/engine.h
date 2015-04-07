@@ -392,7 +392,7 @@ public:
 
 	//fl::scalar getOutputValue(const std::string& name) const;
 
-	//bool isReady(std::string* status = fl::null) const;
+	bool isReady(std::string* status = fl::null) const;
 
 	void process();
 

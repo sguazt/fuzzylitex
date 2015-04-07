@@ -8,6 +8,7 @@
 #include <fl/Headers.h>
 #include <map>
 #include <stdexcept>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -1174,6 +1175,41 @@ Engine* Engine::clone() const
 //
 //	return p_ov->getOutputValue();
 //}
+
+bool Engine::isReady(std::string* p_status) const
+{
+	bool ready = BaseType::isReady(p_status);
+
+	if (ready)
+	{
+		std::ostringstream oss;
+		if (inputNodes_.empty()
+			|| fuzzificationNodes_.empty()
+			|| inputHedgeNodes_.empty()
+			|| antecedentNodes_.empty()
+			|| consequentNodes_.empty()
+			|| accumulationNodes_.empty()
+			|| outputNodes_.empty()
+			|| inConns_.empty()
+			|| outConns_.empty())
+		{
+			oss << "- Engine <" << this->getName() << "> has an incomplete ANFIS model" << std::endl;
+			ready = false;
+		}
+		else if (inputNodes_.size() != this->numberOfInputVariables())
+		{
+			oss << "- Engine <" << this->getName() << "> has a bad number of input nodes in the ANFIS model" << std::endl;
+			ready = false;
+		}
+		else if (outputNodes_.size() != this->numberOfOutputVariables())
+		{
+			oss << "- Engine <" << this->getName() << "> has a bad number of output nodes in the ANFIS model" << std::endl;
+			ready = false;
+		}
+	}
+
+	return ready;
+}
 
 void Engine::process()
 {
