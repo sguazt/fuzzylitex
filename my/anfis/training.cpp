@@ -97,7 +97,7 @@ fl::scalar Jang1993HybridLearningAlgorithm::train(const fl::DataSet<fl::scalar>&
 
 		rmse = this->trainSingleEpoch(data);
 
-		FL_DEBUG_TRACE("TRAINING - EPOCH #" << epoch << " -> RMSE: ");
+		FL_DEBUG_TRACE("TRAINING - EPOCH #" << epoch << " -> RMSE: " << rmse);
 
 		if (fl::detail::FloatTraits<fl::scalar>::EssentiallyLessEqual(rmse, errorGoal))
 		{
