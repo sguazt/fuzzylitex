@@ -9,10 +9,10 @@
 #include <fl/factory/HedgeFactory.h>
 #include <fl/fuzzylite.h>
 #include <fl/hedge/Not.h>
-#include <fl/norm/SNorm.h>
+#include <fl/norm/SNorm.h> //FIXME: needed even if not explicitly used because of fwd decl in fl::RuleBlock
 #include <fl/norm/TNorm.h>
 #include <fl/rule/Antecedent.h>
-#include <fl/rule/Consequent.h>
+#include <fl/rule/Consequent.h> //FIXME: needed even if not explicitly used because of fwd decl in fl::Rule
 #include <fl/rule/Expression.h>
 #include <fl/rule/Rule.h>
 #include <fl/rule/RuleBlock.h>
