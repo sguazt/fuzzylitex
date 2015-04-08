@@ -153,6 +153,12 @@ public:
 	/// Gets the forgetting factor
 	fl::scalar getForgettingFactor() const;
 
+	/// Sets the online/offline mode for the learning algorithm
+	void setIsOnline(bool value);
+
+	/// Gets the online/offline mode of the learning algorithm
+	bool isOnline() const;
+
 	/**
 	 * Trains the ANFIS model
 	 *
@@ -181,6 +187,10 @@ private:
 	/// Check the correctness of the parameters of the training algorithm
 	void check();
 
+	fl::scalar trainSingleEpochOffline(const fl::DataSet<fl::scalar>& data);
+
+	fl::scalar trainSingleEpochOnline(const fl::DataSet<fl::scalar>& data);
+
 
 private:
 	Engine* p_anfis_; ///< The ANFIS model
@@ -192,6 +202,7 @@ private:
 	std::deque<fl::scalar> stepSizeErrWindow_; ///< Window of RMSEs used to update the step size
 	std::size_t stepSizeIncrCounter_; ///< Counter used to check when to increase the step size
 	std::size_t stepSizeDecrCounter_; ///< Counter used to check when to decrease the step size
+	bool online_; ///< \c true in case of online learning; \c false if offline (batch) learning
 	//bool useBias_; ///< if \c true, add a bias to handle zero-firing error
 	//std::vector<fl::scalar> bias_; ///< The bias to use in the output
 	fl::detail::RecursiveLeastSquaresEstimator<fl::scalar> rls_; ///< The recursive least-squares estimator
