@@ -2,197 +2,15 @@
 #define FL_ANFIS_ENGINE_H
 
 
-#include <boost/noncopyable.hpp>
-#include <cstddef>
-#include <fl/commons.h>
-#include <fl/detail/math.h>
-#include <fl/detail/traits.h>
+#include <fl/anfis/nodes.h>
 #include <fl/Engine.h>
 #include <fl/fuzzylite.h>
-#include <fl/hedge/Hedge.h>
-#include <fl/norm/Norm.h>
-#include <fl/norm/TNorm.h>
-#include <fl/rule/RuleBlock.h>
-#include <fl/term/Term.h>
-#include <fl/variable/InputVariable.h>
-#include <fl/variable/OutputVariable.h>
 #include <map>
 #include <string>
+#include <vector>
 
 
 namespace fl { namespace anfis {
-
-class Engine;
-
-
-////////////////////////////////////////////////////////////////////////////////
-// Nodes
-////////////////////////////////////////////////////////////////////////////////
-
-
-class Node: boost::noncopyable
-{
-public:
-	Node(Engine* p_engine);
-
-	virtual ~Node();
-
-	void setEngine(Engine* p_engine);
-
-	Engine* getEngine() const;
-
-	std::vector<Node*> inputConnections() const;
-
-	std::vector<Node*> outputConnections() const;
-
-	std::vector<fl::scalar> inputs() const;
-
-	fl::scalar eval();
-
-	std::vector<fl::scalar> evalDerivativeWrtInputs();
-
-	fl::scalar getValue() const;
-
-//protected:
-	void setValue(fl::scalar v);
-
-private:
-	virtual fl::scalar doEval() = 0;
-
-	virtual std::vector<fl::scalar> doEvalDerivativeWrtInputs() = 0;
-
-
-private:
-	Engine* p_engine_;
-	fl::scalar val_;
-}; // Node
-
-class InputNode: public Node
-{
-public:
-	InputNode(fl::InputVariable* p_var, Engine* p_engine);
-
-	fl::InputVariable* getInputVariable() const;
-
-private:
-	fl::scalar doEval();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
-
-
-private:
-	fl::InputVariable* p_var_;
-}; // InputNode
-
-class FuzzificationNode: public Node
-{
-public:
-	FuzzificationNode(fl::Term* p_term, Engine* p_engine);
-
-	fl::Term* getTerm() const;
-
-	std::vector<fl::scalar> evalDerivativeWrtParams();
-
-private:
-	fl::scalar doEval();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
-
-
-private:
-	fl::Term* p_term_;
-}; // FuzzificationNode
-
-class InputHedgeNode: public Node
-{
-public:
-	InputHedgeNode(fl::Hedge* p_hedge, Engine* p_engine);
-
-	~InputHedgeNode();
-
-	fl::Hedge* getHedge() const;
-
-private:
-	fl::scalar doEval();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
-
-
-private:
-	fl::Hedge* p_hedge_;
-}; // InputHedgeNode
-
-class AntecedentNode: public Node
-{
-public:
-	AntecedentNode(fl::Norm* p_norm, Engine* p_engine);
-
-	fl::Norm* getNorm() const;
-
-private:
-	fl::scalar doEval();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
-
-
-private:
-	fl::Norm* p_norm_;
-}; // AntecedentNode
-
-
-class ConsequentNode: public Node
-{
-public:
-	ConsequentNode(fl::Term* p_term, fl::TNorm* p_tnorm, Engine* p_engine);
-
-	fl::Term* getTerm() const;
-
-	fl::TNorm* getTNorm() const;
-
-private:
-	fl::scalar doEval();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
-
-
-private:
-	fl::Term* p_term_;
-	fl::TNorm* p_tnorm_;
-};
-
-class AccumulationNode: public Node
-{
-public:
-	explicit AccumulationNode(Engine* p_engine);
-
-private:
-	fl::scalar doEval();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
-}; // AccumulationNode
-
-class OutputNode: public Node
-{
-public:
-	OutputNode(fl::OutputVariable* p_var, Engine* p_engine);
-
-	fl::OutputVariable* getOutputVariable() const;
-
-	void setBias(fl::scalar value);
-
-	fl::scalar getBias() const;
-
-private:
-	fl::scalar doEval();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
-
-
-private:
-	fl::OutputVariable* p_var_;
-	fl::scalar bias_; /// The value to use in place of the output value in case of zero firing strength
-}; // OutputNode
-
 
 class FL_API Engine: public fl::Engine
 {
@@ -221,17 +39,6 @@ public:
 		   OutputIterT outputFirst, OutputIterT outputLast,
 		   RuleBlockIterT ruleBlockFirst, RuleBlockIterT ruleBlockLast,
 		   const std::string& name = "");
-/*
-	{
-		this->setInputVariables(inputFirst, inputLast);
-		this->setOutputVariables(outputFirst, outputLast);
-		this->setRuleBlocks(ruleBlockFirst, ruleBlockLast);
-		this->setName(name);
-		this->setHasBias(false);
-
-		this->build();
-	}
-*/
 
 	Engine(const Engine& other);
 
@@ -243,154 +50,14 @@ public:
 
 	Engine* clone() const;
 
-	//std::string toString() const;
-
-	//void configure(fl::TNorm* conjunction, fl::SNorm* disjunction,
-	//			   fl::TNorm* activation, fl::SNorm* accumulation,
-	//			   fl::Defuzzifier* defuzzifier);
-
-	//void configure(const std::string& conjunctionT,
-	//			   const std::string& disjunctionS,
-	//			   const std::string& activationT,
-	//			   const std::string& accumulationS,
-	//			   const std::string& defuzzifier,
-	//			   int resolution = fl::IntegralDefuzzifier::defaultResolution());
-
-	//void setName(const std::string& name);
-
-	//std::string getName() const;
-
-	//void addInputVariable(fl::InputVariable* p_var);
-
-	////fl::InputVariable* setInputVariable(fl::InputVariable* p_var, std::size_t idx);
-	//fl::InputVariable* setInputVariable(fl::InputVariable* p_var, int idx);
-
-	////void insertInputVariable(fl::InputVariable* p_var, std::size_t idx);
-	//void insertInputVariable(fl::InputVariable* p_var, int idx);
-
-	////fl::InputVariable* getInputVariable(std::size_t idx) const;
-	//fl::InputVariable* getInputVariable(int idx) const;
-
-	//fl::InputVariable* getInputVariable(const std::string& name) const;
-
-	////fl::InputVariable* removeInputVariable(std::size_t idx);
-	//fl::InputVariable* removeInputVariable(int idx);
-
-	//fl::InputVariable* removeInputVariable(const std::string& name);
-
-	//bool hasInputVariable(const std::string& name) const;
-
 	template <typename IterT>
 	void setInputVariables(IterT first, IterT last);
-/*
-	{
-		//inputs_.clear();
-		//inputs_.assign(first, last);
-		BaseType::setInputVariables(std::vector<fl::InputVariable*>());
-		while (first != last)
-		{
-			this->addInputVariable(*first);
-			++first;
-		}
-	}
-*/
-
-	//void setInputVariables(const std::vector<fl::InputVariable*>& vars);
-
-	//std::vector<fl::InputVariable*> const& inputVariables() const;
-
-	////std::size_t numberOfInputVariables() const;
-	//int numberOfInputVariables() const;
-
-	//void addOutputVariable(fl::OutputVariable* p_var);
-
-	////fl::OutputVariable* setOutputVariable(fl::OutputVariable* p_var, std::size_t idx);
-	//fl::OutputVariable* setOutputVariable(fl::OutputVariable* p_var, int idx);
-
-	////void insertOutputVariable(fl::OutputVariable* p_var, std::size_t idx);
-	//void insertOutputVariable(fl::OutputVariable* p_var, int idx);
-
-	////fl::OutputVariable* getOutputVariable(std::size_t idx) const;
-	//fl::OutputVariable* getOutputVariable(int idx) const;
-
-	//fl::OutputVariable* getOutputVariable(const std::string& name) const;
-
-	////fl::OutputVariable* removeOutputVariable(std::size_t idx);
-	//fl::OutputVariable* removeOutputVariable(int idx);
-
-	//fl::OutputVariable* removeOutputVariable(const std::string& name);
-
-	//bool hasOutputVariable(const std::string& name) const;
 
 	template <typename IterT>
 	void setOutputVariables(IterT first, IterT last);
-/*
-	{
-		//outputs_.clear();
-		//outputs_.assign(first, last);
-		BaseType::setOutputVariables(std::vector<fl::OutputVariable*>());
-		while (first != last)
-		{
-			this->addOutputVariable(*first);
-			++first;
-		}
-	}
-*/
-
-	//void setOutputVariables(const std::vector<fl::OutputVariable*>& vars);
-
-	//std::vector<fl::OutputVariable*> const& outputVariables() const;
-
-	////std::size_t numberOfOutputVariables() const;
-	//int numberOfOutputVariables() const;
-
-	//std::vector<fl::Variable*> variables() const;
-
-	//void addRuleBlock(fl::RuleBlock* p_block);
-
-	////fl::RuleBlock* setRuleBlock(fl::RuleBlock* p_block, std::size_t idx);
-	//fl::RuleBlock* setRuleBlock(fl::RuleBlock* p_block, int idx);
-
-	////void insertRuleBlock(fl::RuleBlock* p_block, std::size_t idx);
-	//void insertRuleBlock(fl::RuleBlock* p_block, int idx);
-
-	////fl::RuleBlock* getRuleBlock(std::size_t idx) const;
-	//fl::RuleBlock* getRuleBlock(int idx) const;
-
-	//fl::RuleBlock* getRuleBlock(const std::string& name) const;
-
-	//bool hasRuleBlock(const std::string& name) const;
-
-	////fl::RuleBlock* removeRuleBlock(std::size_t idx);
-	//fl::RuleBlock* removeRuleBlock(int idx);
-
-	//fl::RuleBlock* removeRuleBlock(const std::string& name);
 
 	template <typename IterT>
 	void setRuleBlocks(IterT first, IterT last);
-/*
-	{
-		//ruleBlocks_.clear();
-		//ruleBlocks_.assign(first, last);
-		BaseType::setRuleBlocks(std::vector<fl::RuleBlock*>());
-		while (first != last)
-		{
-			this->addRuleBlock(*first);
-			++first;
-		}
-	}
-*/
-
-	//void setRuleBlocks(const std::vector<fl::RuleBlock*>& ruleBlocks);
-
-	//std::vector<fl::RuleBlock*> const& ruleBlocks() const;
-
-	////std::size_t numberOfRuleBlocks() const;
-	//int numberOfRuleBlocks() const;
-
-	//void setInputValue(const std::string& name, fl::scalar value);
-
-	//fl::scalar getOutputValue(const std::string& name) const;
 
 	bool isReady(std::string* status = fl::null) const;
 
@@ -406,20 +73,6 @@ public:
 	void build(InputIterT inputFirst, InputIterT inputLast,
 			   OutputIterT outputFirst, OutputIterT outputLast,
 			   RuleBlockIterT ruleBlockFirst, RuleBlockIterT ruleBlockLast);
-/*
-	{
-		this->clear();
-
-		//inputs_.assign(inputFirst, inputLast);
-		this->setInputVariables(inputFirst, inputLast);
-		//outputs_.assign(outputFirst, outputLast);
-		this->setOutputVariables(outputFirst, outputLast);
-		//ruleBlocks_.assign(ruleBlockFirst, ruleBlockLast);
-		this->setRuleBlocks(ruleBlockFirst, ruleBlockLast);
-
-		this->build();
-	}
-*/
 
 	void clear();
 
@@ -432,11 +85,7 @@ public:
 	bool hasBias() const;
 
 	//template <typename IterT>
-	//void setBias(IterT first, IterT last)
-	//{
-	//	bias_.clear();
-	//	bias_.assign(first, last);
-	//}
+	//void setBias(IterT first, IterT last);
 
 	//void setBias(const std::vector<fl::scalar>& value);
 
@@ -448,25 +97,6 @@ public:
 
 	template <typename IterT>
 	void setInputValues(IterT first, IterT last);
-/*
-	{
-		std::vector<InputNode*>::iterator nodeIt = inputNodes_.begin();
-		std::vector<InputNode*>::iterator nodeEndIt = inputNodes_.end();
-
-		while (first != last && nodeIt != nodeEndIt)
-		{
-			(*nodeIt)->getInputVariable()->setInputValue(*first);
-
-			++first;
-			++nodeIt;
-		}
-
-		if (first != last || nodeIt != nodeEndIt)
-		{
-			FL_THROW2(std::invalid_argument, "Wrong number of inputs");
-		}
-	}
-*/
 
 	std::vector<fl::scalar> getInputValues() const;
 
@@ -494,21 +124,9 @@ public:
 
 	template <typename IterT>
 	std::vector<fl::scalar> eval(IterT first, IterT last);
-/*
-	{
-		this->setInputValues(first, last);
-		return this->eval();
-	}
-*/
 
 	template <typename IterT>
 	std::vector<fl::scalar> evalTo(IterT first, IterT last, LayerCategory layer);
-/*
-	{
-		this->setInputValues(first, last);
-		return this->evalTo(layer);
-	}
-*/
 
 	LayerCategory getNextLayerCategory(LayerCategory cat) const;
 
@@ -528,22 +146,6 @@ private:
 
 	template <typename IterT>
 	std::vector<fl::scalar> evalLayer(IterT first, IterT last);
-/*
-	{
-		std::vector<fl::scalar> res;
-		while (first != last)
-		{
-			Node* p_node = *first;
-
-			FL_DEBUG_ASSERT( p_node );
-
-			res.push_back(p_node->eval());
-
-			++first;
-		}
-		return res;
-	}
-*/
 
 	std::vector<fl::scalar> evalInputLayer();
 
@@ -560,11 +162,6 @@ private:
 	std::vector<fl::scalar> evalOutputLayer();
 
 private:
-	//std::string name_; ///< The mnemonic name for this FIS engine
-	//std::vector<fl::InputVariable*> inputs_; ///< Collection of (pointer to) input variables
-	//std::vector<fl::OutputVariable*> outputs_; ///< Collection of (pointer to) output variables
-	//std::vector<fl::RuleBlock*> ruleBlocks_; ///< Collection of (pointer to) rule blocks
-	//std::size_t order_;
 	std::vector<InputNode*> inputNodes_; ///< Nodes in the input layer
 	std::vector<FuzzificationNode*> fuzzificationNodes_; ///< Nodes in the fuzzification layer for linguistic terms
 	std::vector<InputHedgeNode*> inputHedgeNodes_; ///< Additional nodes in the fuzzification layer for linguistic hedges
@@ -575,7 +172,6 @@ private:
 	std::map< const Node*, std::vector<Node*> > inConns_; ///< Input connection to a given node
 	std::map< const Node*, std::vector<Node*> > outConns_; ///< Output connection from a given node
 	bool hasBias_; ///< If \c true, the bias vector is used in place of the output values in case of zero firing strength
-	//std::vector<fl::scalar> bias_; /// The values to use in place of the output values in case of zero firing strength
 	bool isLearning_; ///< \c true if the ANFIS is in the learning modality
 }; // Engine
 

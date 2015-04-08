@@ -9,6 +9,15 @@
 #define FL_ANFIS_ENGINE_TPP
 
 
+#include <fl/commons.h>
+#include <fl/rule/RuleBlock.h>
+#include <fl/variable/InputVariable.h>
+#include <fl/variable/OutputVariable.h>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+
 namespace fl { namespace anfis {
 
 template <typename InputIterT,
