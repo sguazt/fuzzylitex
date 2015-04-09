@@ -147,6 +147,12 @@ public:
 	/// Gets the step size increase rate
 	fl::scalar getStepSizeIncreaseRate() const;
 
+	/// Sets the momentum value
+	void setMomentum(fl::scalar value);
+
+	/// Gets the momentum value
+	fl::scalar getMomentum() const;
+
 	/// Sets the forgetting factor
 	void setForgettingFactor(fl::scalar value);
 
@@ -181,16 +187,26 @@ public:
 	void reset();
 
 private:
-	/// Initialize the training algorithm
+	/// Initializes the training algorithm
 	void init();
 
-	/// Check the correctness of the parameters of the training algorithm
+	/// Checks the correctness of the parameters of the training algorithm
 	void check();
 
+	/// Trains ANFIS for a signle epoch in offline (batch) mode
 	fl::scalar trainSingleEpochOffline(const fl::DataSet<fl::scalar>& data);
 
+	/// Trains ANFIS for a signle epoch in online mode
 	fl::scalar trainSingleEpochOnline(const fl::DataSet<fl::scalar>& data);
 
+	/// Updates parameters of input terms
+	void updateInputParameters();
+
+	/// Updates the step-size (and the learning rate as well)
+	void updateStepSize();
+
+	/// Resets state for single epoch training
+	void resetSingleEpoch();
 
 private:
 	Engine* p_anfis_; ///< The ANFIS model
@@ -202,11 +218,13 @@ private:
 	std::deque<fl::scalar> stepSizeErrWindow_; ///< Window of RMSEs used to update the step size
 	std::size_t stepSizeIncrCounter_; ///< Counter used to check when to increase the step size
 	std::size_t stepSizeDecrCounter_; ///< Counter used to check when to decrease the step size
+	fl::scalar momentum_;
 	bool online_; ///< \c true in case of online learning; \c false if offline (batch) learning
 	//bool useBias_; ///< if \c true, add a bias to handle zero-firing error
 	//std::vector<fl::scalar> bias_; ///< The bias to use in the output
 	fl::detail::RecursiveLeastSquaresEstimator<fl::scalar> rls_; ///< The recursive least-squares estimator
-	std::map< Node*, std::vector<fl::scalar> > dEdPs_; // Error derivatives wrt node parameters
+	std::map< Node*, std::vector<fl::scalar> > dEdPs_; ///< Error derivatives wrt node parameters
+	std::map< Node*, std::vector<fl::scalar> > oldDeltaPs_; ///< Old values of parameters changes (only for momentum learning)
 	//std::vector<fl::scalar> rlsPhi_; ///< RLS regressor of the last epoch
 }; // Jang1993HybridLearningAlgorithm
 
