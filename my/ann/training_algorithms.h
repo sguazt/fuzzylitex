@@ -428,10 +428,10 @@ std::cerr << std::endl;
 
                 // Updates the error term (aka, sensitivity) of this neuron
                 //p_neuron->setError(dEdOj*dOjdNetj);
-				sensitivies_[p_neuron] = dEdOj*dOjdNetj;
+				sensitivities_[p_neuron] = dEdOj*dOjdNetj;
 //////[XXX]
 //#ifdef FL_DEBUG
-//std::cerr << "Output neuron (" << p_neuron << ") - dEdOj: " << dEdOj << " - dOjdNetj: " << dOjdNetj << " -> Error: " << sensitivies_.at(p_neuron) << std::endl;
+//std::cerr << "Output neuron (" << p_neuron << ") - dEdOj: " << dEdOj << " - dOjdNetj: " << dOjdNetj << " -> Error: " << sensitivities_.at(p_neuron) << std::endl;
 //#endif // FL_DEBUG
 //[/XXX]
 
@@ -500,7 +500,7 @@ std::cerr << std::endl;
 
                         // Compute $\frac{\partial E}{\partial \mathrm{net}_k}$
                         //const ValueT dEdNetk = p_toNeuron->getError();
-                        const ValueT dEdNetk = sensitivies_.at(p_toNeuron);
+                        const ValueT dEdNetk = sensitivities_.at(p_toNeuron);
 
                         // Compute $\frac{\partial \mathrm{net}_k}{\partial o_j}$
                         NetInputFunction<ValueT>* p_netInFunc = p_toNeuron->getNetInputFunction();
@@ -517,10 +517,10 @@ std::cerr << std::endl;
                     const ValueT dEdNetj = dOjdNetj*dEdNetkdNetkdOjs;
 
                     //p_neuron->setError(dEdNetj);
-                    sensitivies_[p_neuron] = dEdNetj;
+                    sensitivities_[p_neuron] = dEdNetj;
 ////[XXX]
 //#ifdef FL_DEBUG
-//std::cerr << "Hidden neuron (" << p_neuron << ") - dOjdNetj: " << dOjdNetj << " - dEdNetkdNetkdOjs: " << dEdNetkdNetkdOjs << " -> Error: " << sensitivies_.at(p_neuron) << std::endl;
+//std::cerr << "Hidden neuron (" << p_neuron << ") - dOjdNetj: " << dOjdNetj << " - dEdNetkdNetkdOjs: " << dEdNetkdNetkdOjs << " -> Error: " << sensitivities_.at(p_neuron) << std::endl;
 //#endif // FL_DEBUG
 ////[/XXX]
 
@@ -569,7 +569,7 @@ std::cerr << std::endl;
 
                     // Get the error term $\frac{\partial E}{\partial \mathrm{net}_j}$
                     //const ValueT dEdNetj = p_neuron->getError();
-                    const ValueT dEdNetj = sensitivies_.at(p_neuron);
+                    const ValueT dEdNetj = sensitivities_.at(p_neuron);
 
                     // Computes $\frac{\partial \mathrm{net}_j}{\partial w_{ij}}$
                     NetInputFunction<ValueT>* p_netInFunc = p_neuron->getNetInputFunction();
@@ -632,7 +632,7 @@ std::cerr << std::endl;
 						{
 							const ValueT oldDeltaWij = oldDeltaWs_.count(p_conn) > 0 ? oldDeltaWs_.at(p_conn) : 0;
 
-							p_conn->setWeight(p_conn->getWeight() + oldDeltaWij);
+							p_conn->setWeight(p_conn->getWeight() + momentum_*oldDeltaWij);
 
 							oldDeltaWs_[p_conn] = deltaWij;
 						}
@@ -656,7 +656,7 @@ std::cerr << std::endl;
 						{
 							const ValueT oldDeltaWij = oldDeltaBs_.count(p_neuron) > 0 ? oldDeltaBs_.at(p_neuron) : 0;
 
-							p_neuron->setBias(p_neuron->getBias() + oldDeltaWij);
+							p_neuron->setBias(p_neuron->getBias() + momentum_*oldDeltaWij);
 
 							oldDeltaBs_[p_neuron] = deltaWij;
 						}
@@ -699,7 +699,7 @@ std::cerr << std::endl;
 
                 // Get the error term $\frac{\partial E}{\partial \mathrm{net}_j}$
                 //const ValueT dEdNetj = p_neuron->getError();
-                const ValueT dEdNetj = sensitivies_.at(p_neuron);
+                const ValueT dEdNetj = sensitivities_.at(p_neuron);
 
                 // Computes $\frac{\partial \mathrm{net}_j}{\partial w_{ij}}$
                 NetInputFunction<ValueT>* p_netInFunc = p_neuron->getNetInputFunction();
@@ -753,6 +753,15 @@ std::cerr << std::endl;
 //#endif // FL_DEBUG
 ////[/XXX]
 
+					if (momentum_ > 0)
+					{
+						const ValueT oldDeltaWij = oldDeltaWs_.count(p_conn) > 0 ? oldDeltaWs_.at(p_conn) : 0;
+
+						p_conn->setWeight(p_conn->getWeight() + momentum_*oldDeltaWij);
+
+						oldDeltaWs_[p_conn] = deltaWij;
+					}
+
 					++i;
                 }
 				if (p_neuron->hasBias())
@@ -772,7 +781,7 @@ std::cerr << std::endl;
 					{
 						const ValueT oldDeltaWij = oldDeltaBs_.count(p_neuron) > 0 ? oldDeltaBs_.at(p_neuron) : 0;
 
-						p_neuron->setBias(p_neuron->getBias() + oldDeltaWij);
+						p_neuron->setBias(p_neuron->getBias() + momentum_*oldDeltaWij);
 
 						oldDeltaBs_[p_neuron] = deltaWij;
 					}
@@ -852,7 +861,7 @@ std::cerr << std::endl;
 						{
 							const ValueT oldDeltaWij = oldDeltaWs_.count(p_conn) > 0 ? oldDeltaWs_.at(p_conn) : 0;
 
-							p_conn->setWeight(p_conn->getWeight() + oldDeltaWij);
+							p_conn->setWeight(p_conn->getWeight() + momentum_*oldDeltaWij);
 
 							oldDeltaWs_[p_conn] = deltaWij;
 						}
@@ -873,7 +882,7 @@ std::cerr << std::endl;
 						{
 							const ValueT oldDeltaWij = oldDeltaBs_.count(p_neuron) > 0 ? oldDeltaBs_.at(p_neuron) : 0;
 
-							p_neuron->setBias(p_neuron->getBias() + oldDeltaWij);
+							p_neuron->setBias(p_neuron->getBias() + momentum_*oldDeltaWij);
 
 							oldDeltaBs_[p_neuron] = deltaWij;
 						}
@@ -989,7 +998,7 @@ std::cerr << std::endl;
 
                     // Get the error term $\frac{\partial E}{\partial \mathrm{net}_j}$
                     //const ValueT dEdNetj = p_neuron->getError();
-                    const ValueT dEdNetj = sensitivies_.at(p_neuron);
+                    const ValueT dEdNetj = sensitivities_.at(p_neuron);
 
                     // Computes $\frac{\partial \mathrm{net}_j}{\partial w_{ij}}$
                     NetInputFunction<ValueT>* p_netInFunc = p_neuron->getNetInputFunction();
@@ -1051,7 +1060,7 @@ std::cerr << std::endl;
                 FL_DEBUG_ASSERT( p_neuron );
 
                 // Get the error term $\frac{\partial E}{\partial \mathrm{net}_j}$
-                const ValueT dEdNetj = sensitivies_.at(p_neuron);
+                const ValueT dEdNetj = sensitivities_.at(p_neuron);
 
                 // Computes $\frac{\partial \mathrm{net}_j}{\partial w_{ij}}$
                 NetInputFunction<ValueT>* p_netInFunc = p_neuron->getNetInputFunction();
@@ -1096,7 +1105,7 @@ std::cerr << std::endl;
 
 	private: void doResetSingleEpoch()
 	{
-		sensitivies_.clear();
+		sensitivities_.clear();
 		oldDeltaWs_.clear();
 		oldDeltaBs_.clear();
 		dEdWs_.clear();
@@ -1108,7 +1117,7 @@ std::cerr << std::endl;
     private: ValueT momentum_ ; ///< The momentum_ parameter
     private: std::size_t maxEpochs_; ///< Maximum number of epochs to train
 	private: bool online_; ///< Tells if the learning procedure is either online (\c true) or offline (\c false)
-	private: std::map<const Neuron<ValueT>*,ValueT> sensitivies_;
+	private: std::map<const Neuron<ValueT>*,ValueT> sensitivities_;
 	private: std::map<const Connection<ValueT>*,ValueT> oldDeltaWs_; // Only for momentum learning
 	private: std::map<const Neuron<ValueT>*,ValueT> oldDeltaBs_; // Only for momentum learning
 	private: std::map<const Connection<ValueT>*,ValueT> dEdWs_; // Only for offline training
