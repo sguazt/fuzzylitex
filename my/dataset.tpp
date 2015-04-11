@@ -179,10 +179,16 @@ std::size_t DataSet<ValueT>::size() const
 }
 
 template <typename ValueT>
-void DataSet<ValueT>::setNumOfInputs(std::size_t val)
+bool DataSet<ValueT>::empty() const
 {
-	ni_ = val;
+	return entries_.empty();
 }
+
+//template <typename ValueT>
+//void DataSet<ValueT>::setNumOfInputs(std::size_t val)
+//{
+//	ni_ = val;
+//}
 
 template <typename ValueT>
 std::size_t DataSet<ValueT>::numOfInputs() const
@@ -190,16 +196,34 @@ std::size_t DataSet<ValueT>::numOfInputs() const
 	return ni_;
 }
 
-template <typename ValueT>
-void DataSet<ValueT>::setNumOfOutputs(std::size_t val)
-{
-	no_ = val;
-}
+//template <typename ValueT>
+//void DataSet<ValueT>::setNumOfOutputs(std::size_t val)
+//{
+//	no_ = val;
+//}
 
 template <typename ValueT>
 std::size_t DataSet<ValueT>::numOfOutputs() const
 {
 	return no_;
+}
+
+//template <typename ValueT>
+//void DataSet<ValueT>::resize(std::size_t ni, std::size_t no)
+//{
+//	for (std::size_t i = 0,
+//					 ni = entries_.size();
+//		 i < ni;
+//		 ++i)
+//	{
+//		entries_[i].resize(ni, no);
+//	}
+//}
+
+template <typename ValueT>
+void DataSet<ValueT>::clear()
+{
+	entries_.clear();
 }
 
 } // Namespace fl

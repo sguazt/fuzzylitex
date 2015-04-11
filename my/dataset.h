@@ -39,6 +39,7 @@ public:
 
 	ValueT getField(std::size_t index) const;
 
+	//void resize(std::size_t ni, std::size_t no);
 
 private:
 	Container in_;
@@ -77,13 +78,19 @@ public:
 
 	std::size_t size() const;
 
-	void setNumOfInputs(std::size_t val);
+	bool empty() const;
+
+	//void setNumOfInputs(std::size_t val);
 
 	std::size_t numOfInputs() const;
 
-	void setNumOfOutputs(std::size_t val);
+	//void setNumOfOutputs(std::size_t val);
 
 	std::size_t numOfOutputs() const;
+
+	//void resize(std::size_t ni, std::size_t no);
+
+	void clear();
 
 
 private:
