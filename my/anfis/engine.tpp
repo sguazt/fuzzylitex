@@ -95,12 +95,26 @@ void Engine::build(InputIterT inputFirst, InputIterT inputLast,
 	this->build();
 }
 
-//template <typename IterT>
-//void Engine::setBias(IterT first, IterT last)
-//{
-//	bias_.clear();
-//	bias_.assign(first, last);
-//}
+template <typename IterT>
+void Engine::setBias(IterT first, IterT last)
+{
+	const std::size_t ni = outputNodes_.size();
+
+	std::size_t i = 0;
+	while (first != last && i < ni)
+	{
+		outputNodes_[i]->setBias(*first);
+
+		++first;
+		++i;
+	}
+
+	//FIXME: decide if the remaining biases should be set to zero or left untouched
+	//for (; i < ni; ++i)
+	//{
+	//	outputNodes_[i]->setBias(0);
+	//}
+}
 
 template <typename IterT>
 void Engine::setInputValues(IterT first, IterT last)

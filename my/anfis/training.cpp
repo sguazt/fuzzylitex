@@ -375,7 +375,7 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOffline(const fl::Da
 			bool skip = false;
 
 			for (std::size_t i = 0,
-							 ni = actualOut.size();
+							 ni = targetOut.size();
 				 i < ni;
 				 ++i)
 			{
@@ -397,12 +397,12 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOffline(const fl::Da
 			if (skip)
 			{
 				// Skip this data point
-//std::cerr << "PHASE #1 - Target output: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - ANFIS output: "; fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << " - Bias: "; fl::detail::VectorOutput(std::cerr, bias_); std::cerr << std::endl; //XXX
+//std::cerr << "PHASE #1 - Target output: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - ANFIS output: "; fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << " - Bias: "; fl::detail::VectorOutput(std::cerr, p_anfis_->getBias()); std::cerr << std::endl; //XXX
 				continue;
 			}
 		}
 
-//std::cerr << "PHASE #1 - Target output: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - ANFIS output: "; fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << " - Bias: "; fl::detail::VectorOutput(std::cerr, bias_); std::cerr << std::endl; //XXX
+//std::cerr << "PHASE #1 - Target output: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - ANFIS output: "; fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << " - Bias: "; fl::detail::VectorOutput(std::cerr, p_anfis_->getBias()); std::cerr << std::endl; //XXX
 
 		// Update error
 		fl::scalar squaredErr = 0;
@@ -608,7 +608,7 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 		// Put estimated RLS parameters in the ANFIS model
 		{
 			const std::vector< std::vector<fl::scalar> > rlsParamMatrix = rls_.getEstimatedParameters();
-	//std::cerr << "PHASE #0 - Estimated RLS params: "; fl::detail::MatrixOutput(std::cerr, rlsParamMatrix); std::cerr << std::endl;//XXX
+//std::cerr << "PHASE #0 - Estimated RLS params: "; fl::detail::MatrixOutput(std::cerr, rlsParamMatrix); std::cerr << std::endl;//XXX
 
 			std::size_t k = 0;
 			//std::size_t r = 0;
@@ -655,7 +655,7 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 			bool skip = false;
 
 			for (std::size_t i = 0,
-							 ni = actualOut.size();
+							 ni = targetOut.size();
 				 i < ni;
 				 ++i)
 			{

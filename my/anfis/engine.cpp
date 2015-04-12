@@ -313,15 +313,24 @@ bool Engine::hasBias() const
 	return hasBias_;
 }
 
-//void Engine::setBias(const std::vector<fl::scalar>& value)
-//{
-//	bias_ = bias;
-//}
+void Engine::setBias(const std::vector<fl::scalar>& value)
+{
+	this->setBias(value.begin(), value.end());
+}
 
-//std::vector<fl::scalar> getBias() const
-//{
-//	return bias_;
-//}
+std::vector<fl::scalar> Engine::getBias() const
+{
+	const std::size_t n = outputNodes_.size();
+
+	std::vector<fl::scalar> res(n, 0);
+
+	for (std::size_t i = 0; i < n; ++i)
+	{
+		res[i] = outputNodes_[i]->getBias();
+	}
+
+	return res;
+}
 
 void Engine::setIsLearning(bool value)
 {
@@ -787,10 +796,10 @@ void Engine::check()
 	//TODO: to be completed
 
 	// Check output var
-	if (this->numberOfOutputVariables() != 1)
-	{
-		FL_THROW2(std::logic_error, "There must be exactly one output variable");
-	}
+	//if (this->numberOfOutputVariables() != 1)
+	//{
+	//	FL_THROW2(std::logic_error, "There must be exactly one output variable");
+	//}
 
 	//NOTE: order is valid only for Takagi-Sugeno ANFIS
 	//		// Check order
@@ -836,6 +845,7 @@ void Engine::build()
 	std::map<const fl::Term*,Node*> termNodeMap;
 	std::map<const fl::Term*,Node*> notFuzzificationNodeMap;
 	std::map<const fl::Rule*,Node*> ruleAntecedentNodeMap;
+	std::map<const fl::Variable*,std::vector<Node*> > varConsequentNodesMap;
 
 	// Layer 0 (the input layer): input linguistic variables
 	// There is one node for each input variable
@@ -855,7 +865,7 @@ void Engine::build()
 		varNodeMap[p_input] = p_node;
 	}
 
-	// Layer 1: linguistic terms layer
+	// Layer 1 (fuzzification layer): linguistic terms layer
 	// There is one node for each linguistic term of each input variable
 	for (std::size_t i = 0,
 					 ni = this->numberOfInputVariables();
@@ -887,7 +897,7 @@ void Engine::build()
 		}
 	}
 
-	// Layer 2: complement terms layer
+	// Layer 2 (input hedge layer): complement terms layer
 	// There is one node for each linguistic term of each input variable
 	for (std::size_t i = 0,
 					 ni = this->numberOfInputVariables();
@@ -919,7 +929,7 @@ void Engine::build()
 		}
 	}
 
-	// Layer 3: firing strength of fuzzy rules
+	// Layer 3 (antecedent layer): firing strength of fuzzy rules
 	// There is one node for each rule
 	for (std::size_t b = 0,
 					 nb = this->numberOfRuleBlocks();
@@ -989,8 +999,8 @@ void Engine::build()
 		}
 	}
 
-	// Layer 4: implication of fuzzy rules
-	// There is one node for each rule
+	// Layer 4 (consequent layer): implication of fuzzy rules
+	// There is one node for each rule and each output term in rule consequent
 	for (std::size_t b = 0,
 					 nb = this->numberOfRuleBlocks();
 		 b < nb;
@@ -1016,58 +1026,90 @@ void Engine::build()
 			// check: null
 			FL_DEBUG_ASSERT( p_rule );
 
-			// check: consistency (only 1 output term)
-			FL_DEBUG_ASSERT( p_rule->getConsequent()->conclusions().size() == 1 );
+			//// check: consistency (only 1 output term)
+			//FL_DEBUG_ASSERT( p_rule->getConsequent()->conclusions().size() == 1 );
 
-			fl::Term* p_term = p_rule->getConsequent()->conclusions().front()->term;
+			const std::vector<fl::Proposition*> conclusions =	p_rule->getConsequent()->conclusions();
+			for (std::size_t c = 0,
+							 nc = conclusions.size();
+				 c < nc;
+				 ++c)
+			{
+				fl::Proposition* p_prop = conclusions.at(c);
 
-			ConsequentNode* p_node = new ConsequentNode(p_term, p_ruleBlock->getActivation(), this);
-			consequentNodes_.push_back(p_node);
+				// check: null
+				FL_DEBUG_ASSERT( p_prop );
 
-			// Connect every input node to this node
-//			for (typename std::vector<Node*>::iterator inputNodeIt = inputNodes_.begin(),
-//													   inputNodeEndIt = inputNodes_.end();
-//				 inputNodeIt != inputNodeEndIt;
-//				 ++inputNodeIt)
-//			{
-//				Node* p_inpNode = *inputNodeIt;
+				fl::Term* p_term = p_prop->term;
+
+				ConsequentNode* p_node = new ConsequentNode(p_term, p_ruleBlock->getActivation(), this);
+				consequentNodes_.push_back(p_node);
+
+				varConsequentNodesMap[p_prop->variable].push_back(p_node);
+
+				// Connect every input node to this node
+//				for (typename std::vector<Node*>::iterator inputNodeIt = inputNodes_.begin(),
+//														   inputNodeEndIt = inputNodes_.end();
+//					 inputNodeIt != inputNodeEndIt;
+//					 ++inputNodeIt)
+//				{
+//					Node* p_inpNode = *inputNodeIt;
 //
-//				this->connect(p_inpNode, p_node);
-//			}
-			// Connect the consequent of a rule with its antecedent node
-			this->connect(ruleAntecedentNodeMap.at(p_rule), p_node);
+//					this->connect(p_inpNode, p_node);
+//				}
+				// Connect the consequent of a rule with its antecedent node
+				this->connect(ruleAntecedentNodeMap.at(p_rule), p_node);
+			}
 		}
 	}
 
-	// Layer 5: the summation layer
+	// Layer 5 (accumulation layer): the summation layer
 	// There are two summation nodes only.
-	// The first node computes the sum of the rule implications
+	// The first nodes compute the sum of the rule implications for each output variable
 	// (i.e., the outputs of Layer 4).
-	// The second one computes the sum of the rule firing strengths (i.e., the outputs of
+	// The last node computes the sum of the rule firing strengths (i.e., the outputs of
 	// Layer 4).
 	{
-		AccumulationNode* p_node = fl::null;
-
-		// Create a first summation node to compute the sum of the implication outputs
-		p_node = new AccumulationNode(this);
-		accumulationNodes_.push_back(p_node);
-		// Connect every rule implication node to this node
-		for (typename std::vector<ConsequentNode*>::iterator nodeIt = consequentNodes_.begin(),
-																  nodeEndIt = consequentNodes_.end();
-			 nodeIt != nodeEndIt;
-			 ++nodeIt)
+		// Create a first set of summation nodes to compute the sum of the implication outputs
+		for (std::size_t i = 0,
+						 ni = this->numberOfOutputVariables();
+			 i < ni;
+			 ++i)
 		{
-			Node* p_consequentNode = *nodeIt;
+			const fl::OutputVariable* p_var = this->getOutputVariable(i);
 
-			this->connect(p_consequentNode, p_node);
+			AccumulationNode* p_node = new AccumulationNode(this);
+			accumulationNodes_.push_back(p_node);
+			// Connect every rule implication node for this output variable to this node
+//			for (typename std::vector<ConsequentNode*>::iterator nodeIt = consequentNodes_.begin(),
+//																 nodeEndIt = consequentNodes_.end();
+//				 nodeIt != nodeEndIt;
+//				 ++nodeIt)
+//			{
+//				Node* p_consequentNode = *nodeIt;
+//
+//				this->connect(p_consequentNode, p_node);
+//			}
+			if (varConsequentNodesMap.count(p_var) > 0)
+			{
+				for (std::size_t j = 0,
+								 nj = varConsequentNodesMap.at(p_var).size();
+					 j < nj;
+					 ++j)
+				{
+					Node* p_consequentNode = varConsequentNodesMap.at(p_var).at(j);
+
+					this->connect(p_consequentNode, p_node);
+				}
+			}
 		}
 
 		// Create a second summation node to compute the sum of all the antecedents' firing strength
-		p_node = new AccumulationNode(this);
+		AccumulationNode* p_node = new AccumulationNode(this);
 		accumulationNodes_.push_back(p_node);
 		// Connect every antecedent node to this node
 		for (typename std::vector<AntecedentNode*>::iterator nodeIt = antecedentNodes_.begin(),
-												   nodeEndIt = antecedentNodes_.end();
+															 nodeEndIt = antecedentNodes_.end();
 			 nodeIt != nodeEndIt;
 			 ++nodeIt)
 		{
@@ -1077,7 +1119,7 @@ void Engine::build()
 		}
 	}
 
-	// Layer 6: the normalization layer
+	// Layer 6 (output layer): the normalization layer
 	// There is one normalization node only.
 	// This node computes the ratio between the weighted sum of rules'
 	// implications (i.e., the output of the first node of Layer 5) and the
@@ -1095,16 +1137,24 @@ void Engine::build()
 		OutputNode* p_node = new OutputNode(p_output, this);
 		outputNodes_.push_back(p_node);
 
-		// Connect every summation node to this node
-		for (typename std::vector<AccumulationNode*>::iterator nodeIt = accumulationNodes_.begin(),
-												   nodeEndIt = accumulationNodes_.end();
-			 nodeIt != nodeEndIt;
-			 ++nodeIt)
-		{
-			Node* p_accNode = *nodeIt;
+//		// Connect every summation node to this node
+//		for (typename std::vector<AccumulationNode*>::iterator nodeIt = accumulationNodes_.begin(),
+//															   nodeEndIt = accumulationNodes_.end();
+//			 nodeIt != nodeEndIt;
+//			 ++nodeIt)
+//		{
+//			Node* p_accNode = *nodeIt;
+//
+//			this->connect(p_accNode, p_node);
+//		}
 
-			this->connect(p_accNode, p_node);
-		}
+		// check: the accumulation layer must have a specific node (other than the sum of the all firing strengths) for this output variable
+		FL_DEBUG_ASSERT( i < (accumulationNodes_.size()-1) );
+
+		// Connect the corresponding summation node (i.e., the sum of the firing strengths of its output terms) to this node
+		this->connect(accumulationNodes_[i], p_node);
+		// Connect the last summation node (i.e., the sum of all firing strengths) to this node
+		this->connect(accumulationNodes_.back(), p_node);
 	}
 
 //NOTE: order is valid only for Takagi-Sugeno ANFIS

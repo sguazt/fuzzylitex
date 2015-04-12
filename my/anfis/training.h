@@ -218,8 +218,8 @@ private:
 	std::deque<fl::scalar> stepSizeErrWindow_; ///< Window of RMSEs used to update the step size
 	std::size_t stepSizeIncrCounter_; ///< Counter used to check when to increase the step size
 	std::size_t stepSizeDecrCounter_; ///< Counter used to check when to decrease the step size
-	fl::scalar momentum_;
 	bool online_; ///< \c true in case of online learning; \c false if offline (batch) learning
+	fl::scalar momentum_;
 	//bool useBias_; ///< if \c true, add a bias to handle zero-firing error
 	//std::vector<fl::scalar> bias_; ///< The bias to use in the output
 	fl::detail::RecursiveLeastSquaresEstimator<fl::scalar> rls_; ///< The recursive least-squares estimator

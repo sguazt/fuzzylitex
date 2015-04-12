@@ -454,6 +454,11 @@ fl::scalar OutputNode::getBias() const
 	return bias_;
 }
 
+fl::OutputVariable* OutputNode::getOutputVariable() const
+{
+	return p_var_;
+}
+
 fl::scalar OutputNode::doEval()
 {
 	std::vector<fl::scalar> inputs = this->inputs();

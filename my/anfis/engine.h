@@ -84,12 +84,12 @@ public:
 
 	bool hasBias() const;
 
-	//template <typename IterT>
-	//void setBias(IterT first, IterT last);
+	template <typename IterT>
+	void setBias(IterT first, IterT last);
 
-	//void setBias(const std::vector<fl::scalar>& value);
+	void setBias(const std::vector<fl::scalar>& value);
 
-	//std::vector<fl::scalar> getBias() const;
+	std::vector<fl::scalar> getBias() const;
 
 	std::vector<Node*> inputConnections(const Node* p_node) const;
 

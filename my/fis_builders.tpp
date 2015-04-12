@@ -82,10 +82,10 @@ FL_unique_ptr<EngineT> GridPartitionFisBuilder<EngineT>::build(const fl::DataSet
 	const std::size_t numOutputs = data.numOfOutputs();
 	const std::size_t numInOuts = numInputs+numOutputs;
 
-	if (numOutputs > 1)
-	{
-		FL_THROW2(std::invalid_argument, "Data must have exactly one output");
-	}
+	//if (numOutputs > 1)
+	//{
+	//	FL_THROW2(std::invalid_argument, "Data must have exactly one output");
+	//}
 	if (outTerms_.front() != fl::Linear().className() && outTerms_.front() != fl::Constant().className())
 	{
 		FL_THROW2(std::invalid_argument, "Output term must be either linear or constant");
