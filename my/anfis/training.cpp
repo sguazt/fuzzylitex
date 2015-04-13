@@ -10,6 +10,7 @@
 #include <fl/detail/traits.h>
 #include <fl/fuzzylite.h>
 #include <fl/Operation.h>
+#include <fl/term/Linear.h>
 #include <fl/term/Term.h>
 #include <fl/variable/OutputVariable.h>
 #include <map>
@@ -198,6 +199,8 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOffline(const fl::Da
 	//dEdPs_.clear();
 	this->resetSingleEpoch();
 
+	const std::size_t numOutTermParams = this->numberOfOutputTermParameters();
+
 	fl::scalar rmse = 0; // The Root Mean Squared Error (RMSE) for this epoch
 
 	// Forwards inputs from input layer to antecedent layer, and estimate parameters with RLS
@@ -276,42 +279,29 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOffline(const fl::Da
 //std::cerr << std::endl;
 //}//[XXX]
 
-			std::size_t k = 0;
-			//std::size_t r = 0;
-			for (std::size_t v = 0,
-							 nv = p_anfis_->numberOfOutputVariables();
-				 v < nv;
-				 ++v)
+			for (std::size_t i = 0,
+							 ni = p_anfis_->numberOfRuleBlocks();
+				 i < ni;
+				 ++i)
 			{
-				fl::OutputVariable* p_var = p_anfis_->getOutputVariable(v);
+				fl::RuleBlock* p_rb = p_anfis_->getRuleBlock(i);
 
 				// check: null
-				FL_DEBUG_ASSERT( p_var );
+				FL_DEBUG_ASSERT( p_rb );
 
-				// check: consistency (number of output terms must not exceed the number of rules)
-				FL_DEBUG_ASSERT( p_var->numberOfTerms() <= ruleFiringStrengths.size() );
-
-				std::size_t r = 0;
-				for (std::size_t t = 0,
-								 nt = p_var->numberOfTerms();
-					 t < nt;
-					 ++t)
+				std::size_t k = 0;
+				for (std::size_t r = 0,
+								 nr = p_rb->numberOfRules();
+					 r < nr;
+					 ++r)
 				{
-					fl::Term* p_term = p_var->getTerm(t);
-
-					// check: null
-					FL_DEBUG_ASSERT( p_term );
-
-					const std::size_t numParams = detail::GetTermParameters(p_term).size();
-					for (std::size_t p = 1; p < numParams; ++p)
+					for (std::size_t p = 1; p < numOutTermParams; ++p)
 					{
-						//rlsInputs[k] = ruleFiringStrengths[r]*entry.getField(p-1)/totRuleFiringStrength;
 						rlsInputs[k] = ruleFiringStrengths[r]*entry.getInput(p-1)/totRuleFiringStrength;
 						++k;
 					}
 					rlsInputs[k] = ruleFiringStrengths[r]/totRuleFiringStrength;
 					++k;
-					++r;
 				}
 			}
 		}
@@ -328,8 +318,6 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOffline(const fl::Da
 		const std::vector< std::vector<fl::scalar> > rlsParamMatrix = rls_.getEstimatedParameters();
 //std::cerr << "PHASE #0 - Estimated RLS params: "; fl::detail::MatrixOutput(std::cerr, rlsParamMatrix); std::cerr << std::endl;//XXX
 
-		//std::size_t k = 0;
-		////std::size_t r = 0;
 		for (std::size_t v = 0,
 						 nv = p_anfis_->numberOfOutputVariables();
 			 v < nv;
@@ -537,6 +525,8 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 	//rls_.reset();
 	this->resetSingleEpoch();
 
+	const std::size_t numOutTermParams = this->numberOfOutputTermParameters();
+
 	fl::scalar rmse = 0; // The Root Mean Squared Error (RMSE) for this epoch
 
 	// Forwards inputs from input layer to antecedent layer, and estimate parameters with RLS
@@ -557,15 +547,14 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 
 		const std::vector<fl::scalar> targetOut(entry.outputBegin(), entry.outputEnd());
 
-//[FIXME]
 		// Update parameters of input terms
 		this->updateInputParameters();
 
 		// Update step-size
 		this->updateStepSize();
 
+		// Resets error signals
 		dEdPs_.clear();
-//[/FIXME]
 
 		// Compute current rule firing strengths
 		const std::vector<fl::scalar> ruleFiringStrengths = p_anfis_->evalTo(entry.inputBegin(), entry.inputEnd(), fl::anfis::Engine::AntecedentLayer);
@@ -576,41 +565,29 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 			// Compute normalization factor
 			const fl::scalar totRuleFiringStrength = fl::detail::Sum<fl::scalar>(ruleFiringStrengths.begin(), ruleFiringStrengths.end());
 
-			std::size_t k = 0;
-			//std::size_t r = 0;
-			for (std::size_t v = 0,
-							 nv = p_anfis_->numberOfOutputVariables();
-				 v < nv;
-				 ++v)
+			for (std::size_t i = 0,
+							 ni = p_anfis_->numberOfRuleBlocks();
+				 i < ni;
+				 ++i)
 			{
-				fl::OutputVariable* p_var = p_anfis_->getOutputVariable(v);
+				fl::RuleBlock* p_rb = p_anfis_->getRuleBlock(i);
 
 				// check: null
-				FL_DEBUG_ASSERT( p_var );
+				FL_DEBUG_ASSERT( p_rb );
 
-				// check: consistency (number of output terms must not exceed the number of rules)
-				FL_DEBUG_ASSERT( p_var->numberOfTerms() <= ruleFiringStrengths.size() );
-
-				std::size_t r = 0;
-				for (std::size_t t = 0,
-								 nt = p_var->numberOfTerms();
-					 t < nt;
-					 ++t)
+				std::size_t k = 0;
+				for (std::size_t r = 0,
+								 nr = p_rb->numberOfRules();
+					 r < nr;
+					 ++r)
 				{
-					fl::Term* p_term = p_var->getTerm(t);
-
-					// check: null
-					FL_DEBUG_ASSERT( p_term );
-
-					const std::size_t numParams = detail::GetTermParameters(p_term).size();
-					for (std::size_t p = 1; p < numParams; ++p)
+					for (std::size_t p = 1; p < numOutTermParams; ++p)
 					{
 						rlsInputs[k] = ruleFiringStrengths[r]*entry.getInput(p-1)/totRuleFiringStrength;
 						++k;
 					}
 					rlsInputs[k] = ruleFiringStrengths[r]/totRuleFiringStrength;
 					++k;
-					++r;
 				}
 			}
 		}
@@ -993,29 +970,24 @@ void Jang1993HybridLearningAlgorithm::init()
 	std::size_t numOutVars = 0;
 	if (p_anfis_)
 	{
+		const std::size_t numTermParams = this->numberOfOutputTermParameters();
+
 		for (std::size_t i = 0,
-						 nv = p_anfis_->numberOfOutputVariables();
-			 i < nv;
+						 ni = p_anfis_->numberOfRuleBlocks();
+			 i < ni;
 			 ++i)
 		{
-			fl::OutputVariable* p_var = p_anfis_->getOutputVariable(i);
+			fl::RuleBlock* p_rb = p_anfis_->getRuleBlock(i);
 
 			// check: null
-			FL_DEBUG_ASSERT( p_var );
+			FL_DEBUG_ASSERT( p_rb );
 
-			for (std::size_t j = 0,
-							 nt = p_var->numberOfTerms();
-				 j < nt;
-				 ++j)
+			if (p_rb->isEnabled())
 			{
-				fl::Term* p_term = p_var->getTerm(j);
-
-				// check: null
-				FL_DEBUG_ASSERT( p_term );
-
-				numParams += detail::GetTermParameters(p_term).size();
+				numParams += p_rb->numberOfRules()*numTermParams;
 			}
 		}
+
 		numOutVars = p_anfis_->numberOfOutputVariables();
 	}
 
@@ -1038,7 +1010,7 @@ void Jang1993HybridLearningAlgorithm::init()
 	//}
 }
 
-void Jang1993HybridLearningAlgorithm::check()
+void Jang1993HybridLearningAlgorithm::check() const
 {
 	if (p_anfis_ == fl::null)
 	{
@@ -1060,6 +1032,64 @@ void Jang1993HybridLearningAlgorithm::check()
 	{
 		FL_THROW2(std::logic_error, "Invalid length for the step-size error window");
 	}
+
+	// Output terms must be homogeneous in shape
+	{
+		std::string termClass;
+		for (std::size_t i = 0,
+						 ni = p_anfis_->numberOfOutputVariables();
+			 i < ni;
+			 ++i)
+		{
+			const fl::OutputVariable* p_var = p_anfis_->getOutputVariable(i);
+
+			// check: null
+			FL_DEBUG_ASSERT( p_var );
+
+			for (std::size_t j = 0,
+							 nj = p_var->numberOfTerms();
+				 j < nj;
+				 ++j)
+			{
+				const fl::Term* p_term = p_var->getTerm(j);
+
+				// check: null
+				FL_DEBUG_ASSERT( p_term );
+
+				if (termClass.empty())
+				{
+					termClass = p_term->className();
+				}
+				else if (termClass != p_term->className())
+				{
+					FL_THROW2(std::logic_error, "Output terms must be homogeneous (i.e., output membership functions must have the same shape)");
+				}
+			}
+		}
+	}
+}
+
+std::size_t Jang1993HybridLearningAlgorithm::numberOfOutputTermParameters() const
+{
+	std::size_t numTermParams = 0;
+
+	if (p_anfis_->numberOfOutputVariables() > 0)
+	{
+		numTermParams += 1; // constant term
+
+		const fl::OutputVariable* p_var = p_anfis_->getOutputVariable(0);
+		if (p_var->numberOfTerms() > 0)
+		{
+			const fl::Term* p_term = p_var->getTerm(0);
+
+			if (p_term->className() == fl::Linear().className())
+			{
+				numTermParams += p_anfis_->numberOfInputVariables();
+			}
+		}
+	}
+
+	return numTermParams;
 }
 
 }} // Namespace fl::anfis

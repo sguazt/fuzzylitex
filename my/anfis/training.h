@@ -191,7 +191,7 @@ private:
 	void init();
 
 	/// Checks the correctness of the parameters of the training algorithm
-	void check();
+	void check() const;
 
 	/// Trains ANFIS for a signle epoch in offline (batch) mode
 	fl::scalar trainSingleEpochOffline(const fl::DataSet<fl::scalar>& data);
@@ -207,6 +207,10 @@ private:
 
 	/// Resets state for single epoch training
 	void resetSingleEpoch();
+
+	/// Gets the number of parameters of each output term
+	std::size_t numberOfOutputTermParameters() const;
+
 
 private:
 	Engine* p_anfis_; ///< The ANFIS model
