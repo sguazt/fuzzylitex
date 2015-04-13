@@ -72,6 +72,28 @@ ValueT DataSetEntry<ValueT>::getField(std::size_t index) const
 							  : out_.at(index-in_.size());
 }
 
+template <typename ValueT>
+ValueT DataSetEntry<ValueT>::getInput(std::size_t index) const
+{
+	if (index >= in_.size())
+	{
+		FL_THROW2(std::invalid_argument, "Index is out-of-range");
+	}
+
+	return in_.at(index);
+}
+
+template <typename ValueT>
+ValueT DataSetEntry<ValueT>::getOutput(std::size_t index) const
+{
+	if (index >= out_.size())
+	{
+		FL_THROW2(std::invalid_argument, "Index is out-of-range");
+	}
+
+	return out_.at(index);
+}
+
 
 ///////////
 // DataSet

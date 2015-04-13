@@ -39,6 +39,10 @@ public:
 
 	ValueT getField(std::size_t index) const;
 
+	ValueT getInput(std::size_t index) const;
+
+	ValueT getOutput(std::size_t index) const;
+
 	//void resize(std::size_t ni, std::size_t no);
 
 private:
