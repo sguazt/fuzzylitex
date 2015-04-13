@@ -223,7 +223,7 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOffline(const fl::Da
 
 //std::cerr << "PHASE #0 - Traning data #: " << std::distance(data.entryBegin(), entryIt) << std::endl;//XXX
 //std::cerr << "PHASE #0 - Entry input: "; fl::detail::VectorOutput(std::cerr, std::vector<fl::scalar>(entry.inputBegin(), entry.inputEnd())); std::cerr << std::endl;//XXX
-////std::cerr << "PHASE #0 - Rule firing strength: "; fl::detail::VectorOutput(std::cerr, ruleFiringStrengths); std::cerr << std::endl;//XXX
+//std::cerr << "PHASE #0 - Rule firing strength: "; fl::detail::VectorOutput(std::cerr, ruleFiringStrengths); std::cerr << std::endl;//XXX
 //{[XXX]
 //	std::vector< std::vector<fl::scalar> > mfParams;
 //	std::cerr << "PHASE #0 - Layer 0: [";
@@ -261,8 +261,11 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOffline(const fl::Da
 //		std::cerr << "MF #" << i << " Parameters: "; fl::detail::VectorOutput(std::cerr, mfParams[i]); std::cerr << std::endl;
 //	}
 //}[/XXX]
-		// Compute normalization factor
-		const fl::scalar totRuleFiringStrength = fl::detail::Sum<fl::scalar>(ruleFiringStrengths.begin(), ruleFiringStrengths.end());
+		// Compute input to RLS algorithm
+		std::vector<fl::scalar> rlsInputs(rls_.getInputDimension());
+		{
+			// Compute normalization factor
+			const fl::scalar totRuleFiringStrength = fl::detail::Sum<fl::scalar>(ruleFiringStrengths.begin(), ruleFiringStrengths.end());
 //{//[XXX]
 //std::cerr << "PHASE #0 - Total Rule firing strength: " << totRuleFiringStrength << std::endl;
 //std::cerr << "PHASE #0 - Normalized Rule firing strength: ";
@@ -272,11 +275,9 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOffline(const fl::Da
 //}
 //std::cerr << std::endl;
 //}//[XXX]
-		// Compute input to RLS algorithm
-		std::vector<fl::scalar> rlsInputs(rls_.getInputDimension());
-		{
+
 			std::size_t k = 0;
-			std::size_t r = 0;
+			//std::size_t r = 0;
 			for (std::size_t v = 0,
 							 nv = p_anfis_->numberOfOutputVariables();
 				 v < nv;
@@ -284,8 +285,13 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOffline(const fl::Da
 			{
 				fl::OutputVariable* p_var = p_anfis_->getOutputVariable(v);
 
+				// check: null
 				FL_DEBUG_ASSERT( p_var );
 
+				// check: consistency (number of output terms must not exceed the number of rules)
+				FL_DEBUG_ASSERT( p_var->numberOfTerms() <= ruleFiringStrengths.size() );
+
+				std::size_t r = 0;
 				for (std::size_t t = 0,
 								 nt = p_var->numberOfTerms();
 					 t < nt;
@@ -293,12 +299,14 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOffline(const fl::Da
 				{
 					fl::Term* p_term = p_var->getTerm(t);
 
+					// check: null
 					FL_DEBUG_ASSERT( p_term );
 
 					const std::size_t numParams = detail::GetTermParameters(p_term).size();
 					for (std::size_t p = 1; p < numParams; ++p)
 					{
-						rlsInputs[k] = ruleFiringStrengths[r]*entry.getField(p-1)/totRuleFiringStrength;
+						//rlsInputs[k] = ruleFiringStrengths[r]*entry.getField(p-1)/totRuleFiringStrength;
+						rlsInputs[k] = ruleFiringStrengths[r]*entry.getInput(p-1)/totRuleFiringStrength;
 						++k;
 					}
 					rlsInputs[k] = ruleFiringStrengths[r]/totRuleFiringStrength;
@@ -315,13 +323,13 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOffline(const fl::Da
 //std::cerr << "PHASE #0 - Target: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - Actual: ";fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << std::endl;///XXX
 	}
 
-	// Put estimated RLS parameters in the ANFIS model and save RLS regressor vector
+	// Put estimated RLS parameters in the ANFIS model
 	{
 		const std::vector< std::vector<fl::scalar> > rlsParamMatrix = rls_.getEstimatedParameters();
 //std::cerr << "PHASE #0 - Estimated RLS params: "; fl::detail::MatrixOutput(std::cerr, rlsParamMatrix); std::cerr << std::endl;//XXX
 
-		std::size_t k = 0;
-		//std::size_t r = 0;
+		//std::size_t k = 0;
+		////std::size_t r = 0;
 		for (std::size_t v = 0,
 						 nv = p_anfis_->numberOfOutputVariables();
 			 v < nv;
@@ -331,6 +339,7 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOffline(const fl::Da
 
 			FL_DEBUG_ASSERT( p_var );
 
+			std::size_t k = 0;
 			for (std::size_t t = 0,
 							 nt = p_var->numberOfTerms();
 				 t < nt;
@@ -484,7 +493,6 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOffline(const fl::Da
 			}
 		}
 
-//std::cerr << "PHASE #1 - Updating parameters" << std::endl;
 		// Update error derivatives wrt parameters $\frac{\partial E}{\partial P_{ij}}$
 		std::vector<FuzzificationNode*> fuzzyLayer = p_anfis_->getFuzzificationLayer();
 		for (std::size_t i = 0,
@@ -562,14 +570,14 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 		// Compute current rule firing strengths
 		const std::vector<fl::scalar> ruleFiringStrengths = p_anfis_->evalTo(entry.inputBegin(), entry.inputEnd(), fl::anfis::Engine::AntecedentLayer);
 
-		// Compute normalization factor
-		const fl::scalar totRuleFiringStrength = fl::detail::Sum<fl::scalar>(ruleFiringStrengths.begin(), ruleFiringStrengths.end());
-
 		// Compute input to RLS algorithm
 		std::vector<fl::scalar> rlsInputs(rls_.getInputDimension());
 		{
+			// Compute normalization factor
+			const fl::scalar totRuleFiringStrength = fl::detail::Sum<fl::scalar>(ruleFiringStrengths.begin(), ruleFiringStrengths.end());
+
 			std::size_t k = 0;
-			std::size_t r = 0;
+			//std::size_t r = 0;
 			for (std::size_t v = 0,
 							 nv = p_anfis_->numberOfOutputVariables();
 				 v < nv;
@@ -577,8 +585,13 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 			{
 				fl::OutputVariable* p_var = p_anfis_->getOutputVariable(v);
 
+				// check: null
 				FL_DEBUG_ASSERT( p_var );
 
+				// check: consistency (number of output terms must not exceed the number of rules)
+				FL_DEBUG_ASSERT( p_var->numberOfTerms() <= ruleFiringStrengths.size() );
+
+				std::size_t r = 0;
 				for (std::size_t t = 0,
 								 nt = p_var->numberOfTerms();
 					 t < nt;
@@ -586,12 +599,13 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 				{
 					fl::Term* p_term = p_var->getTerm(t);
 
+					// check: null
 					FL_DEBUG_ASSERT( p_term );
 
 					const std::size_t numParams = detail::GetTermParameters(p_term).size();
 					for (std::size_t p = 1; p < numParams; ++p)
 					{
-						rlsInputs[k] = ruleFiringStrengths[r]*entry.getField(p-1)/totRuleFiringStrength;
+						rlsInputs[k] = ruleFiringStrengths[r]*entry.getInput(p-1)/totRuleFiringStrength;
 						++k;
 					}
 					rlsInputs[k] = ruleFiringStrengths[r]/totRuleFiringStrength;
@@ -610,8 +624,8 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 			const std::vector< std::vector<fl::scalar> > rlsParamMatrix = rls_.getEstimatedParameters();
 //std::cerr << "PHASE #0 - Estimated RLS params: "; fl::detail::MatrixOutput(std::cerr, rlsParamMatrix); std::cerr << std::endl;//XXX
 
-			std::size_t k = 0;
-			//std::size_t r = 0;
+			//std::size_t k = 0;
+			////std::size_t r = 0;
 			for (std::size_t v = 0,
 							 nv = p_anfis_->numberOfOutputVariables();
 				 v < nv;
@@ -621,6 +635,7 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 
 				FL_DEBUG_ASSERT( p_var );
 
+				std::size_t k = 0;
 				for (std::size_t t = 0,
 								 nt = p_var->numberOfTerms();
 					 t < nt;
@@ -638,7 +653,7 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 						++k;
 					}
 					detail::SetTermParameters(p_term, params.begin(), params.end());
-	//std::cerr << "PHASE #0 - Estimated RLS params - Output #" << v << " - Term #" << t << " - Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;//XXX
+//std::cerr << "PHASE #0 - Estimated RLS params - Output #" << v << " - Term #" << t << " - Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;//XXX
 					//++r;
 				}
 			}
@@ -677,12 +692,12 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 			if (skip)
 			{
 				// Skip this data point
-//std::cerr << "PHASE #1 - Target output: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - ANFIS output: "; fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << " - Bias: "; fl::detail::VectorOutput(std::cerr, bias_); std::cerr << std::endl; //XXX
+//std::cerr << "PHASE #1 - Target output: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - ANFIS output: "; fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << " - Bias: "; fl::detail::VectorOutput(std::cerr, p_anfis_->getBias()); std::cerr << std::endl; //XXX
 				continue;
 			}
 		}
 
-//std::cerr << "PHASE #1 - Target output: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - ANFIS output: "; fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << " - Bias: "; fl::detail::VectorOutput(std::cerr, bias_); std::cerr << std::endl; //XXX
+//std::cerr << "PHASE #1 - Target output: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - ANFIS output: "; fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << " - Bias: "; fl::detail::VectorOutput(std::cerr, p_anfis_->getBias()); std::cerr << std::endl; //XXX
 
 		// Update error
 		fl::scalar squaredErr = 0;
@@ -985,6 +1000,7 @@ void Jang1993HybridLearningAlgorithm::init()
 		{
 			fl::OutputVariable* p_var = p_anfis_->getOutputVariable(i);
 
+			// check: null
 			FL_DEBUG_ASSERT( p_var );
 
 			for (std::size_t j = 0,
@@ -994,6 +1010,7 @@ void Jang1993HybridLearningAlgorithm::init()
 			{
 				fl::Term* p_term = p_var->getTerm(j);
 
+				// check: null
 				FL_DEBUG_ASSERT( p_term );
 
 				numParams += detail::GetTermParameters(p_term).size();
