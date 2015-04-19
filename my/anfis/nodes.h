@@ -7,7 +7,7 @@
 #include <fl/fuzzylite.h>
 #include <fl/hedge/Hedge.h>
 #include <fl/norm/Norm.h>
-#include <fl/norm/TNorm.h>
+//#include <fl/norm/TNorm.h>
 //#include <fl/norm/SNorm.h>
 #include <fl/term/Term.h>
 #include <fl/variable/InputVariable.h>
@@ -135,11 +135,11 @@ private:
 class ConsequentNode: public Node
 {
 public:
-	ConsequentNode(fl::Term* p_term, fl::TNorm* p_tnorm, Engine* p_engine);
+	ConsequentNode(fl::Term* p_term, /*fl::TNorm* p_tnorm,*/ Engine* p_engine);
 
 	fl::Term* getTerm() const;
 
-	fl::TNorm* getTNorm() const;
+//	fl::TNorm* getTNorm() const;
 
 private:
 	fl::scalar doEval();
@@ -149,7 +149,7 @@ private:
 
 private:
 	fl::Term* p_term_;
-	fl::TNorm* p_tnorm_;
+//	fl::TNorm* p_tnorm_;
 };
 
 class AccumulationNode: public Node

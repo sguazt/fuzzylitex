@@ -124,7 +124,7 @@ void Engine::setInputValues(IterT first, IterT last)
 
 	while (first != last && nodeIt != nodeEndIt)
 	{
-		(*nodeIt)->getInputVariable()->setInputValue(*first);
+		(*nodeIt)->getInputVariable()->setValue(*first);
 
 		++first;
 		++nodeIt;

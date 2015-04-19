@@ -9,7 +9,7 @@
 #include <fl/norm/Norm.h>
 #include <fl/norm/s/AlgebraicSum.h>
 #include <fl/norm/s/Maximum.h>
-#include <fl/norm/TNorm.h>
+//#include <fl/norm/TNorm.h>
 #include <fl/norm/t/AlgebraicProduct.h>
 #include <fl/norm/t/Minimum.h>
 #include <fl/term/Term.h>
@@ -115,7 +115,7 @@ fl::InputVariable* InputNode::getInputVariable() const
 
 fl::scalar InputNode::doEval()
 {
-	return p_var_->getInputValue();
+	return p_var_->getValue();
 }
 
 std::vector<fl::scalar> InputNode::doEvalDerivativeWrtInputs()
@@ -344,10 +344,10 @@ std::vector<fl::scalar> AntecedentNode::doEvalDerivativeWrtInputs()
 // Consequent Node
 /////////////
 
-ConsequentNode::ConsequentNode(fl::Term* p_term, fl::TNorm* p_tnorm, Engine* p_engine)
+ConsequentNode::ConsequentNode(fl::Term* p_term, /*fl::TNorm* p_tnorm,*/ Engine* p_engine)
 : Node(p_engine),
-  p_term_(p_term),
-  p_tnorm_(p_tnorm)
+  p_term_(p_term)/*,
+  p_tnorm_(p_tnorm)*/
 {
 }
 
@@ -356,10 +356,10 @@ fl::Term* ConsequentNode::getTerm() const
 	return p_term_;
 }
 
-fl::TNorm* ConsequentNode::getTNorm() const
-{
-	return p_tnorm_;
-}
+//fl::TNorm* ConsequentNode::getTNorm() const
+//{
+//	return p_tnorm_;
+//}
 
 fl::scalar ConsequentNode::doEval()
 {
@@ -371,7 +371,8 @@ fl::scalar ConsequentNode::doEval()
 	}
 
 	// The last and only input is the one coming from the antecedent layer.
-	return p_tnorm_->compute(inputs.back(), p_term_->membership(1.0));
+	//return p_tnorm_->compute(inputs.back(), p_term_->membership(1.0));
+	return inputs.back()*p_term_->membership(1.0);
 }
 
 std::vector<fl::scalar> ConsequentNode::doEvalDerivativeWrtInputs()
@@ -384,7 +385,7 @@ std::vector<fl::scalar> ConsequentNode::doEvalDerivativeWrtInputs()
 //	for (std::size_t i = 0; i < p_linear->getEngine()->inputVariables().size(); ++i) {
 //		if (i < p_linear->coefficients().size())
 //		{
-//			std::cerr << " + " << p_linear->getEngine()->inputVariables().at(i)->getInputValue() << "*" << p_linear->coefficients().at(i);
+//			std::cerr << " + " << p_linear->getEngine()->inputVariables().at(i)->getValue() << "*" << p_linear->coefficients().at(i);
 //		}
 //	}
 //	if (p_linear->coefficients().size() > p_linear->getEngine()->inputVariables().size())
@@ -495,7 +496,7 @@ fl::scalar OutputNode::doEval()
 		res = inputs[0]/inputs[1];
 	}
 
-	p_var_->setOutputValue(res);
+	p_var_->setValue(res);
 
 	return res;
 }

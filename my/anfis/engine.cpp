@@ -350,7 +350,7 @@ std::vector<fl::scalar> Engine::getInputValues() const
 
 	for (std::size_t i = 0; i < n; ++i)
 	{
-		inputs[i] = inputNodes_[i]->getInputVariable()->getInputValue();
+		inputs[i] = inputNodes_[i]->getInputVariable()->getValue();
 	}
 
 	return inputs;
@@ -793,6 +793,11 @@ std::vector<Node*> Engine::outputConnections(const Node* p_node) const
 
 void Engine::check()
 {
+	if (this->type() != fl::Engine::TakagiSugeno)
+	{
+		FL_THROW2(std::logic_error, "ANFIS must represent a TSK fuzzy inference system");
+	}
+
 	//TODO: to be completed
 
 	// Check output var
@@ -1042,7 +1047,7 @@ void Engine::build()
 
 				fl::Term* p_term = p_prop->term;
 
-				ConsequentNode* p_node = new ConsequentNode(p_term, p_ruleBlock->getActivation(), this);
+				ConsequentNode* p_node = new ConsequentNode(p_term, /*p_ruleBlock->getActivation(),*/ this);
 				consequentNodes_.push_back(p_node);
 
 				varConsequentNodesMap[p_prop->variable].push_back(p_node);
