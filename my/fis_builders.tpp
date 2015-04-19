@@ -266,7 +266,7 @@ FL_unique_ptr<EngineT> GridPartitionFisBuilder<EngineT>::build(const fl::DataSet
 		p_ov->fuzzyOutput()->setAccumulation(new fl::Maximum());
 		p_ov->setDefuzzifier(new fl::WeightedAverage());
 		p_ov->setDefaultValue(fl::nan);
-		p_ov->setPreviousOutputValue(false);
+		p_ov->setPreviousValue(false);
 
 		for (std::size_t j = 0; j < numRules; ++j)
 		{
