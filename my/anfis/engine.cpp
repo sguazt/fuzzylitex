@@ -115,12 +115,13 @@ Engine::Engine(const Engine& other)
   hasBias_(other.hasBias_),
   isLearning_(other.isLearning_)
 {
-	// Clears the current network structure
-	this->clearAnfis();
+	//// Clears the current network structure
+	//this->clearAnfis();
 
 	// Creates a new network structure
 	this->build();
 
+/*
 	// Copies MF params
 	// - Copies input MF params
 	for (std::size_t i = 0,
@@ -176,6 +177,7 @@ Engine::Engine(const Engine& other)
 			fl::detail::SetTermParameters(p_term, params.begin(), params.end());
 		}
 	}
+*/
 }
 
 Engine::~Engine()
@@ -189,22 +191,26 @@ Engine& Engine::operator=(const Engine& rhs)
 	{
 		this->clear();
 
-		Engine tmp(rhs);
+		BaseType::operator=(rhs);
 
-		std::swap(inputNodes_, tmp.inputNodes_);
-		std::swap(fuzzificationNodes_, tmp.fuzzificationNodes_);
-		std::swap(inputHedgeNodes_, tmp.inputHedgeNodes_);
-		std::swap(antecedentNodes_, tmp.antecedentNodes_);
-		std::swap(consequentNodes_, tmp.consequentNodes_);
-		std::swap(accumulationNodes_, tmp.accumulationNodes_);
-		std::swap(outputNodes_, tmp.outputNodes_);
-		std::swap(inConns_, tmp.inConns_);
-		std::swap(outConns_, tmp.outConns_);
-		std::swap(hasBias_, tmp.hasBias_);
-		//std::swap(bias_, tmp.bias_);
-		std::swap(isLearning_, tmp.isLearning_);
+//		Engine tmp(rhs);
+//
+//		std::swap(inputNodes_, tmp.inputNodes_);
+//		std::swap(fuzzificationNodes_, tmp.fuzzificationNodes_);
+//		std::swap(inputHedgeNodes_, tmp.inputHedgeNodes_);
+//		std::swap(antecedentNodes_, tmp.antecedentNodes_);
+//		std::swap(consequentNodes_, tmp.consequentNodes_);
+//		std::swap(accumulationNodes_, tmp.accumulationNodes_);
+//		std::swap(outputNodes_, tmp.outputNodes_);
+//		std::swap(inConns_, tmp.inConns_);
+//		std::swap(outConns_, tmp.outConns_);
+//		std::swap(hasBias_, tmp.hasBias_);
+//		//std::swap(bias_, tmp.bias_);
+//		std::swap(isLearning_, tmp.isLearning_);
 
-		this->updateReferences();
+		this->build();
+
+		this->updateAnfisReferences();
 	}
 
 	return *this;
@@ -226,8 +232,8 @@ Engine* Engine::clone() const
 //	std::swap(outputNodes_, other.outputNodes_);
 //	std::swap(inConns_, other.inConns_);
 //	std::swap(outConns_, other.outConns_);
-//	this->updateReferences();
-//	other.updateReferences();
+//	this->updateAnfisReferences();
+//	other.updateAnfisReferences();
 //}
 
 //TODO
@@ -726,9 +732,9 @@ void Engine::clearAnfis()
 	outputNodes_.clear();
 }
 
-void Engine::updateReferences()
+void Engine::updateAnfisReferences()
 {
-	BaseType::updateReferences();
+	//BaseType::updateReferences();
 
 	for (std::size_t i = 0,
 					 n = inputNodes_.size();
@@ -842,9 +848,13 @@ void Engine::check()
 
 void Engine::build()
 {
+	// Clears the current network structure
+	this->clearAnfis();
+
+	// Check consistency
 	this->check();
 
-	this->clearAnfis();
+	// Build...
 
 	std::map<const fl::Variable*,Node*> varNodeMap;
 	std::map<const fl::Term*,Node*> termNodeMap;

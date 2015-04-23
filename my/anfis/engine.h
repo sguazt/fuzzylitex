@@ -133,7 +133,7 @@ public:
 	LayerCategory getPreviousLayerCategory(LayerCategory cat) const;
 
 protected:
-	void updateReferences();
+	void updateAnfisReferences();
 
 private:
 	void check();
