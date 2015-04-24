@@ -1,13 +1,13 @@
 /**
- * \file fl/fis_builders.tpp
+ * \file fl/builder/grid_partition.tpp
  *
  *  This is an internal header file, included by other library headers.
  *  Do not attempt to use it directly.
  */
 
 
-#ifndef FL_FIS_BUILDERS_TPP
-#define FL_FIS_BUILDERS_TPP
+#ifndef FL_FIS_BUILDER_GRID_PARTITION_TPP
+#define FL_FIS_BUILDER_GRID_PARTITION_TPP
 
 
 #include <cstddef>
@@ -374,4 +374,4 @@ const std::string GridPartitionFisBuilder<EngineT>::DefaultOutputTerm = fl::Line
 
 } // Namespace fl
 
-#endif // FL_FIS_BUILDERS_TPP
+#endif // FL_FIS_BUILDER_GRID_PARTITION_TPP
