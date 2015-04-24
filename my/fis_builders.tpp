@@ -263,7 +263,8 @@ FL_unique_ptr<EngineT> GridPartitionFisBuilder<EngineT>::build(const fl::DataSet
 		p_ov->setEnabled(true);
 		p_ov->setName(oss.str());
 		p_ov->setRange(mins[k], maxs[k]);
-		p_ov->fuzzyOutput()->setAccumulation(new fl::Maximum());
+		//p_ov->fuzzyOutput()->setAccumulation(new fl::Maximum());
+		p_ov->fuzzyOutput()->setAccumulation(fl::null);
 		p_ov->setDefuzzifier(new fl::WeightedAverage());
 		p_ov->setDefaultValue(fl::nan);
 		p_ov->setPreviousValue(false);
@@ -292,7 +293,8 @@ FL_unique_ptr<EngineT> GridPartitionFisBuilder<EngineT>::build(const fl::DataSet
 	p_rules->setEnabled(true);
 	p_rules->setConjunction(new fl::AlgebraicProduct());
 	p_rules->setDisjunction(new fl::Maximum());
-	p_rules->setActivation(new fl::AlgebraicProduct());
+	//p_rules->setActivation(new fl::AlgebraicProduct());
+	p_rules->setActivation(fl::null);
 	for (std::size_t r = 0; r < numRules; ++r)
 	{
 		std::ostringstream oss;
