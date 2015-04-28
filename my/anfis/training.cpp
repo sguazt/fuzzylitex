@@ -1016,6 +1016,10 @@ void Jang1993HybridLearningAlgorithm::check() const
 	{
 		FL_THROW2(std::logic_error, "Invalid ANFIS engine");
 	}
+	if (p_anfis_->type() != fl::Engine::TakagiSugeno)
+	{
+		FL_THROW2(std::logic_error, "This learning algorithm currently works only for Takagi-Sugeno ANFIS");
+	}
 	if (stepSizeInit_ <= 0)
 	{
 		FL_THROW2(std::logic_error, "Invalid step-size");
