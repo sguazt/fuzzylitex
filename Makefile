@@ -7,3 +7,7 @@ test:
 
 examples:
 	cd examples && $(MAKE)
+
+clean:
+	cd test && $(MAKE) clean
+	cd examples && $(MAKE) clean
