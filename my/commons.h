@@ -61,8 +61,8 @@
 
 #define FL_THROW(m)	throw fl::Exception(m, FL_AT)
 #define FL_THROW2(e,m)	{ \
-							std::ostringstream oss__(m); \
-							oss__ << std::endl << "{at " << FL__FILE__ << "::" << FL__FUNCTION__ << "() [line:" << __LINE__ << "]}"; \
+							std::ostringstream oss__; \
+							oss__ << (m) << std::endl << " {at " << FL__FILE__ << "::" << FL__FUNCTION__ << " [line: " << __LINE__ << "]}"; \
 							throw e(oss__.str()); \
 						}
 
