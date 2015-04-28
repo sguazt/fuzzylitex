@@ -1,5 +1,5 @@
-#ifndef FL_BUILDER_GRID_PARTITION_H
-#define FL_BUILDER_GRID_PARTITION_H
+#ifndef FL_FIS_BUILDER_GRID_PARTITION_H
+#define FL_FIS_BUILDER_GRID_PARTITION_H
 
 #include <cstddef>
 #include <fl/dataset.h>
@@ -69,7 +69,7 @@ private:
 } // Namespace fl
 
 
-#include "fl/builder/grid_partition.tpp"
+#include "fl/fis_builder/grid_partition.tpp"
 
 
 #endif // FL_FIS_BUILDER_GRID_PARTITION_H

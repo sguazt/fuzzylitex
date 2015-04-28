@@ -1,5 +1,5 @@
 /**
- * \file fl/builder/grid_partition.tpp
+ * \file fl/fis_builder/grid_partition.tpp
  *
  *  This is an internal header file, included by other library headers.
  *  Do not attempt to use it directly.
