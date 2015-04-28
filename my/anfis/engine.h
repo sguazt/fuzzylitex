@@ -40,6 +40,8 @@ public:
 		   RuleBlockIterT ruleBlockFirst, RuleBlockIterT ruleBlockLast,
 		   const std::string& name = "");
 
+	explicit Engine(const fl::Engine& other);
+
 	Engine(const Engine& other);
 
 	FL_DEFAULT_MOVE(Engine)

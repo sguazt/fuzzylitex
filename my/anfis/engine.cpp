@@ -110,6 +110,14 @@ Engine::Engine(const std::string& name)
 {
 }
 
+Engine::Engine(const fl::Engine& other)
+: BaseType(other),
+  hasBias_(false),
+  isLearning_(false)
+{
+	this->build();
+}
+
 Engine::Engine(const Engine& other)
 : BaseType(other),
   hasBias_(other.hasBias_),
