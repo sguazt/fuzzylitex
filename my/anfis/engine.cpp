@@ -799,51 +799,46 @@ std::vector<Node*> Engine::outputConnections(const Node* p_node) const
 
 void Engine::check()
 {
-	if (this->type() != fl::Engine::TakagiSugeno)
+	// Check inference type
+	if (this->type() != fl::Engine::TakagiSugeno
+		&& this->type() != fl::Engine::Tsukamoto)
 	{
-		FL_THROW2(std::logic_error, "ANFIS must represent a TSK fuzzy inference system");
+		FL_THROW2(std::logic_error, "ANFIS must represent either a Takagi-Sugeno or a Tsukamoto fuzzy inference system");
 	}
 
-	//TODO: to be completed
+	// Check input vars
+	if (this->numberOfInputVariables() == 0)
+	{
+		FL_THROW2(std::logic_error, "Not enough input variables to build an ANFIS model");
+	}
 
-	// Check output var
-	//if (this->numberOfOutputVariables() != 1)
-	//{
-	//	FL_THROW2(std::logic_error, "There must be exactly one output variable");
-	//}
+	// Check output vars
+	if (this->numberOfOutputVariables() == 0)
+	{
+		FL_THROW2(std::logic_error, "Not enough output variables to build an ANFIS model");
+	}
 
-	//NOTE: order is valid only for Takagi-Sugeno ANFIS
-	//		// Check order
-	//		std::size_t order = 0;
-	//		for (std::size_t t = 0,
-	//						 nt = p_output_->numberOfTerms();
-	//			 t != nt;
-	//			 ++t)
-	//		{
-	//			const fl::Term* p_term = p_output->getTerm(t);
-	//
-	//			// check: null
-	//			FL_DEBUG_ASSERT( p_term );
-	//
-	//			if (dynamic_cast<fl::Constant const*>(p_term))
-	//			{
-	//				if (t > 0 && order != 0)
-	//				{
-	//					FL_THROW2(std::logic_error, "Output terms must be of the same order");
-	//				}
-	//
-	//				order = 0;
-	//			}
-	//			else if (dynamic_cast<fl::Linear const*>(p_term))
-	//			{
-	//				if (t > 0 && order != 1)
-	//				{
-	//					FL_THROW2(std::logic_error, "Output terms must be of the same order");
-	//				}
-	//
-	//				order = 1;
-	//			}
-	//		}
+	// Check rules
+	{
+		std::size_t numRules = 0;
+		for (std::size_t r = 0,
+						 nr = this->numberOfRuleBlocks();
+			 r < nr && numRules == 0;
+			 ++r)
+		{
+			const fl::RuleBlock* rb = this->getRuleBlock(r);
+
+			if (rb->isEnabled())
+			{
+				numRules += rb->numberOfRules();
+			}
+		}
+
+		if (numRules == 0)
+		{
+			FL_THROW2(std::logic_error, "Not enough enabled rules to build an ANFIS model");
+		}
+	}
 }
 
 void Engine::build()
