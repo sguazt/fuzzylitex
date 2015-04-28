@@ -26,11 +26,11 @@
 #define FL_ANN_NEURONS_H
 
 
+#include <fl/ann/activation_functions.h>
+#include <fl/ann/net_input_functions.h>
+#include <fl/commons.h>
 #include <fl/fuzzylite.h>
 #include <limits>
-#include <my/ann/activation_functions.h>
-#include <my/ann/net_input_functions.h>
-#include <my/commons.h>
 #include <vector>
 
 

@@ -25,16 +25,16 @@
 #include <algorithm>
 #include <iostream>
 #include <fl/fuzzylite.h>
-#include <my/ann/activation_functions.h>
-#include <my/ann/error_functions.h>
-#include <my/ann/io.h>
-#include <my/ann/layers.h>
-#include <my/ann/net_input_functions.h>
-#include <my/ann/networks.h>
-#include <my/ann/neurons.h>
-#include <my/ann/training_algorithms.h>
-#include <my/ann/weight_randomizers.h>
-#include <my/dataset.h>
+#include <fl/ann/activation_functions.h>
+#include <fl/ann/error_functions.h>
+#include <fl/ann/io.h>
+#include <fl/ann/layers.h>
+#include <fl/ann/net_input_functions.h>
+#include <fl/ann/networks.h>
+#include <fl/ann/neurons.h>
+#include <fl/ann/training_algorithms.h>
+#include <fl/ann/weight_randomizers.h>
+#include <fl/dataset.h>
 #ifdef FL_CPP11
 # include <random>
 #else // FL_CPP11

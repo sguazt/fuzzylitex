@@ -28,12 +28,12 @@
 
 #include <boost/noncopyable.hpp>
 #include <cstddef>
+#include <fl/ann/error_functions.h>
+#include <fl/ann/networks.h>
+#include <fl/dataset.h>
+#include <fl/detail/traits.h>
+#include <fl/detail/iterators.h>
 #include <fl/fuzzylite.h>
-#include <my/dataset.h>
-#include <my/detail/traits.h>
-#include <my/detail/iterators.h>
-#include <my/ann/error_functions.h>
-#include <my/ann/networks.h>
 #include <vector>
 
 

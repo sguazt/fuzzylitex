@@ -28,13 +28,13 @@
 
 #include <cstddef>
 #include <cstdlib>
+#include <fl/ann/connection.h>
+#include <fl/ann/layers.h>
+#include <fl/ann/neurons.h>
+#include <fl/commons.h>
+#include <fl/detail/random.h>
 #include <fl/fuzzylite.h>
 #include <map>
-#include <my/commons.h>
-#include <my/ann/connection.h>
-#include <my/ann/layers.h>
-#include <my/ann/neurons.h>
-#include <my/detail/random.h>
 #include <string>
 #include <utility>
 #include <vector>

@@ -29,14 +29,14 @@
 #include <boost/noncopyable.hpp>
 #include <cmath>
 #include <cstddef>
+#include <fl/ann/connection.h>
+#include <fl/ann/layers.h>
+#include <fl/ann/networks.h>
+#include <fl/ann/neurons.h>
+#include <fl/commons.h>
+//#include <fl/detail/math.h>
+#include <fl/detail/random.h>
 #include <limits>
-#include <my/ann/connection.h>
-#include <my/ann/layers.h>
-#include <my/ann/networks.h>
-#include <my/ann/neurons.h>
-#include <my/commons.h>
-//#include <my/detail/math.h>
-#include <my/detail/random.h>
 #include <utility>
 
 
