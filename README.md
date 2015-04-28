@@ -1,3 +1,3 @@
 # fuzzylitex
 
-Extensions to the fuzzylite project
+Extensions to the [http://www.fuzzylite.com](fuzzylite) project
