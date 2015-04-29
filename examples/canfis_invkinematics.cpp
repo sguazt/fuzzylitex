@@ -87,7 +87,6 @@ namespace /*<unnamed>*/ {
 
 const std::size_t DefaultMaxEpochs = 150;
 const fl::scalar DefaultGoalError = 0;
-const fl::scalar DefaultMomentum = 0;
 const bool DefaultOnlineMode = false;
 const fl::scalar DefaultTolerance = 1e-7;
 
@@ -118,7 +117,7 @@ void MakeTestSet(fl::DataSet<>& data);
 
 FL_unique_ptr<fl::anfis::Engine> BuildAnfis(const fl::DataSet<>& data, std::size_t numInMFs);
 
-fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& data, std::size_t maxEpochs, fl::scalar goalError, fl::scalar momentum, bool online);
+fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& data, std::size_t maxEpochs, fl::scalar goalError, bool online);
 
 fl::scalar TestAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& testSet);
 
@@ -423,7 +422,7 @@ FL_unique_ptr<fl::anfis::Engine> BuildAnfis(const fl::DataSet<>& data, std::size
 	return p_anfis;
 }
 
-fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& data, std::size_t maxEpochs, fl::scalar goalError, fl::scalar momentum, bool online)
+fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& data, std::size_t maxEpochs, fl::scalar goalError, bool online)
 {
 	//  {MATLAB: fis2 = anfis(fis, maxEpochs, [0,0,0,0]);}
 
@@ -437,7 +436,6 @@ fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& data, std
 	{
 		hybridLearner.setIsOnline(false);
 	}
-	hybridLearner.setMomentum(momentum);
 	return hybridLearner.train(data, maxEpochs, goalError);
 }
 
@@ -482,7 +480,6 @@ int main(int argc, char* argv[])
 {
 	std::size_t maxEpochs = DefaultMaxEpochs;
 	fl::scalar goalError = DefaultGoalError;
-	fl::scalar momentum = DefaultMomentum;
 	bool online = DefaultOnlineMode;
 
 	for (int i = 1; i < argc; ++i)
@@ -510,15 +507,6 @@ int main(int argc, char* argv[])
 				iss >> goalError;
 			}
 		}
-		else if (!std::strcmp(argv[i], "--momentum"))
-		{
-			++i;
-			if (i < argc)
-			{
-				std::istringstream iss(argv[i]);
-				iss >> momentum;
-			}
-		}
 		else if (!std::strcmp(argv[i], "--offline"))
 		{
 			online = false;
@@ -533,7 +521,6 @@ int main(int argc, char* argv[])
 			  << "- max epochs: " << maxEpochs << std::endl
 			  << "- error goal: " << goalError  << std::endl
 			  << "- online: " << std::boolalpha << online << std::endl
-			  << "- momentum: " << momentum << std::endl
 			  << std::endl;
 
 	//fl::fuzzylite::setDebug(true);
@@ -563,7 +550,7 @@ int main(int argc, char* argv[])
 	fl::scalar rmse = 0;
 
 	std::cout << "Training the ANFIS network..." << std::endl;
-	rmse = TrainAnfis(p_anfis.get(), data, maxEpochs, goalError, momentum, online);
+	rmse = TrainAnfis(p_anfis.get(), data, maxEpochs, goalError, online);
 	std::cout << "Trained -> RMSE: " << rmse << std::endl;
 	std::cout << "Trained -> MODEL: " << std::endl
 			  << p_anfis->toString() << std::endl;

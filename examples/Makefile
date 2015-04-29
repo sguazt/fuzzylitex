@@ -14,20 +14,20 @@ CC=$(CXX)
 
 all: anfis_invkinematics anfis_mackeyglass canfis_invkinematics
 
-anfis_invkinematics: anfis_invkinematics.o engine.o nodes.o terms.o training.o
-	$(CXX) $(CXXFLAGS) -o anfis_invkinematics anfis_invkinematics.o engine.o nodes.o terms.o training.o $(LDFLAGS)
+anfis_invkinematics: anfis_invkinematics.o engine.o nodes.o terms.o training_gradient_descent.o training_jang1993_hybrid.o training_training_algorithm.o
+	$(CXX) $(CXXFLAGS) -o anfis_invkinematics anfis_invkinematics.o engine.o nodes.o terms.o training_gradient_descent.o training_jang1993_hybrid.o training_training_algorithm.o $(LDFLAGS)
 
-anfis_mackeyglass: anfis_mackeyglass.o engine.o nodes.o terms.o training.o
-	$(CXX) $(CXXFLAGS) -o anfis_mackeyglass anfis_mackeyglass.o engine.o nodes.o terms.o training.o $(LDFLAGS)
+anfis_mackeyglass: anfis_mackeyglass.o engine.o nodes.o terms.o training_gradient_descent.o training_jang1993_hybrid.o
+	$(CXX) $(CXXFLAGS) -o anfis_mackeyglass anfis_mackeyglass.o engine.o nodes.o terms.o training_gradient_descent.o training_jang1993_hybrid.o training_training_algorithm.o $(LDFLAGS)
+
+canfis_invkinematics: canfis_invkinematics.o engine.o nodes.o terms.o training_gradient_descent.o training_jang1993_hybrid.o
+	$(CXX) $(CXXFLAGS) -o canfis_invkinematics canfis_invkinematics.o engine.o nodes.o terms.o training_gradient_descent.o training_jang1993_hybrid.o training_training_algorithm.o $(LDFLAGS)
 
 anfis_invkinematics.o: anfis_invkinematics.cpp
 	$(CXX) $(CXXFLAGS) -c -o anfis_invkinematics.o anfis_invkinematics.cpp
 
 anfis_mackeyglass.o: anfis_mackeyglass.cpp
 	$(CXX) $(CXXFLAGS) -c -o anfis_mackeyglass.o anfis_mackeyglass.cpp
-
-canfis_invkinematics: canfis_invkinematics.o engine.o nodes.o terms.o training.o
-	$(CXX) $(CXXFLAGS) -o canfis_invkinematics canfis_invkinematics.o engine.o nodes.o terms.o training.o $(LDFLAGS)
 
 canfis_invkinematics.o: canfis_invkinematics.cpp
 	$(CXX) $(CXXFLAGS) -c -o canfis_invkinematics.o canfis_invkinematics.cpp
@@ -41,8 +41,14 @@ nodes.o: $(src_path)/anfis/nodes.cpp
 terms.o: $(src_path)/detail/terms.cpp
 	$(CXX) $(CXXFLAGS) -c -o terms.o $(src_path)/detail/terms.cpp
 
-training.o: $(src_path)/anfis/training.cpp
-	$(CXX) $(CXXFLAGS) -c -o training.o $(src_path)/anfis/training.cpp
+training_gradient_descent.o: $(src_path)/anfis/training/gradient_descent.cpp
+	$(CXX) $(CXXFLAGS) -c -o training_gradient_descent.o $(src_path)/anfis/training/gradient_descent.cpp
+
+training_jang1993_hybrid.o: $(src_path)/anfis/training/jang1993_hybrid.cpp
+	$(CXX) $(CXXFLAGS) -c -o training_jang1993_hybrid.o $(src_path)/anfis/training/jang1993_hybrid.cpp
+
+training_training_algorithm.o: $(src_path)/anfis/training/training_algorithm.cpp
+	$(CXX) $(CXXFLAGS) -c -o training_training_algorithm.o $(src_path)/anfis/training/training_algorithm.cpp
 
 clean:
 	rm -f *.o \

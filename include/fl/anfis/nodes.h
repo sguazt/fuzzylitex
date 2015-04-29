@@ -63,19 +63,35 @@ public:
 
 	std::vector<fl::scalar> inputs() const;
 
+	/// Evals the node function with respect to node inputs
 	fl::scalar eval();
 
+	/// Evals the derivate of the node function with respect to node inputs
 	std::vector<fl::scalar> evalDerivativeWrtInputs();
+
+	/// Evals the derivate of the node function with respect to node parameters
+	std::vector<fl::scalar> evalDerivativeWrtParams();
 
 	fl::scalar getValue() const;
 
 //protected:
 	void setValue(fl::scalar v);
 
+	template <typename IterT>
+	void setParams(IterT first, IterT last);
+
+	std::vector<fl::scalar> getParams() const;
+
 private:
 	virtual fl::scalar doEval() = 0;
 
 	virtual std::vector<fl::scalar> doEvalDerivativeWrtInputs() = 0;
+
+	virtual std::vector<fl::scalar> doEvalDerivativeWrtParams() = 0;
+
+	virtual void doSetParams(const std::vector<fl::scalar>& params) = 0;
+
+	virtual std::vector<fl::scalar> doGetParams() const = 0;
 
 
 private:
@@ -95,6 +111,12 @@ private:
 
 	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
 
+	std::vector<fl::scalar> doEvalDerivativeWrtParams();
+
+	void doSetParams(const std::vector<fl::scalar>& params);
+
+	std::vector<fl::scalar> doGetParams() const;
+
 
 private:
 	fl::InputVariable* p_var_;
@@ -107,12 +129,16 @@ public:
 
 	fl::Term* getTerm() const;
 
-	std::vector<fl::scalar> evalDerivativeWrtParams();
-
 private:
 	fl::scalar doEval();
 
 	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
+
+	std::vector<fl::scalar> doEvalDerivativeWrtParams();
+
+	void doSetParams(const std::vector<fl::scalar>& params);
+
+	std::vector<fl::scalar> doGetParams() const;
 
 
 private:
@@ -133,6 +159,12 @@ private:
 
 	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
 
+	std::vector<fl::scalar> doEvalDerivativeWrtParams();
+
+	void doSetParams(const std::vector<fl::scalar>& params);
+
+	std::vector<fl::scalar> doGetParams() const;
+
 
 private:
 	fl::Hedge* p_hedge_;
@@ -149,6 +181,12 @@ private:
 	fl::scalar doEval();
 
 	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
+
+	std::vector<fl::scalar> doEvalDerivativeWrtParams();
+
+	void doSetParams(const std::vector<fl::scalar>& params);
+
+	std::vector<fl::scalar> doGetParams() const;
 
 
 private:
@@ -170,6 +208,12 @@ private:
 
 	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
 
+	std::vector<fl::scalar> doEvalDerivativeWrtParams();
+
+	void doSetParams(const std::vector<fl::scalar>& params);
+
+	std::vector<fl::scalar> doGetParams() const;
+
 
 private:
 	fl::Term* p_term_;
@@ -185,6 +229,12 @@ private:
 	fl::scalar doEval();
 
 	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
+
+	std::vector<fl::scalar> doEvalDerivativeWrtParams();
+
+	void doSetParams(const std::vector<fl::scalar>& params);
+
+	std::vector<fl::scalar> doGetParams() const;
 }; // AccumulationNode
 
 class OutputNode: public Node
@@ -203,11 +253,28 @@ private:
 
 	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
 
+	std::vector<fl::scalar> doEvalDerivativeWrtParams();
+
+	void doSetParams(const std::vector<fl::scalar>& params);
+
+	std::vector<fl::scalar> doGetParams() const;
+
 
 private:
 	fl::OutputVariable* p_var_;
 	fl::scalar bias_; /// The value to use in place of the output value in case of zero firing strength
 }; // OutputNode
+
+
+////////////////////////
+// Template definitions
+////////////////////////
+
+template <typename IterT>
+void Node::setParams(IterT first, IterT last)
+{
+	this->doSetParams(std::vector<fl::scalar>(first, last));
+}
 
 }} // Namespace fl::anfis
 

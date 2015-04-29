@@ -87,7 +87,6 @@ namespace /*<unnamed>*/ {
 
 const std::size_t DefaultMaxEpochs = 150;
 const fl::scalar DefaultGoalError = 0;
-const fl::scalar DefaultMomentum = 0;
 const bool DefaultOnlineMode = false;
 const fl::scalar DefaultTolerance = 1e-7;
 
@@ -116,7 +115,7 @@ void MakeTrainingSets(fl::DataSet<>& data1, fl::DataSet<>& data2);
 
 void MakeTestSets(fl::DataSet<>& data1, fl::DataSet<>& data2);
 
-FL_unique_ptr<fl::anfis::Engine> BuildAndTrainAnfis(const fl::DataSet<>& data, std::size_t numInMFs, std::size_t maxEpochs, fl::scalar goalError, fl::scalar momentum, bool online);
+FL_unique_ptr<fl::anfis::Engine> BuildAndTrainAnfis(const fl::DataSet<>& data, std::size_t numInMFs, std::size_t maxEpochs, fl::scalar goalError, bool online);
 
 fl::scalar TestAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& testSet);
 
@@ -415,7 +414,7 @@ void MakeTestSets(fl::DataSet<>& data1, fl::DataSet<>& data2)
 	}
 }
 
-FL_unique_ptr<fl::anfis::Engine> BuildAndTrainAnfis(const fl::DataSet<>& data, std::size_t numInMFs, std::size_t maxEpochs, fl::scalar goalError, fl::scalar momentum, bool online)
+FL_unique_ptr<fl::anfis::Engine> BuildAndTrainAnfis(const fl::DataSet<>& data, std::size_t numInMFs, std::size_t maxEpochs, fl::scalar goalError, bool online)
 {
 	//  {MATLAB: fis = anfis(data, numInMFs, maxEpochs, [0,0,0,0]);}
 
@@ -441,7 +440,6 @@ FL_unique_ptr<fl::anfis::Engine> BuildAndTrainAnfis(const fl::DataSet<>& data, s
 	{
 		hybridLearner.setIsOnline(false);
 	}
-	hybridLearner.setMomentum(momentum);
 	hybridLearner.train(data, maxEpochs, goalError);
 
 	return p_anfis;
@@ -542,7 +540,6 @@ int main(int argc, char* argv[])
 {
 	std::size_t maxEpochs = DefaultMaxEpochs;
 	fl::scalar goalError = DefaultGoalError;
-	fl::scalar momentum = DefaultMomentum;
 	bool online = DefaultOnlineMode;
 
 	for (int i = 1; i < argc; ++i)
@@ -570,15 +567,6 @@ int main(int argc, char* argv[])
 				iss >> goalError;
 			}
 		}
-		else if (!std::strcmp(argv[i], "--momentum"))
-		{
-			++i;
-			if (i < argc)
-			{
-				std::istringstream iss(argv[i]);
-				iss >> momentum;
-			}
-		}
 		else if (!std::strcmp(argv[i], "--offline"))
 		{
 			online = false;
@@ -593,7 +581,6 @@ int main(int argc, char* argv[])
 			  << "- max epochs: " << maxEpochs << std::endl
 			  << "- error goal: " << goalError  << std::endl
 			  << "- online: " << std::boolalpha << online << std::endl
-			  << "- momentum: " << momentum << std::endl
 			  << std::endl;
 
 	//fl::fuzzylite::setDebug(true);
@@ -618,7 +605,7 @@ int main(int argc, char* argv[])
 	std::cout << "Building & Training the first ANFIS network..." << std::endl;
 	//  MATLAB: anfis1 = anfis(data1, 7, 150, [0,0,0,0])
 	FL_unique_ptr<fl::anfis::Engine> p_anfis1;
-	p_anfis1 = BuildAndTrainAnfis(data1, 7, maxEpochs, goalError, momentum, online);
+	p_anfis1 = BuildAndTrainAnfis(data1, 7, maxEpochs, goalError, online);
 	p_anfis1->setName("ANFIS1");
 	std::cout << "Built & Trained the first ANFIS network: " << std::endl
 			  << p_anfis1->toString() << std::endl;
@@ -626,7 +613,7 @@ int main(int argc, char* argv[])
 	// - Builds and trains the second ANFIS network
 	//  MATLAB: anfis2 = anfis(data2, 6, 150, [0,0,0,0])
 	FL_unique_ptr<fl::anfis::Engine> p_anfis2;
-	p_anfis2 = BuildAndTrainAnfis(data2, 6, maxEpochs, goalError, momentum, online);
+	p_anfis2 = BuildAndTrainAnfis(data2, 6, maxEpochs, goalError, online);
 	p_anfis2->setName("ANFIS2");
 	std::cout << "Built & Trained the second ANFIS network: " << std::endl
 			  << p_anfis2->toString() << std::endl;

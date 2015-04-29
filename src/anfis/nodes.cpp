@@ -112,6 +112,11 @@ std::vector<fl::scalar> Node::evalDerivativeWrtInputs()
 	return this->doEvalDerivativeWrtInputs();
 }
 
+std::vector<fl::scalar> Node::evalDerivativeWrtParams()
+{
+	return this->doEvalDerivativeWrtParams();
+}
+
 fl::scalar Node::getValue() const
 {
 	return val_;
@@ -120,6 +125,11 @@ fl::scalar Node::getValue() const
 void Node::setValue(fl::scalar v)
 {
 	val_ = v;
+}
+
+std::vector<fl::scalar> Node::getParams() const
+{
+	return this->doGetParams();
 }
 
 /////////////
@@ -147,6 +157,21 @@ std::vector<fl::scalar> InputNode::doEvalDerivativeWrtInputs()
 	FL_THROW2(std::logic_error, "Derivative wrt inputs should not be evaluated for input nodes ");
 }
 
+std::vector<fl::scalar> InputNode::doEvalDerivativeWrtParams()
+{
+	FL_THROW2(std::logic_error, "Derivative wrt parameters should not be evaluated for fuzzification nodes ");
+}
+
+void InputNode::doSetParams(const std::vector<fl::scalar>& params)
+{
+	FL_SUPPRESS_UNUSED_VARIABLE_WARNING( params );
+}
+
+std::vector<fl::scalar> InputNode::doGetParams() const
+{
+	return std::vector<fl::scalar>();
+}
+
 /////////////
 // Fuzzification Node
 /////////////
@@ -160,18 +185,6 @@ FuzzificationNode::FuzzificationNode(fl::Term* p_term, Engine* p_engine)
 fl::Term* FuzzificationNode::getTerm() const
 {
 	return p_term_;
-}
-
-std::vector<fl::scalar> FuzzificationNode::evalDerivativeWrtParams()
-{
-	const std::vector<fl::scalar> inputs = this->inputs();
-
-	if (inputs.size() != 1)
-	{
-		FL_THROW2(std::logic_error, "Fuzzification node must have exactly one input");
-	}
-
-	return fl::detail::EvalTermDerivativeWrtParams(p_term_, inputs.back());
 }
 
 fl::scalar FuzzificationNode::doEval()
@@ -189,6 +202,28 @@ fl::scalar FuzzificationNode::doEval()
 std::vector<fl::scalar> FuzzificationNode::doEvalDerivativeWrtInputs()
 {
 	FL_THROW2(std::logic_error, "Derivative wrt inputs should not be evaluated for fuzzification nodes ");
+}
+
+std::vector<fl::scalar> FuzzificationNode::doEvalDerivativeWrtParams()
+{
+	const std::vector<fl::scalar> inputs = this->inputs();
+
+	if (inputs.size() != 1)
+	{
+		FL_THROW2(std::logic_error, "Fuzzification node must have exactly one input");
+	}
+
+	return fl::detail::EvalTermDerivativeWrtParams(p_term_, inputs.back());
+}
+
+void FuzzificationNode::doSetParams(const std::vector<fl::scalar>& params)
+{
+	detail::SetTermParameters(p_term_, params.begin(), params.end());
+}
+
+std::vector<fl::scalar> FuzzificationNode::doGetParams() const
+{
+	return detail::GetTermParameters(p_term_);
 }
 
 /////////////
@@ -236,6 +271,22 @@ std::vector<fl::scalar> InputHedgeNode::doEvalDerivativeWrtInputs()
 	}
 
 	return std::vector<fl::scalar>(inputs.size(), -1);
+}
+
+std::vector<fl::scalar> InputHedgeNode::doEvalDerivativeWrtParams()
+{
+	//return std::vector<fl::scalar>(1, 0);
+	return std::vector<fl::scalar>();
+}
+
+void InputHedgeNode::doSetParams(const std::vector<fl::scalar>& params)
+{
+	FL_SUPPRESS_UNUSED_VARIABLE_WARNING( params );
+}
+
+std::vector<fl::scalar> InputHedgeNode::doGetParams() const
+{
+	return std::vector<fl::scalar>();
 }
 
 /////////////
@@ -364,6 +415,22 @@ std::vector<fl::scalar> AntecedentNode::doEvalDerivativeWrtInputs()
 	return res;
 }
 
+std::vector<fl::scalar> AntecedentNode::doEvalDerivativeWrtParams()
+{
+	//return std::vector<fl::scalar>(1, 0);
+	return std::vector<fl::scalar>();
+}
+
+void AntecedentNode::doSetParams(const std::vector<fl::scalar>& params)
+{
+	FL_SUPPRESS_UNUSED_VARIABLE_WARNING( params );
+}
+
+std::vector<fl::scalar> AntecedentNode::doGetParams() const
+{
+	return std::vector<fl::scalar>();
+}
+
 /////////////
 // Consequent Node
 /////////////
@@ -427,6 +494,47 @@ std::vector<fl::scalar> ConsequentNode::doEvalDerivativeWrtInputs()
 	return std::vector<fl::scalar>(1, p_term_->membership(1.0));
 }
 
+std::vector<fl::scalar> ConsequentNode::doEvalDerivativeWrtParams()
+{
+	const std::vector<fl::scalar> inputs = this->inputs();
+
+	if (inputs.size() != 1)
+	{
+		FL_THROW2(std::logic_error, "Consequent node must have exactly one input");
+	}
+
+	const fl::scalar firingStrength = inputs[0];
+
+	std::vector<fl::scalar> res;
+
+	if (dynamic_cast<fl::Linear*>(p_term_))
+	{
+		for (std::size_t i = 0,
+						 ni = this->getEngine()->numberOfInputVariables();
+			 i < ni;
+			 ++i)
+		{
+			const fl::scalar input = this->getEngine()->getInputVariable(i)->getValue();
+
+			res.push_back(firingStrength*input);
+		}
+	}
+
+	res.push_back(firingStrength);
+
+	return res;
+}
+
+void ConsequentNode::doSetParams(const std::vector<fl::scalar>& params)
+{
+	detail::SetTermParameters(p_term_, params.begin(), params.end());
+}
+
+std::vector<fl::scalar> ConsequentNode::doGetParams() const
+{
+	return detail::GetTermParameters(p_term_);
+}
+
 /////////////
 // Accumulation Node
 /////////////
@@ -456,6 +564,22 @@ fl::scalar AccumulationNode::doEval()
 std::vector<fl::scalar> AccumulationNode::doEvalDerivativeWrtInputs()
 {
 	return std::vector<fl::scalar>(this->inputs().size(), 1.0);
+}
+
+std::vector<fl::scalar> AccumulationNode::doEvalDerivativeWrtParams()
+{
+	//return std::vector<fl::scalar>(1, 0);
+	return std::vector<fl::scalar>();
+}
+
+void AccumulationNode::doSetParams(const std::vector<fl::scalar>& params)
+{
+	FL_SUPPRESS_UNUSED_VARIABLE_WARNING( params );
+}
+
+std::vector<fl::scalar> AccumulationNode::doGetParams() const
+{
+	return std::vector<fl::scalar>();
 }
 
 /////////////
@@ -544,6 +668,22 @@ std::vector<fl::scalar> OutputNode::doEvalDerivativeWrtInputs()
 	res[1] = -inputs[0]/fl::detail::Sqr(inputs[1]);
 
 	return res;
+}
+
+std::vector<fl::scalar> OutputNode::doEvalDerivativeWrtParams()
+{
+	//return std::vector<fl::scalar>(1, 0);
+	return std::vector<fl::scalar>();
+}
+
+void OutputNode::doSetParams(const std::vector<fl::scalar>& params)
+{
+	FL_SUPPRESS_UNUSED_VARIABLE_WARNING( params );
+}
+
+std::vector<fl::scalar> OutputNode::doGetParams() const
+{
+	return std::vector<fl::scalar>();
 }
 
 }} // Namespace fl::anfis

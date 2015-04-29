@@ -61,10 +61,13 @@
 
 namespace /*<unnamed>*/ {
 
+const std::string GradientDescentAlgorithmTag = "gd";
+const std::string Jang1993HybridAlgorithmTag = "hybrid";
+
 const std::size_t DefaultMaxEpochs = 10;
 const fl::scalar DefaultGoalError = 0;
-const fl::scalar DefaultMomentum = 0;
 const bool DefaultOnlineMode = false;
+const std::string DefaultTrainingAlgorithm = Jang1993HybridAlgorithmTag;
 const fl::scalar DefaultTolerance = 1.0e-10;
 
 
@@ -84,7 +87,7 @@ FL_unique_ptr<fl::anfis::Engine> BuildAnfis(const fl::DataSet<>& trainingSet);
 
 /// Trains the given ANFIS model with the given training set and according to
 /// the given number of epochs and training error goal
-fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& trainingSet, std::size_t maxEpochs, fl::scalar goalError, fl::scalar momentum, bool online);
+fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& trainingSet, const std::string& algo, std::size_t maxEpochs, fl::scalar goalError, bool online);
 
 /// Tests the trained ANFIS model against the given test set
 fl::scalar TestAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& testSet);
@@ -92,7 +95,9 @@ fl::scalar TestAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& testSet);
 /**
  * Check the trained ANFIS against MATLAB's results
  *
- * This function uses data stored in file 'data/mgdata_check.dat'.
+ * This function uses data stored in file 'data/mgdata_algo_mode_check.dat',
+ * where <em>algo</em> is the learning algorithm tag and <em>mode</em> is either
+ * 'offline' or 'online'.
  * Each row in this data file has two columns, where the first column represents
  * the true output of the time series and the second column represents the
  * output obtained by the ANFIS trained with MATLAB 2012b.
@@ -100,7 +105,7 @@ fl::scalar TestAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& testSet);
  * The first 500 rows are related to data in the training set, while the latter
  * 500 rows are related to data in the test set.
  */
-fl::scalar ValidateAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& trainingSet, const fl::DataSet<>& testSet);
+fl::scalar ValidateAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& trainingSet, const fl::DataSet<>& testSet, const std::string& algo, bool online);
 
 
 template <typename T>
@@ -119,10 +124,19 @@ void usage(const char* progname)
 	std::cout << "Usage: " << progname << " [options]" << std::endl
 			  << "Options:" << std::endl
 			  << "--help: Show this help message." << std::endl
+			  << "--algo <algorithm-id>: Set the training algorithm." << std::endl
+			  << "  Possible values for '<algorithm-id>' are:" << std::endl
+			  << "  - '" << GradientDescentAlgorithmTag << "': gradient descent backpropagation." << std::endl
+			  << "  - '" << Jang1993HybridAlgorithmTag << "': hybrid algorithm proposed by (Jang et al.,1993)." << std::endl
+			  << "  [default: " << DefaultTrainingAlgorithm << "]" << std::endl
 			  << "--epoch <value>: Set the maximum number of epochs in the training algorithm." << std::endl
 			  << "  [default: " << DefaultMaxEpochs << "]" << std::endl
 			  << "--error <value>: Set the maximum error to achieve in the training algorithm." << std::endl
 			  << "  [default: " << DefaultGoalError << "]" << std::endl
+			  << "--online: Set the training algorithm to operate in online mode." << std::endl
+			  << "  [default: " << DefaultOnlineMode << "]" << std::endl
+			  << "--offline: Set the training algorithm to operate in offline mode." << std::endl
+			  << "  [default: " << !DefaultOnlineMode << "]" << std::endl
 			  << std::endl;
 }
 
@@ -133,6 +147,7 @@ void MakeTrainAndTestSets(fl::DataSet<>& trainingSet, fl::DataSet<>& testSet)
 	// previous MG equation.
 	// It is assumed that $x(0)= 1.2$, $\tau=17$, and $x(t)=0$ for $t<0$.
 	// The result was saved in the file 'data/mgdata.dat'.
+
 	std::ifstream ifs("data/mgdata.dat");
 	std::vector<fl::scalar> x;
 	for (std::string line; std::getline(ifs, line); )
@@ -219,22 +234,37 @@ FL_unique_ptr<fl::anfis::Engine> BuildAnfis(const fl::DataSet<>& trainingSet)
 	return p_anfis;
 }
 
-fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& trainingSet, std::size_t maxEpochs, fl::scalar goalError, fl::scalar momentum, bool online)
+fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& trainingSet, const std::string& algo, std::size_t maxEpochs, fl::scalar goalError, bool online)
 {
 	fl::scalar rmse = 0;
 
-	fl::anfis::Jang1993HybridLearningAlgorithm hybridLearner(p_anfis);
-	if (online)
+	if (algo == Jang1993HybridAlgorithmTag)
 	{
-		hybridLearner.setIsOnline(true);
-		hybridLearner.setForgettingFactor(0.98);
+		fl::anfis::Jang1993HybridLearningAlgorithm hybridLearner(p_anfis);
+		if (online)
+		{
+			hybridLearner.setIsOnline(true);
+			hybridLearner.setForgettingFactor(0.98);
+		}
+		else
+		{
+			hybridLearner.setIsOnline(false);
+		}
+		rmse = hybridLearner.train(trainingSet, maxEpochs, goalError);
 	}
 	else
 	{
-		hybridLearner.setIsOnline(false);
+		fl::anfis::GradientDescentBackpropagationAlgorithm learnAlgo(p_anfis);
+		if (online)
+		{
+			learnAlgo.setIsOnline(true);
+		}
+		else
+		{
+			learnAlgo.setIsOnline(false);
+		}
+		rmse = learnAlgo.train(trainingSet, maxEpochs, goalError);
 	}
-	hybridLearner.setMomentum(momentum);
-	rmse = hybridLearner.train(trainingSet, maxEpochs, goalError);
 
 	return rmse;
 }
@@ -264,9 +294,20 @@ fl::scalar TestAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& testSet)
 	return rmse;
 }
 
-fl::scalar ValidateAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& trainingSet, const fl::DataSet<>& testSet)
+fl::scalar ValidateAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& trainingSet, const fl::DataSet<>& testSet, const std::string& algo, bool online)
 {
-	std::ifstream ifs("data/mgdata_check.dat");
+	std::ostringstream oss;
+	oss << "data/mgdata_"
+		<< algo + "_"
+		<< (online ? "online" : "offline")
+		<< "_check.dat";
+
+	std::ifstream ifs(oss.str().c_str());
+	if (!ifs)
+	{
+		std::clog << "No validation data '" << oss.str() << "' found. Skip." << std::endl;
+		return -1;
+	}
 
 	fl::scalar rmse = 0; // The Root Mean Squared Error (RMSE)
 
@@ -330,9 +371,9 @@ fl::scalar ValidateAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& traini
 
 int main(int argc, char* argv[])
 {
+	std::string algo = DefaultTrainingAlgorithm;
 	std::size_t maxEpochs = DefaultMaxEpochs;
 	fl::scalar goalError = DefaultGoalError;
-	fl::scalar momentum = DefaultMomentum;
 	bool online = DefaultOnlineMode;
 
 	for (int i = 1; i < argc; ++i)
@@ -340,7 +381,16 @@ int main(int argc, char* argv[])
 		if (!std::strcmp(argv[i], "--help"))
 		{
 			usage(argv[0]);
-			break;
+			return 0;
+		}
+		else if (!std::strcmp(argv[i], "--algo"))
+		{
+			++i;
+			if (i < argc)
+			{
+				std::istringstream iss(argv[i]);
+				iss >> algo;
+			}
 		}
 		else if (!std::strcmp(argv[i], "--epoch"))
 		{
@@ -360,15 +410,6 @@ int main(int argc, char* argv[])
 				iss >> goalError;
 			}
 		}
-		else if (!std::strcmp(argv[i], "--momentum"))
-		{
-			++i;
-			if (i < argc)
-			{
-				std::istringstream iss(argv[i]);
-				iss >> momentum;
-			}
-		}
 		else if (!std::strcmp(argv[i], "--offline"))
 		{
 			online = false;
@@ -380,10 +421,10 @@ int main(int argc, char* argv[])
 	}
 
 	std::cout << "Options:" << std::endl
+			  << "- algorithm: " << algo << std::endl
 			  << "- max epochs: " << maxEpochs << std::endl
 			  << "- error goal: " << goalError  << std::endl
 			  << "- online: " << std::boolalpha << online << std::endl
-			  << "- momentum: " << momentum << std::endl
 			  << std::endl;
 
 	//fl::fuzzylite::setDebug(true);
@@ -407,7 +448,7 @@ int main(int argc, char* argv[])
 
 	std::cout << "Training..." << std::endl;
 
-	rmse = TrainAnfis(p_anfis.get(), trainingSet, maxEpochs, goalError, momentum, online);
+	rmse = TrainAnfis(p_anfis.get(), trainingSet, algo, maxEpochs, goalError, online);
 
 	std::cout << "Trained -> RMSE: " << rmse << std::endl;
 	std::cout << "Trained -> FIS: " << std::endl
@@ -421,7 +462,7 @@ int main(int argc, char* argv[])
 
 	std::cout << "Validating..." << std::endl;
 
-	rmse = ValidateAnfis(p_anfis.get(), trainingSet, testSet);
+	rmse = ValidateAnfis(p_anfis.get(), trainingSet, testSet, algo, online);
 
 	std::cout << "Validating -> RMSE: " << rmse << std::endl;
 }
