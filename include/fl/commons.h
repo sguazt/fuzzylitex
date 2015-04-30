@@ -22,8 +22,8 @@
  * limitations under the License.
  */
 
-#ifndef FL_NF_COMMONS_H
-#define FL_NF_COMMONS_H
+#ifndef FL_COMMONS_H
+#define FL_COMMONS_H
 
 
 #include <cassert>
@@ -246,4 +246,4 @@
 	FL_MAKE_ITERATOR_TYPES(a,c,t) \
 	FL_MAKE_ITERATOR_ACCESSORS(a,t,p,v)
 
-#endif // FL_NF_COMMONS_H
+#endif // FL_COMMONS_H
