@@ -1,8 +1,10 @@
 export inc_path=$(PWD)/include
+export libs_path=$(PWD)/libs
 export src_path=$(PWD)/src
 export CXXFLAGS+=-Wall -Wextra -ansi -pedantic
 export CXXFLAGS+=-g -Og
 export CXXFLAGS+=-I$(inc_path)
+#export CXXFLAGS+=-I$(libs_path)/boost/include
 export CXXFLAGS+=-I$(HOME)/sys/src/git/boost
 export CXXFLAGS+=-I$(HOME)/sys/src/git/fuzzylite/fuzzylite
 #export LDFLAGS+=-L$(HOME)/sys/src/git/boost/stage/libs
