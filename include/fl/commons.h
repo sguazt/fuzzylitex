@@ -79,7 +79,7 @@
 								assert(x); \
 							FL_DEBUG_END
 # define FL_DEBUG_TRACE(x)	FL_DEBUG_BEGIN \
-								::std::cerr << FL__FILE__ << "::" << FL__FUNCTION__ << "[" << __LINE__ << "]:" << FL_EXPAND__(x) << ::std::endl
+								::std::cerr << FL__FILE__ << "::" << FL__FUNCTION__ << "[" << __LINE__ << "]:" << FL_EXPAND__(x) << ::std::endl \
 							FL_DEBUG_END
 #endif // NDEBUG
 
