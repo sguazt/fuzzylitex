@@ -31,7 +31,7 @@
 #include <iostream>
 #include <fl/ann/layers.h>
 #include <fl/ann/networks.h>
-#include <fl/commons.h>
+#include <fl/macro.h>
 #include <vector>
 
 

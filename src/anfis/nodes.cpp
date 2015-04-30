@@ -25,7 +25,7 @@
 #include <cstddef>
 #include <fl/anfis/engine.h>
 #include <fl/anfis/nodes.h>
-#include <fl/commons.h>
+#include <fl/macro.h>
 #include <fl/detail/math.h>
 #include <fl/detail/terms.h>
 #include <fl/detail/traits.h>

@@ -71,6 +71,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <cstring>
 #include <fl/anfis.h>
 #include <fl/dataset.h>
 #include <fl/fis_builders.h>

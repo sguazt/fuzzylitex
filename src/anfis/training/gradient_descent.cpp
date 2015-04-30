@@ -719,42 +719,11 @@ void GradientDescentBackpropagationAlgorithm::resetSingleEpoch()
 
 void GradientDescentBackpropagationAlgorithm::init()
 {
-	std::size_t numParams = 0;
-	std::size_t numOutVars = 0;
-	if (this->getEngine())
-	{
-		const std::size_t numTermParams = this->numberOfOutputTermParameters();
-
-		for (std::size_t i = 0,
-						 ni = this->getEngine()->numberOfRuleBlocks();
-			 i < ni;
-			 ++i)
-		{
-			fl::RuleBlock* p_rb = this->getEngine()->getRuleBlock(i);
-
-			// check: null
-			FL_DEBUG_ASSERT( p_rb );
-
-			if (p_rb->isEnabled())
-			{
-				numParams += p_rb->numberOfRules()*numTermParams;
-			}
-		}
-
-		numOutVars = this->getEngine()->numberOfOutputVariables();
-	}
-
 	dEdPs_.clear();
 	stepSize_ = stepSizeInit_;
 	stepSizeIncrCounter_ = stepSizeDecrCounter_ = 0;
 	stepSizeErrWindow_.clear();
 	oldDeltaPs_.clear();
-
-	//bias_.clear();
-	//if (useBias_)
-	//{
-	//	bias_.resize(this->getEngine()->numberOfOutputVariables(), 0);
-	//}
 }
 
 void GradientDescentBackpropagationAlgorithm::check() const

@@ -31,7 +31,7 @@
 #include <fl/ann/connection.h>
 #include <fl/ann/layers.h>
 #include <fl/ann/neurons.h>
-#include <fl/commons.h>
+#include <fl/macro.h>
 #include <fl/detail/random.h>
 #include <fl/fuzzylite.h>
 #include <map>

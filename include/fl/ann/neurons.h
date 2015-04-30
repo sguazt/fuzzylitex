@@ -28,7 +28,7 @@
 
 #include <fl/ann/activation_functions.h>
 #include <fl/ann/net_input_functions.h>
-#include <fl/commons.h>
+#include <fl/macro.h>
 #include <fl/fuzzylite.h>
 #include <limits>
 #include <vector>

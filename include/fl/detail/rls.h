@@ -28,7 +28,7 @@
 
 #include <cstddef>
 #include <fl/detail/math.h>
-#include <fl/commons.h>
+#include <fl/macro.h>
 #include <limits>
 #include <stdexcept>
 #include <vector>

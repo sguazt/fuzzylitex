@@ -27,7 +27,7 @@
 
 
 #include <cstddef>
-#include <fl/commons.h>
+#include <fl/macro.h>
 #include <fl/fuzzylite.h>
 #include <vector>
 

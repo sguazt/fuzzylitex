@@ -33,7 +33,7 @@
 #include <fl/ann/layers.h>
 #include <fl/ann/networks.h>
 #include <fl/ann/neurons.h>
-#include <fl/commons.h>
+#include <fl/macro.h>
 //#include <fl/detail/math.h>
 #include <fl/detail/random.h>
 #include <limits>

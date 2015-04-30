@@ -1,14 +1,14 @@
-inc_path=../include
-src_path=../src
-CXXFLAGS+=-Wall -Wextra -ansi -pedantic
-CXXFLAGS+=-g -Og
-CXXFLAGS+=-I../include
-CXXFLAGS+=-I$(HOME)/sys/src/git/boost
-CXXFLAGS+=-I$(HOME)/sys/src/git/fuzzylite/fuzzylite
-#LDFLAGS+=-L$(HOME)/sys/src/git/boost/stage/libs
-LDFLAGS+=-L$(HOME)/sys/src/git/fuzzylite/fuzzylite/debug/bin -lfuzzylited
-LDFLAGS+=-lm
-CC=$(CXX)
+#inc_path=../include
+#src_path=../src
+#CXXFLAGS+=-Wall -Wextra -ansi -pedantic
+#CXXFLAGS+=-g -Og
+#CXXFLAGS+=-I../include
+#CXXFLAGS+=-I$(HOME)/sys/src/git/boost
+#CXXFLAGS+=-I$(HOME)/sys/src/git/fuzzylite/fuzzylite
+##LDFLAGS+=-L$(HOME)/sys/src/git/boost/stage/libs
+#LDFLAGS+=-L$(HOME)/sys/src/git/fuzzylite/fuzzylite/debug/bin -lfuzzylited
+#LDFLAGS+=-lm
+#CC=$(CXX)
 
 .PHONY: all clean
 

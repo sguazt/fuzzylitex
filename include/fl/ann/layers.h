@@ -28,7 +28,7 @@
 
 #include <cstddef>
 #include <fl/ann/neurons.h>
-#include <fl/commons.h>
+#include <fl/macro.h>
 #include <fl/fuzzylite.h>
 #include <stdexcept>
 #include <string>

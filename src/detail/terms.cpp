@@ -24,7 +24,7 @@
 
 #include <cmath>
 #include <cstddef>
-#include <fl/commons.h>
+#include <fl/macro.h>
 #include <fl/detail/math.h>
 #include <fl/detail/terms.h>
 #include <fl/fuzzylite.h>

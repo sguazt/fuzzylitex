@@ -28,7 +28,7 @@
 
 #include <boost/noncopyable.hpp>
 #include <cmath>
-#include <fl/commons.h>
+#include <fl/macro.h>
 
 
 namespace fl { namespace ann {

@@ -1,7 +1,7 @@
 /**
- * \file fl/commons.h
+ * \file fl/macro.h
  *
- * \brief Header file for common functionalities
+ * \brief Header file for common macros
  *
  * \author Marco Guazzone (marco.guazzone@gmail.com)
  *
@@ -22,8 +22,8 @@
  * limitations under the License.
  */
 
-#ifndef FL_COMMONS_H
-#define FL_COMMONS_H
+#ifndef FL_MACRO_H
+#define FL_MACRO_H
 
 
 #include <cassert>
@@ -35,6 +35,8 @@
 /// A macro just for expanding its argument (intended to use inside other macros)
 #define FL_EXPAND__(x) x
 
+//[FIXME]: the following part has been commented since strongly depends on the Boost library
+/*
 /// Pointer management macros
 #ifdef FL_CPP11
 # include <memory>
@@ -61,6 +63,8 @@
 # define FL_make_unique FL_unique_ptr
 # define FL_function boost::function
 #endif // FL_CPP11
+*/
+//[/FIXME]
 
 #ifdef FL_CPP11
 # define FL__FUNCTION__ __func__
@@ -246,4 +250,4 @@
 	FL_MAKE_ITERATOR_TYPES(a,c,t) \
 	FL_MAKE_ITERATOR_ACCESSORS(a,t,p,v)
 
-#endif // FL_COMMONS_H
+#endif // FL_MACRO_H
