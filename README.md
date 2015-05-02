@@ -22,7 +22,7 @@ This extension is under the `fl::ann` namespace.
 ### Limitations
 
 - Only the multilayer perceptron architecture is available
-- Only a few variants of backpropagation algorithms are available
+- Only few variants of backpropagation algorithms are available
 
 ## ANFIS Extension
 
