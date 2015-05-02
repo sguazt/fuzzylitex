@@ -565,8 +565,8 @@ void GradientDescentBackpropagationAlgorithm::updateInputParameters()
 		while (layerCat != Engine::OutputLayer);
 
 		errNorm = std::sqrt(errNorm);
-std::cerr << "PHASE #-1 - Layer: " << layerCat << " - Error Norm: " << errNorm << std::endl;///XXX
-std::cerr << "PHASE #-1 - Layer: " << layerCat << " - STEP-SIZE: " << stepSize_ << std::endl;///XXX
+//std::cerr << "PHASE #-1 - Layer: " << layerCat << " - Error Norm: " << errNorm << std::endl;///XXX
+//std::cerr << "PHASE #-1 - Layer: " << layerCat << " - STEP-SIZE: " << stepSize_ << std::endl;///XXX
 
 		// Update parameters
 
@@ -595,8 +595,8 @@ std::cerr << "PHASE #-1 - Layer: " << layerCat << " - STEP-SIZE: " << stepSize_ 
 
 					std::vector<fl::scalar> params = p_node->getParams();
 
-std::cerr << "PHASE #-1 - Layer: " << layerCat << " - Node #" << i << ": " << p_node << " - Old Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;///XXX
-std::cerr << "PHASE #2 - Layer: " << layerCat << " - Node #" << i << ": " << p_node << " - dEdPs: "; fl::detail::VectorOutput(std::cerr, dEdPs_.at(p_node)); std::cerr << std::endl;///XXX
+//std::cerr << "PHASE #-1 - Layer: " << layerCat << " - Node #" << i << ": " << p_node << " - Old Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;///XXX
+//std::cerr << "PHASE #2 - Layer: " << layerCat << " - Node #" << i << ": " << p_node << " - dEdPs: "; fl::detail::VectorOutput(std::cerr, dEdPs_.at(p_node)); std::cerr << std::endl;///XXX
 					//if (momentum_ > 0 && oldDeltaPs_.count(p_node) == 0)
 					//{
 					//	oldDeltaPs_[p_node].resize(np, 0);
