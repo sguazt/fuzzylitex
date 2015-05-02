@@ -10,7 +10,7 @@ This extension is under the `fl::ann` namespace.
 
 ### Features
 
-- Multi-layer perceptron
+- Multilayer perceptron
 - Learning algorithms:
     - Gradient descent backpropagation learning algorithm with momentum (e.g., see [2]), both with offline and online modality.
 - Weight randomizers and initializers:
@@ -21,6 +21,8 @@ This extension is under the `fl::ann` namespace.
 
 ### Limitations
 
+- Only the multilayer perceptron architecture is available
+- Only a few variants of backpropagation algorithms are available
 
 ## ANFIS Extension
 
