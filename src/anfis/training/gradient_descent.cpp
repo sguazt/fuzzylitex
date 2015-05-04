@@ -1,7 +1,7 @@
 /**
  * \file fl/anfis/training/gradient_descent.cpp
  *
- * \brief Definitions for the ANFIS training algorithms
+ * \brief Definitions for the ANFIS training algorithms based on gradient descent backpropagation
  *
  * \author Marco Guazzone (marco.guazzone@gmail.com)
  *
@@ -40,62 +40,17 @@
 
 namespace fl { namespace anfis {
 
-GradientDescentBackpropagationAlgorithm::GradientDescentBackpropagationAlgorithm(Engine* p_anfis,
-																				 fl::scalar ss,
-																				 fl::scalar ssDecrRate,
-																				 fl::scalar ssIncrRate)
+///////////////////////////////////////////////////
+// GradientDescentBackpropagationAlgorithm
+///////////////////////////////////////////////////
+
+
+GradientDescentBackpropagationAlgorithm::GradientDescentBackpropagationAlgorithm(Engine* p_anfis)
 : BaseType(p_anfis),
-  stepSizeInit_(ss),
-  stepSizeDecrRate_(ssDecrRate),
-  stepSizeIncrRate_(ssIncrRate),
-  stepSizeErrWindowLen_(5),
-  stepSizeIncrCounter_(0),
-  stepSizeDecrCounter_(0),
-  online_(false)/*,
-  momentum_(0)*/
+  online_(false)
 {
 	this->init();
 }
-
-void GradientDescentBackpropagationAlgorithm::setInitialStepSize(fl::scalar value)
-{
-	stepSizeInit_ = fl::detail::FloatTraits<fl::scalar>::DefinitelyMax(value, 0);
-}
-
-fl::scalar GradientDescentBackpropagationAlgorithm::getInitialStepSize() const
-{
-	return stepSizeInit_;
-}
-
-void GradientDescentBackpropagationAlgorithm::setStepSizeDecreaseRate(fl::scalar value)
-{
-	stepSizeDecrRate_ = fl::detail::FloatTraits<fl::scalar>::DefinitelyMax(value, 0);
-}
-
-fl::scalar GradientDescentBackpropagationAlgorithm::getStepSizeDecreaseRate() const
-{
-	return stepSizeDecrRate_;
-}
-
-void GradientDescentBackpropagationAlgorithm::setStepSizeIncreaseRate(fl::scalar value)
-{
-	stepSizeIncrRate_ = fl::detail::FloatTraits<fl::scalar>::DefinitelyMax(value, 0);
-}
-
-fl::scalar GradientDescentBackpropagationAlgorithm::getStepSizeIncreaseRate() const
-{
-	return stepSizeIncrRate_;
-}
-
-//void GradientDescentBackpropagationAlgorithm::setMomentum(fl::scalar value)
-//{
-//	momentum_ = fl::detail::FloatTraits<fl::scalar>::Clamp(value, 0, 1);
-//}
-
-//fl::scalar GradientDescentBackpropagationAlgorithm::getMomentum() const
-//{
-//	return momentum_;
-//}
 
 void GradientDescentBackpropagationAlgorithm::setIsOnline(bool value)
 {
@@ -105,6 +60,21 @@ void GradientDescentBackpropagationAlgorithm::setIsOnline(bool value)
 bool GradientDescentBackpropagationAlgorithm::isOnline() const
 {
 	return online_;
+}
+
+void GradientDescentBackpropagationAlgorithm::setCurrentError(fl::scalar value)
+{
+	curError_ = value;
+}
+
+fl::scalar GradientDescentBackpropagationAlgorithm::getCurrentError() const
+{
+	return curError_;
+}
+
+const std::map< Node*, std::vector<fl::scalar> >& GradientDescentBackpropagationAlgorithm::getErrorDerivatives() const
+{
+	return dEdPs_;
 }
 
 fl::scalar GradientDescentBackpropagationAlgorithm::doTrainSingleEpoch(const fl::DataSet<fl::scalar>& data)
@@ -121,6 +91,10 @@ fl::scalar GradientDescentBackpropagationAlgorithm::doTrainSingleEpoch(const fl:
 	{
 		rmse = this->trainSingleEpochOffline(data);
 	}
+
+	//TODO
+	//this->setEpochError(rmse);
+	//this->setTotalError(this->getTotalError()+rmse);
 
 	return rmse;
 }
@@ -162,27 +136,7 @@ fl::scalar GradientDescentBackpropagationAlgorithm::trainSingleEpochOffline(cons
 		// Update bias in case of zero rule firing strength
 		if (this->getEngine()->hasBias())
 		{
-			bool skip = false;
-
-			for (std::size_t i = 0,
-							 ni = targetOut.size();
-				 i < ni;
-				 ++i)
-			{
-				if (fl::Operation::isNaN(actualOut[i]))
-				{
-					OutputNode* p_outNode = this->getEngine()->getOutputLayer().at(i);
-
-					FL_DEBUG_ASSERT( p_outNode );
-
-					//bias_[i] += stepSize_*(targetOut[i]-bias_[i]);
-					fl::scalar bias = p_outNode->getBias();
-					bias += stepSize_*(targetOut[i]-bias);
-					p_outNode->setBias(bias);
-					skip = true;
-				}
-			}
-			//this->getEngine()->setBias(bias_);
+			const bool skip = this->updateBias(targetOut, actualOut);
 
 			if (skip)
 			{
@@ -309,19 +263,10 @@ fl::scalar GradientDescentBackpropagationAlgorithm::trainSingleEpochOffline(cons
 
 	rmse = std::sqrt(rmse/data.size());
 
-	if (stepSizeErrWindow_.size() == stepSizeErrWindowLen_)
-	{
-		stepSizeErrWindow_.pop_back();
-		//stepSizeErrWindow_.pop_front();
-	}
-	stepSizeErrWindow_.push_front(rmse);
-	//stepSizeErrWindow_.push_back(rmse);
+	this->setCurrentError(rmse);
 
 	// Update parameters of input terms
 	this->updateInputParameters();
-
-	// Update step-size
-	this->updateStepSize();
 
 	return rmse;
 }
@@ -359,27 +304,7 @@ fl::scalar GradientDescentBackpropagationAlgorithm::trainSingleEpochOnline(const
 		// Update bias in case of zero rule firing strength
 		if (this->getEngine()->hasBias())
 		{
-			bool skip = false;
-
-			for (std::size_t i = 0,
-							 ni = targetOut.size();
-				 i < ni;
-				 ++i)
-			{
-				if (fl::Operation::isNaN(actualOut[i]))
-				{
-					OutputNode* p_outNode = this->getEngine()->getOutputLayer().at(i);
-
-					FL_DEBUG_ASSERT( p_outNode );
-
-					//bias_[i] += stepSize_*(targetOut[i]-bias_[i]);
-					fl::scalar bias = p_outNode->getBias();
-					bias += stepSize_*(targetOut[i]-bias);
-					p_outNode->setBias(bias);
-					skip = true;
-				}
-			}
-			//this->getEngine()->setBias(bias_);
+			const bool skip = this->updateBias(targetOut, actualOut);
 
 			if (skip)
 			{
@@ -389,7 +314,7 @@ fl::scalar GradientDescentBackpropagationAlgorithm::trainSingleEpochOnline(const
 			}
 		}
 
-//std::cerr << "PHASE #1 - Target output: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - ANFIS output: "; fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << " - Bias: "; fl::detail::VectorOutput(std::cerr, this->getEngine()->getBias()); std::cerr << std::endl; //XXX
+std::cerr << "PHASE #1 - Target output: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - ANFIS output: "; fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << " - Bias: "; fl::detail::VectorOutput(std::cerr, this->getEngine()->getBias()); std::cerr << std::endl; //XXX
 
 		// Update error
 		fl::scalar squaredErr = 0;
@@ -403,7 +328,8 @@ fl::scalar GradientDescentBackpropagationAlgorithm::trainSingleEpochOnline(const
 			squaredErr += fl::detail::Sqr(targetOut[i]-out);
 		}
 		rmse += squaredErr;
-//std::cerr << "PHASE #1 - Current error: " <<  squaredErr << " - Total error: " << rmse << std::endl;//XXX
+		this->setCurrentError(squaredErr);
+std::cerr << "PHASE #1 - Current error: " <<  squaredErr << " - Total error: " << rmse << std::endl;//XXX
 
 		// Backward errors
 		std::map<const Node*,fl::scalar> dEdOs;
@@ -508,19 +434,8 @@ fl::scalar GradientDescentBackpropagationAlgorithm::trainSingleEpochOnline(const
 		}
 		while (layerCat != Engine::OutputLayer);
 
-		if (stepSizeErrWindow_.size() == stepSizeErrWindowLen_)
-		{
-			stepSizeErrWindow_.pop_back();
-			//stepSizeErrWindow_.pop_front();
-		}
-		stepSizeErrWindow_.push_front(squaredErr);
-		//stepSizeErrWindow_.push_back(squaredErr);
-
 		// Update parameters of input terms
 		this->updateInputParameters();
-
-		// Update step-size
-		this->updateStepSize();
 	}
 
 	rmse = std::sqrt(rmse/data.size());
@@ -530,8 +445,105 @@ fl::scalar GradientDescentBackpropagationAlgorithm::trainSingleEpochOnline(const
 
 void GradientDescentBackpropagationAlgorithm::updateInputParameters()
 {
+	this->doUpdateInputParameters();
+}
+
+bool GradientDescentBackpropagationAlgorithm::updateBias(const std::vector<fl::scalar>& targetOut, const std::vector<fl::scalar>& actualOut)
+{
+	return this->doUpdateBias(targetOut, actualOut);
+}
+
+void GradientDescentBackpropagationAlgorithm::resetSingleEpoch()
+{
+	dEdPs_.clear();
+	curError_ = 0;
+
+	this->doResetSingleEpoch();
+}
+
+void GradientDescentBackpropagationAlgorithm::init()
+{
+	dEdPs_.clear();
+	curError_ = 0;
+}
+
+void GradientDescentBackpropagationAlgorithm::check() const
+{
+	if (this->getEngine() == fl::null)
+	{
+		FL_THROW2(std::logic_error, "Invalid ANFIS engine");
+	}
+
+	this->doCheck();
+}
+
+
+///////////////////////////////////////////////////
+// Jang1993GradientDescentBackpropagationAlgorithm
+///////////////////////////////////////////////////
+
+
+Jang1993GradientDescentBackpropagationAlgorithm::Jang1993GradientDescentBackpropagationAlgorithm(Engine* p_anfis,
+																								 fl::scalar ss,
+																								 fl::scalar ssDecrRate,
+																								 fl::scalar ssIncrRate)
+: BaseType(p_anfis),
+  stepSizeInit_(ss),
+  stepSizeDecrRate_(ssDecrRate),
+  stepSizeIncrRate_(ssIncrRate),
+  stepSizeErrWindowLen_(5),
+  stepSizeIncrCounter_(0),
+  stepSizeDecrCounter_(0)
+{
+	this->init();
+}
+
+void Jang1993GradientDescentBackpropagationAlgorithm::setInitialStepSize(fl::scalar value)
+{
+	stepSizeInit_ = fl::detail::FloatTraits<fl::scalar>::DefinitelyMax(value, 0);
+}
+
+fl::scalar Jang1993GradientDescentBackpropagationAlgorithm::getInitialStepSize() const
+{
+	return stepSizeInit_;
+}
+
+void Jang1993GradientDescentBackpropagationAlgorithm::setStepSizeDecreaseRate(fl::scalar value)
+{
+	stepSizeDecrRate_ = fl::detail::FloatTraits<fl::scalar>::DefinitelyMax(value, 0);
+}
+
+fl::scalar Jang1993GradientDescentBackpropagationAlgorithm::getStepSizeDecreaseRate() const
+{
+	return stepSizeDecrRate_;
+}
+
+void Jang1993GradientDescentBackpropagationAlgorithm::setStepSizeIncreaseRate(fl::scalar value)
+{
+	stepSizeIncrRate_ = fl::detail::FloatTraits<fl::scalar>::DefinitelyMax(value, 0);
+}
+
+fl::scalar Jang1993GradientDescentBackpropagationAlgorithm::getStepSizeIncreaseRate() const
+{
+	return stepSizeIncrRate_;
+}
+
+void Jang1993GradientDescentBackpropagationAlgorithm::doReset()
+{
+	BaseType::doReset();
+	this->init();
+}
+
+void Jang1993GradientDescentBackpropagationAlgorithm::doResetSingleEpoch()
+{
+}
+
+void Jang1993GradientDescentBackpropagationAlgorithm::doUpdateInputParameters()
+{
+	const std::map< Node*, std::vector<fl::scalar> >& dEdPs = this->getErrorDerivatives();
+
 	// Update parameters of input terms
-	if (dEdPs_.size() > 0)
+	if (dEdPs.size() > 0)
 	{
 		// Computes the error norm
 
@@ -554,19 +566,20 @@ void GradientDescentBackpropagationAlgorithm::updateInputParameters()
 //std::cerr << "PHASE #-1 - Layer: " << layerCat << " - Computing Error Norm for node #" << i << " (" << p_node << ")... "<< std::endl;///XXX
 
 				for (std::size_t p = 0,
-								 np = dEdPs_.at(p_node).size();
+								 np = dEdPs.at(p_node).size();
 					 p < np;
 					 ++p)
 				{
-					errNorm += fl::detail::Sqr(dEdPs_.at(p_node).at(p));
+					errNorm += fl::detail::Sqr(dEdPs.at(p_node).at(p));
 				}
 			}
 		}
 		while (layerCat != Engine::OutputLayer);
 
 		errNorm = std::sqrt(errNorm);
-//std::cerr << "PHASE #-1 - Layer: " << layerCat << " - Error Norm: " << errNorm << std::endl;///XXX
-//std::cerr << "PHASE #-1 - Layer: " << layerCat << " - STEP-SIZE: " << stepSize_ << std::endl;///XXX
+std::cerr << "PHASE #-1 - Layer: " << layerCat << " - Error Norm: " << errNorm << std::endl;///XXX
+std::cerr << "PHASE #-1 - Layer: " << layerCat << " - STEP-SIZE: " << stepSize_ << std::endl;///XXX
+std::cerr << "PHASE #-1 - Layer: " << layerCat << " - Learning Rate: " << (stepSize_/errNorm) << std::endl;///XXX
 
 		// Update parameters
 
@@ -591,31 +604,18 @@ void GradientDescentBackpropagationAlgorithm::updateInputParameters()
 					// check: null
 					FL_DEBUG_ASSERT( p_node );
 
-					const std::size_t np = dEdPs_.at(p_node).size();
+					const std::size_t np = dEdPs.at(p_node).size();
 
 					std::vector<fl::scalar> params = p_node->getParams();
 
-//std::cerr << "PHASE #-1 - Layer: " << layerCat << " - Node #" << i << ": " << p_node << " - Old Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;///XXX
-//std::cerr << "PHASE #2 - Layer: " << layerCat << " - Node #" << i << ": " << p_node << " - dEdPs: "; fl::detail::VectorOutput(std::cerr, dEdPs_.at(p_node)); std::cerr << std::endl;///XXX
-					//if (momentum_ > 0 && oldDeltaPs_.count(p_node) == 0)
-					//{
-					//	oldDeltaPs_[p_node].resize(np, 0);
-					//}
+std::cerr << "PHASE #-1 - Layer: " << layerCat << " - Node #" << i << ": " << p_node << " - Old Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;///XXX
+//std::cerr << "PHASE #2 - Layer: " << layerCat << " - Node #" << i << ": " << p_node << " - dEdPs: "; fl::detail::VectorOutput(std::cerr, dEdPs.at(p_node)); std::cerr << std::endl;///XXX
 
 					for (std::size_t p = 0; p < np; ++p)
 					{
-						const fl::scalar deltaP = -learningRate*dEdPs_.at(p_node).at(p);
+						const fl::scalar deltaP = -learningRate*dEdPs.at(p_node).at(p);
 
 						params[p] += deltaP;
-
-						//if (momentum_ > 0)
-						//{
-						//	const fl::scalar oldDeltaP = oldDeltaPs_.at(p_node).at(p);
-						//
-						//	params[p] += momentum_*oldDeltaP;
-						//
-						//	oldDeltaPs_[p_node][p] = deltaP;
-						//}
 					}
 std::cerr << "PHASE #-1 - Layer: " << layerCat << " - Node #" << i << ": " << p_node << " - New Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;///XXX
 					p_node->setParams(params.begin(), params.end());
@@ -624,10 +624,48 @@ std::cerr << "PHASE #-1 - Layer: " << layerCat << " - Node #" << i << ": " << p_
 			while (layerCat != Engine::OutputLayer);
 		}
 	}
+
+	// Update step-size
+	this->updateStepSize();
 }
 
-void GradientDescentBackpropagationAlgorithm::updateStepSize()
+bool Jang1993GradientDescentBackpropagationAlgorithm::doUpdateBias(const std::vector<fl::scalar>& targetOut, const std::vector<fl::scalar>& actualOut)
 {
+	bool skip = false;
+
+	for (std::size_t i = 0,
+					 ni = targetOut.size();
+		 i < ni;
+		 ++i)
+	{
+		if (fl::Operation::isNaN(actualOut[i]))
+		{
+			OutputNode* p_outNode = this->getEngine()->getOutputLayer().at(i);
+
+			FL_DEBUG_ASSERT( p_outNode );
+
+			//bias_[i] += stepSize_*(targetOut[i]-bias_[i]);
+			fl::scalar bias = p_outNode->getBias();
+			bias += stepSize_*(targetOut[i]-bias);
+			p_outNode->setBias(bias);
+			skip = true;
+		}
+	}
+	//this->getEngine()->setBias(bias_);
+
+	return skip;
+}
+
+void Jang1993GradientDescentBackpropagationAlgorithm::updateStepSize()
+{
+	if (stepSizeErrWindow_.size() == stepSizeErrWindowLen_)
+	{
+		stepSizeErrWindow_.pop_back();
+		//stepSizeErrWindow_.pop_front();
+	}
+	stepSizeErrWindow_.push_front(this->getCurrentError());
+	//stepSizeErrWindow_.push_back(this->getCurrentError());
+
 //std::cerr << "STEP-SIZE error window: "; fl::detail::VectorOutput(std::cerr, stepSizeErrWindow_); std::cerr << std::endl;//XXX
 //std::cerr << "STEP-SIZE decr-counter: " << stepSizeDecrCounter_ << ", incr-counter: " << stepSizeIncrCounter_ << std::endl;//XXX
 	if (!fl::detail::FloatTraits<fl::scalar>::EssentiallyEqual(stepSizeDecrRate_, 1))
@@ -711,27 +749,15 @@ void GradientDescentBackpropagationAlgorithm::updateStepSize()
 	}
 }
 
-void GradientDescentBackpropagationAlgorithm::resetSingleEpoch()
+void Jang1993GradientDescentBackpropagationAlgorithm::init()
 {
-	dEdPs_.clear();
-	oldDeltaPs_.clear();
-}
-
-void GradientDescentBackpropagationAlgorithm::init()
-{
-	dEdPs_.clear();
 	stepSize_ = stepSizeInit_;
 	stepSizeIncrCounter_ = stepSizeDecrCounter_ = 0;
 	stepSizeErrWindow_.clear();
-	oldDeltaPs_.clear();
 }
 
-void GradientDescentBackpropagationAlgorithm::check() const
+void Jang1993GradientDescentBackpropagationAlgorithm::doCheck() const
 {
-	if (this->getEngine() == fl::null)
-	{
-		FL_THROW2(std::logic_error, "Invalid ANFIS engine");
-	}
 	if (stepSizeInit_ <= 0)
 	{
 		FL_THROW2(std::logic_error, "Invalid step-size");
@@ -785,7 +811,215 @@ void GradientDescentBackpropagationAlgorithm::check() const
 	}
 }
 
-std::size_t GradientDescentBackpropagationAlgorithm::numberOfOutputTermParameters() const
+std::size_t Jang1993GradientDescentBackpropagationAlgorithm::numberOfOutputTermParameters() const
+{
+	std::size_t numTermParams = 0;
+
+	if (this->getEngine()->numberOfOutputVariables() > 0)
+	{
+		numTermParams += 1; // constant term
+
+		const fl::OutputVariable* p_var = this->getEngine()->getOutputVariable(0);
+		if (p_var->numberOfTerms() > 0)
+		{
+			const fl::Term* p_term = p_var->getTerm(0);
+
+			if (p_term->className() == fl::Linear().className())
+			{
+				numTermParams += this->getEngine()->numberOfInputVariables();
+			}
+		}
+	}
+
+	return numTermParams;
+}
+
+
+///////////////////////////////////////////////////
+// GradientDescentBackpropagationAlgorithm
+///////////////////////////////////////////////////
+
+
+GradientDescentWithMomentumBackpropagationAlgorithm::GradientDescentWithMomentumBackpropagationAlgorithm(Engine* p_anfis,
+																										 fl::scalar learningRate,
+																										 fl::scalar momentum)
+: BaseType(p_anfis),
+  learnRate_(learningRate),
+  momentum_(momentum)
+{
+	this->init();
+}
+
+void GradientDescentWithMomentumBackpropagationAlgorithm::setLearningRate(fl::scalar value)
+{
+	learnRate_ = fl::detail::FloatTraits<fl::scalar>::DefinitelyMax(value, 0);
+}
+
+fl::scalar GradientDescentWithMomentumBackpropagationAlgorithm::getLearningRate() const
+{
+	return learnRate_;
+}
+
+void GradientDescentWithMomentumBackpropagationAlgorithm::setMomentum(fl::scalar value)
+{
+	momentum_ = fl::detail::FloatTraits<fl::scalar>::Clamp(value, 0, 1);
+}
+
+fl::scalar GradientDescentWithMomentumBackpropagationAlgorithm::getMomentum() const
+{
+	return momentum_;
+}
+
+void GradientDescentWithMomentumBackpropagationAlgorithm::doReset()
+{
+	BaseType::doReset();
+
+	this->init();
+}
+
+void GradientDescentWithMomentumBackpropagationAlgorithm::doResetSingleEpoch()
+{
+	oldDeltaPs_.clear();
+}
+
+void GradientDescentWithMomentumBackpropagationAlgorithm::doUpdateInputParameters()
+{
+	const std::map< Node*, std::vector<fl::scalar> >& dEdPs = this->getErrorDerivatives();
+
+	if (dEdPs.size() > 0)
+	{
+		Engine::LayerCategory layerCat = Engine::InputLayer;
+		do
+		{
+			layerCat = this->getEngine()->getNextLayerCategory(layerCat);
+
+			std::vector<Node*> layer = this->getEngine()->getLayer(layerCat);
+
+			for (std::size_t i = 0,
+							 ni = layer.size();
+				 i < ni;
+				 ++i)
+			{
+				Node* p_node = layer[i];
+
+				// check: null
+				FL_DEBUG_ASSERT( p_node );
+
+				const std::size_t np = dEdPs.at(p_node).size();
+
+				std::vector<fl::scalar> params = p_node->getParams();
+
+std::cerr << "PHASE #-1 - Layer: " << layerCat << " - Node #" << i << ": " << p_node << " - Old Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;///XXX
+//std::cerr << "PHASE #2 - Layer: " << layerCat << " - Node #" << i << ": " << p_node << " - dEdPs: "; fl::detail::VectorOutput(std::cerr, dEdPs.at(p_node)); std::cerr << std::endl;///XXX
+				if (momentum_ > 0 && oldDeltaPs_.count(p_node) == 0)
+				{
+					oldDeltaPs_[p_node].resize(np, 0);
+				}
+
+				for (std::size_t p = 0; p < np; ++p)
+				{
+					fl::scalar deltaP = -learnRate_*dEdPs.at(p_node).at(p);
+
+					if (momentum_ > 0)
+					{
+						const fl::scalar oldDeltaP = oldDeltaPs_.at(p_node).at(p);
+
+						deltaP = (1-momentum_)*deltaP + momentum_*oldDeltaP;
+
+						oldDeltaPs_[p_node][p] = deltaP;
+					}
+
+					params[p] += deltaP;
+				}
+std::cerr << "PHASE #-1 - Layer: " << layerCat << " - Node #" << i << ": " << p_node << " - New Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;///XXX
+				p_node->setParams(params.begin(), params.end());
+			}
+		}
+		while (layerCat != Engine::OutputLayer);
+	}
+}
+
+bool GradientDescentWithMomentumBackpropagationAlgorithm::doUpdateBias(const std::vector<fl::scalar>& targetOut, const std::vector<fl::scalar>& actualOut)
+{
+	bool skip = false;
+
+	for (std::size_t i = 0,
+					 ni = targetOut.size();
+		 i < ni;
+		 ++i)
+	{
+		if (fl::Operation::isNaN(actualOut[i]))
+		{
+			OutputNode* p_outNode = this->getEngine()->getOutputLayer().at(i);
+
+			FL_DEBUG_ASSERT( p_outNode );
+
+			//FIXME: should we take into account also the momentum?
+
+			fl::scalar bias = p_outNode->getBias();
+			bias += learnRate_*(targetOut[i]-bias);
+			p_outNode->setBias(bias);
+			skip = true;
+		}
+	}
+	//this->getEngine()->setBias(bias_);
+
+	return skip;
+}
+
+void GradientDescentWithMomentumBackpropagationAlgorithm::init()
+{
+	oldDeltaPs_.clear();
+}
+
+void GradientDescentWithMomentumBackpropagationAlgorithm::doCheck() const
+{
+	if (learnRate_ <= 0)
+	{
+		FL_THROW2(std::logic_error, "Invalid learning rate");
+	}
+	if (momentum_ < 0 || momentum_ > 1)
+	{
+		FL_THROW2(std::logic_error, "Invalid momentum");
+	}
+
+	// Output terms must be homogeneous in shape
+	{
+		std::string termClass;
+		for (std::size_t i = 0,
+						 ni = this->getEngine()->numberOfOutputVariables();
+			 i < ni;
+			 ++i)
+		{
+			const fl::OutputVariable* p_var = this->getEngine()->getOutputVariable(i);
+
+			// check: null
+			FL_DEBUG_ASSERT( p_var );
+
+			for (std::size_t j = 0,
+							 nj = p_var->numberOfTerms();
+				 j < nj;
+				 ++j)
+			{
+				const fl::Term* p_term = p_var->getTerm(j);
+
+				// check: null
+				FL_DEBUG_ASSERT( p_term );
+
+				if (termClass.empty())
+				{
+					termClass = p_term->className();
+				}
+				else if (termClass != p_term->className())
+				{
+					FL_THROW2(std::logic_error, "Output terms must be homogeneous (i.e., output membership functions must have the same shape)");
+				}
+			}
+		}
+	}
+}
+
+std::size_t GradientDescentWithMomentumBackpropagationAlgorithm::numberOfOutputTermParameters() const
 {
 	std::size_t numTermParams = 0;
 
