@@ -55,8 +55,6 @@ Jang1993HybridLearningAlgorithm::Jang1993HybridLearningAlgorithm(Engine* p_anfis
   stepSizeIncrCounter_(0),
   stepSizeDecrCounter_(0),
   online_(false),
-  //momentum_(0),
-  //useBias_(true),
   rls_(0,0,0,ff)
 {
 	this->init();
@@ -91,16 +89,6 @@ fl::scalar Jang1993HybridLearningAlgorithm::getStepSizeIncreaseRate() const
 {
 	return stepSizeIncrRate_;
 }
-
-//void Jang1993HybridLearningAlgorithm::setMomentum(fl::scalar value)
-//{
-//	momentum_ = fl::detail::FloatTraits<fl::scalar>::Clamp(value, 0, 1);
-//}
-
-//fl::scalar Jang1993HybridLearningAlgorithm::getMomentum() const
-//{
-//	return momentum_;
-//}
 
 void Jang1993HybridLearningAlgorithm::setForgettingFactor(fl::scalar value)
 {
@@ -495,6 +483,7 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOffline(const fl::Da
 
 	rmse = std::sqrt(rmse/data.size());
 
+	// Remember the last errors to use them in the step-size update strategy
 	if (stepSizeErrWindow_.size() == stepSizeErrWindowLen_)
 	{
 		stepSizeErrWindow_.pop_back();
@@ -660,7 +649,7 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 			}
 		}
 
-//std::cerr << "PHASE #1 - Target output: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - ANFIS output: "; fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << " - Bias: "; fl::detail::VectorOutput(std::cerr, this->getEngine()->getBias()); std::cerr << std::endl; //XXX
+std::cerr << "PHASE #1 - Target output: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - ANFIS output: "; fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << " - Bias: "; fl::detail::VectorOutput(std::cerr, this->getEngine()->getBias()); std::cerr << std::endl; //XXX
 
 		// Update error
 		fl::scalar squaredErr = 0;
@@ -674,7 +663,7 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 			squaredErr += fl::detail::Sqr(targetOut[i]-out);
 		}
 		rmse += squaredErr;
-//std::cerr << "PHASE #1 - Current error: " <<  squaredErr << " - Total error: " << rmse << std::endl;//XXX
+std::cerr << "PHASE #1 - Current error: " <<  squaredErr << " - Total error: " << rmse << std::endl;//XXX
 
 		// Backward errors
 		std::map<const Node*,fl::scalar> dEdOs;
@@ -772,7 +761,7 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 			}
 		}
 
-//[FIXME]
+		// Remember the last errors to use them in the step-size update strategy
 		if (stepSizeErrWindow_.size() == stepSizeErrWindowLen_)
 		{
 			stepSizeErrWindow_.pop_back();
@@ -780,7 +769,6 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
 		}
 		stepSizeErrWindow_.push_front(squaredErr);
 		//stepSizeErrWindow_.push_back(squaredErr);
-//[/FIXME]
 	}
 
 	rmse = std::sqrt(rmse/data.size());
@@ -812,8 +800,9 @@ void Jang1993HybridLearningAlgorithm::updateInputParameters()
 			}
 		}
 		errNorm = std::sqrt(errNorm);
-//std::cerr << "PHASE #-1 - Error Norm: " << errNorm << std::endl;///XXX
-//std::cerr << "PHASE #-1 - STEP-SIZE: " << stepSize_ << std::endl;///XXX
+std::cerr << "PHASE #-1 - Layer: " << Engine::FuzzificationLayer << " - Error Norm: " << errNorm << std::endl;///XXX
+std::cerr << "PHASE #-1 - Layer: " << Engine::FuzzificationLayer << " - STEP-SIZE: " << stepSize_ << std::endl;///XXX
+std::cerr << "PHASE #-1 - Layer: " << Engine::FuzzificationLayer << " - Learning Rate: " << (stepSize_/errNorm) << std::endl;///XXX
 		if (errNorm > 0)
 		{
 			const fl::scalar learningRate = stepSize_/errNorm;
@@ -831,25 +820,11 @@ void Jang1993HybridLearningAlgorithm::updateInputParameters()
 
 //std::cerr << "PHASE #-1 - Node #" << i << ": " << p_node << " - Old Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;///XXX
 //std::cerr << "PHASE #2 - Node #" << i << ": " << p_node << " - dEdPs: "; fl::detail::VectorOutput(std::cerr, dEdPs_.at(p_node)); std::cerr << std::endl;///XXX
-				//if (momentum_ > 0 && oldDeltaPs_.count(p_node) == 0)
-				//{
-				//	oldDeltaPs_[p_node].resize(np, 0);
-				//}
-
 				for (std::size_t p = 0; p < np; ++p)
 				{
 					const fl::scalar deltaP = -learningRate*dEdPs_.at(p_node).at(p);
 
 					params[p] += deltaP;
-
-					//if (momentum_ > 0)
-					//{
-					//	const fl::scalar oldDeltaP = oldDeltaPs_.at(p_node).at(p);
-					//
-					//	params[p] += momentum_*oldDeltaP;
-					//
-					//	oldDeltaPs_[p_node][p] = deltaP;
-					//}
 				}
 //std::cerr << "PHASE #-1 - Node #" << i << ": " << p_node << " - New Params: "; fl::detail::VectorOutput(std::cerr, params); std::cerr << std::endl;///XXX
 				detail::SetTermParameters(p_node->getTerm(), params.begin(), params.end());

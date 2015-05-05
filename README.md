@@ -41,6 +41,7 @@ This extension is under the `fl::anfis` namespace.
 
 ### Limitations
 
+- The only hedge currently supported in the rule antecedent is the *NOT* hedge.
 - The combined gradient descent and least-squares estimation hybrid learning algorithm currently support the Takagi-Sugeno-Kang fuzzy inference system only.
 
 
