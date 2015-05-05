@@ -35,12 +35,14 @@
 
 namespace fl { namespace detail {
 
+/// Returns the square of the given parameter \a x
 template <typename T>
 T Sqr(T x)
 {
 	return x*x;
 }
 
+/// Returns the sum (or the difference, if \a minus is true) of the values in the range [\a first, \a last)
 template <typename T, typename IterT>
 T AlgebraicSum(IterT first, IterT last, bool minus)
 {
@@ -60,12 +62,14 @@ T AlgebraicSum(IterT first, IterT last, bool minus)
 	return sum;
 }
 
+/// Returns the sum of the values in the range [\a first, \a last)
 template <typename T, typename IterT>
 T Sum(IterT first, IterT last)
 {
 	return AlgebraicSum<T>(first, last, false);
 }
 
+/// Returns the difference of the values in the range [\a first, \a last)
 template <typename T, typename IterT>
 T Diff(IterT first, IterT last)
 {
@@ -106,6 +110,7 @@ std::vector<ValueT> LinSpace(ValueT start, ValueT stop, std::size_t num, bool en
 	return res;
 }
 
+/// Outputs the given vector \a v to the output stream \a os
 template <typename CharT, typename CharTraitsT, typename VectorT>
 void VectorOutput(std::basic_ostream<CharT,CharTraitsT>& os, const VectorT& v)
 {
@@ -121,6 +126,7 @@ void VectorOutput(std::basic_ostream<CharT,CharTraitsT>& os, const VectorT& v)
 	os << "]";
 }
 
+/// Outputs the given matrix \a A to the output stream \a os
 template <typename CharT, typename CharTraitsT, typename MatrixT>
 void MatrixOutput(std::basic_ostream<CharT,CharTraitsT>& os, const MatrixT& A)
 {
@@ -143,7 +149,7 @@ void MatrixOutput(std::basic_ostream<CharT,CharTraitsT>& os, const MatrixT& A)
 	os << "]";
 }
 
-/// Computes v*c, where v is a nx1 vector and c is a scalar value
+/// Computes v*c, where \a v is a nx1 vector and \a c is a scalar value
 template <typename VectorT, typename ValueT>
 VectorT VectorScalarProduct(const VectorT& v, ValueT c)
 {
@@ -159,7 +165,7 @@ VectorT VectorScalarProduct(const VectorT& v, ValueT c)
 	return res;
 }
 
-/// Computes A*c, where A is a nxm matrix and c is a scalar value
+/// Computes A*c, where \a A is a nxm matrix and \a c is a scalar value
 template <typename MatrixT, typename ValueT>
 MatrixT MatrixScalarProduct(const MatrixT& A, ValueT c)
 {
@@ -180,7 +186,7 @@ MatrixT MatrixScalarProduct(const MatrixT& A, ValueT c)
 	return res;
 }
 
-/// Computes u+v, where u and v are nx1 vectors
+/// Computes u+v (or u-v, if \a minus is true), where \a u and \a v are nx1 vectors
 template <typename VectorT>
 VectorT VectorAlgebraicSum(const VectorT& u, const VectorT& v, bool minus)
 {
@@ -202,21 +208,21 @@ VectorT VectorAlgebraicSum(const VectorT& u, const VectorT& v, bool minus)
 	return res;
 }
 
-/// Computes u+v, where u and v are nx1 vectors
+/// Computes u+v, where \a u and \a v are nx1 vectors
 template <typename VectorT>
 VectorT VectorSum(const VectorT& u, const VectorT& v)
 {
 	return VectorAlgebraicSum(u, v, false);
 }
 
-/// Computes u-v, where u and v are nx1 vectors
+/// Computes u-v, where \a u and \a v are nx1 vectors
 template <typename VectorT>
 VectorT VectorDiff(const VectorT& u, const VectorT& v)
 {
 	return VectorAlgebraicSum(u, v, true);
 }
 
-/// Computes the transpose A' of A, where A is a nxm matrix
+/// Computes the transpose A' of A, where \a A is a nxm matrix
 template <typename MatrixT>
 MatrixT MatrixTranspose(const MatrixT& A)
 {
@@ -237,7 +243,7 @@ MatrixT MatrixTranspose(const MatrixT& A)
 	return res;
 }
 
-/// Computes the transpose A' of A, where A is a nxm matrix
+/// Computes the transpose A' of A, where \a A is a nxm matrix
 template <typename MatrixT>
 MatrixT MatrixIdentity(std::size_t nr, std::size_t nc)
 {
@@ -252,7 +258,7 @@ MatrixT MatrixIdentity(std::size_t nr, std::size_t nc)
 	return res;
 }
 
-/// Computes A+B, where A and B are nxm matrices
+/// Computes A+B, where \a A and \a B are nxm matrices
 template <typename MatrixT>
 MatrixT MatrixAlgebraicSum(const MatrixT& A, const MatrixT& B, bool minus)
 {
@@ -280,7 +286,7 @@ MatrixT MatrixAlgebraicSum(const MatrixT& A, const MatrixT& B, bool minus)
 	return res;
 }
 
-/// Computes A+B, where A and B are nxm matrices
+/// Computes A+B, where \a A and \a B are nxm matrices
 template <typename MatrixT>
 MatrixT MatrixSum(const MatrixT& A, const MatrixT& B)
 {
@@ -294,7 +300,7 @@ MatrixT MatrixDiff(const MatrixT& A, const MatrixT& B)
 	return MatrixAlgebraicSum(A, B, true);
 }
 
-/// Computes A*B, where A is a nxp matrix and B is a pxm matrix
+/// Computes A*B, where \a A is a nxp matrix and \a B is a pxm matrix
 template <typename MatrixT>
 MatrixT MatrixProduct(const MatrixT& A, const MatrixT& B)
 {
@@ -325,7 +331,7 @@ MatrixT MatrixProduct(const MatrixT& A, const MatrixT& B)
 	return res;
 }
 
-/// Computes the inner product u'*v, where u and v are nx1 vectors, and u' is the transpose of u
+/// Computes the inner product u'*v, where \a u and \a v are nx1 vectors, and u' is the transpose of u
 template <typename VectorT>
 typename VectorT::value_type VectorInnerProduct(const VectorT& u, const VectorT& v)
 {
@@ -347,7 +353,7 @@ typename VectorT::value_type VectorInnerProduct(const VectorT& u, const VectorT&
 	return res;
 }
  
-/// Computes the outer product u*v', where u and v are nx1 vectors, and v' is the transpose of v
+/// Computes the outer product u*v', where \a u and \a v are nx1 vectors, and v' is the transpose of v
 template <typename MatrixT, typename VectorT>
 MatrixT VectorOuterProduct(const VectorT& u, const VectorT& v)
 {
@@ -368,7 +374,7 @@ MatrixT VectorOuterProduct(const VectorT& u, const VectorT& v)
 	return res;
 }
  
-/// Computes A*v, where A is a nxp matrix and v is a px1 vector
+/// Computes A*v, where \a A is a nxp matrix and \a v is a px1 vector
 template <typename MatrixT, typename VectorT>
 VectorT MatrixVectorProduct(const MatrixT& A, const VectorT& v)
 {
@@ -394,7 +400,7 @@ VectorT MatrixVectorProduct(const MatrixT& A, const VectorT& v)
 	return res;
 }
 
-/// Computes v'*A, wherev is a px1 vector,  A is a pxn matrix, and v' is the transpose of v
+/// Computes v'*A, where \a v is a px1 vector, \a A is a pxn matrix, and v' is the transpose of v
 template <typename VectorT, typename MatrixT>
 VectorT VectorMatrixProduct(const VectorT& v, const MatrixT& A)
 {
