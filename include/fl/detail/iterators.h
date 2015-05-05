@@ -60,7 +60,7 @@ using ForwardIteratorImpl = boost::type_erasure::any<
 
 # define FL_ForwardIteratorType(t) fl::detail::ForwardIteratorImpl<t>
 
-#else // FL_CPP1
+#else // FL_CPP11
 
 // Use nested typedef to emulate alias templates...
 
