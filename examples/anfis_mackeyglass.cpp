@@ -61,7 +61,8 @@
 
 namespace /*<unnamed>*/ {
 
-const std::string GradientDescentAlgorithmTag = "gd";
+const std::string Jang1993GradientDescentAlgorithmTag = "gdss";
+const std::string GradientDescentMomentumAlgorithmTag = "gdm";
 const std::string Jang1993HybridAlgorithmTag = "hybrid";
 
 const std::size_t DefaultMaxEpochs = 10;
@@ -126,7 +127,8 @@ void usage(const char* progname)
 			  << "--help: Show this help message." << std::endl
 			  << "--algo <algorithm-id>: Set the training algorithm." << std::endl
 			  << "  Possible values for '<algorithm-id>' are:" << std::endl
-			  << "  - '" << GradientDescentAlgorithmTag << "': gradient descent backpropagation." << std::endl
+			  << "  - '" << GradientDescentMomentumAlgorithmTag << "': gradient descent backpropagation with momentum." << std::endl
+			  << "  - '" << Jang1993GradientDescentAlgorithmTag << "': gradient descent backpropagation with adaptive learning rate based on step-size and proposed by (Jang et al.,1993)." << std::endl
 			  << "  - '" << Jang1993HybridAlgorithmTag << "': hybrid algorithm proposed by (Jang et al.,1993)." << std::endl
 			  << "  [default: " << DefaultTrainingAlgorithm << "]" << std::endl
 			  << "--epoch <value>: Set the maximum number of epochs in the training algorithm." << std::endl
@@ -236,37 +238,54 @@ FL_unique_ptr<fl::anfis::Engine> BuildAnfis(const fl::DataSet<>& trainingSet)
 
 fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& trainingSet, const std::string& algo, std::size_t maxEpochs, fl::scalar goalError, bool online)
 {
-	fl::scalar rmse = 0;
+	FL_unique_ptr<fl::anfis::TrainingAlgorithm> p_trainAlgo;
 
 	if (algo == Jang1993HybridAlgorithmTag)
 	{
-		fl::anfis::Jang1993HybridLearningAlgorithm hybridLearner(p_anfis);
+		fl::anfis::Jang1993HybridLearningAlgorithm* p_hybrid = new fl::anfis::Jang1993HybridLearningAlgorithm(p_anfis);
 		if (online)
 		{
-			hybridLearner.setIsOnline(true);
-			hybridLearner.setForgettingFactor(0.98);
+			p_hybrid->setIsOnline(true);
+			p_hybrid->setForgettingFactor(0.98);
 		}
 		else
 		{
-			hybridLearner.setIsOnline(false);
+			p_hybrid->setIsOnline(false);
 		}
-		rmse = hybridLearner.train(trainingSet, maxEpochs, goalError);
+		p_trainAlgo.reset(p_hybrid);
+	}
+	else if (algo == Jang1993GradientDescentAlgorithmTag)
+	{
+		fl::anfis::Jang1993GradientDescentBackpropagationAlgorithm* p_gdss = new fl::anfis::Jang1993GradientDescentBackpropagationAlgorithm(p_anfis);
+		if (online)
+		{
+			p_gdss->setIsOnline(true);
+		}
+		else
+		{
+			p_gdss->setIsOnline(false);
+		}
+		p_trainAlgo.reset(p_gdss);
+	}
+	else if (algo == GradientDescentMomentumAlgorithmTag)
+	{
+		fl::anfis::GradientDescentWithMomentumBackpropagationAlgorithm* p_gdm = new fl::anfis::GradientDescentWithMomentumBackpropagationAlgorithm(p_anfis);
+		if (online)
+		{
+			p_gdm->setIsOnline(true);
+		}
+		else
+		{
+			p_gdm->setIsOnline(false);
+		}
+		p_trainAlgo.reset(p_gdm);
 	}
 	else
 	{
-		fl::anfis::GradientDescentBackpropagationAlgorithm learnAlgo(p_anfis);
-		if (online)
-		{
-			learnAlgo.setIsOnline(true);
-		}
-		else
-		{
-			learnAlgo.setIsOnline(false);
-		}
-		rmse = learnAlgo.train(trainingSet, maxEpochs, goalError);
+		throw std::invalid_argument("Unknown learning algorithm '" + algo + "'");
 	}
 
-	return rmse;
+	return p_trainAlgo->train(trainingSet, maxEpochs, goalError);
 }
 
 fl::scalar TestAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& testSet)

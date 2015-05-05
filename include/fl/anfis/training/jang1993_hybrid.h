@@ -47,10 +47,10 @@ namespace fl { namespace anfis {
  * parameters of the input and output membership functions of a single-output,
  * Sugeno-type fuzzy inference system.
  *
- * The hybrid learning algorithm has been proposed by J.-S.R. Jang in [1] and is
- * well explained in [2].
+ * The hybrid learning algorithm has been proposed by J.-S.R. Jang in [Jang1993]
+ * and is well explained in [Jang1997].
  * What follows is an extert of the description of the hybrid algorithm as
- * found in [2].
+ * found in [Jang1997].
  * In the batch mode of the hybrid learning algorithm, each epoch is composed of
  * a <em>forward pass</em> and a <em>backward pass</em>.
  * In the forward pass, after an input vector is presented, the outputs of the
@@ -91,10 +91,26 @@ namespace fl { namespace anfis {
  *   \f]
  *   where \f$d_k\f$ is the desired value and \f$o_k\f$ is the actual output.
  * .
+ * The <em>step-size</em> represents the length of each transition along the
+ * gradient direction in the parameter space and may influence the speed of
+ * convergence.
+ * Specifically, as discussed in [Jang1993], if \f$\kappa\f$ is small, the
+ * gradient method will closely approximate the gradient path, but convergence
+ * will be slow since the gradient must be calculated many times.
+ * On the other hand, if \f$\kappa\f$ is large, convergence will initially be
+ * very fast, but the algorithm will oscillate about the optimum.
+ * Based on this observations, the <em>step-size</em> is updated according to
+ * the following strategy (as suggested by [Jang1993]):
+ * - If the error undergoes four consecutive reductions, increase the step-size
+ *   by multiplying it by a constant positive numeric value greater than one.
+ * - If the error undergoes two consecutive combinations of one increase and one
+ *   reduction, decrease the step-size by multiplying it by a constant positive
+ *   numeric value less than one.
+ * .
  *
  * References
- * -# J.-S.R. Jang, "ANFIS: Adaptive-Network-based Fuzzy Inference Systems," IEEE Transactions on Systems, Man, and Cybernetics, 23:3(665-685), 1993.
- * -# J.-S.R. Jang et al., "Neuro-Fuzzy and Soft Computing: A Computational Approach to Learning and Machine Intelligence," Prentice-Hall, Inc., 1997.
+ * -# [Jang1993] J.-S.R. Jang, "ANFIS: Adaptive-Network-based Fuzzy Inference Systems," IEEE Transactions on Systems, Man, and Cybernetics, 23:3(665-685), 1993.
+ * -# [Jang1997] J.-S.R. Jang et al., "Neuro-Fuzzy and Soft Computing: A Computational Approach to Learning and Machine Intelligence," Prentice-Hall, Inc., 1997.
  * .
  *
  * \author Marco Guazzone (marco.guazzone@gmail.com)
@@ -200,11 +216,9 @@ private:
 	std::size_t stepSizeIncrCounter_; ///< Counter used to check when to increase the step size
 	std::size_t stepSizeDecrCounter_; ///< Counter used to check when to decrease the step size
 	bool online_; ///< \c true in case of online learning; \c false if offline (batch) learning
-	//fl::scalar momentum_;
 	fl::detail::RecursiveLeastSquaresEstimator<fl::scalar> rls_; ///< The recursive least-squares estimator
 	std::map< Node*, std::vector<fl::scalar> > dEdPs_; ///< Error derivatives wrt node parameters
 	std::map< Node*, std::vector<fl::scalar> > oldDeltaPs_; ///< Old values of parameters changes (only for momentum learning)
-	//std::vector<fl::scalar> rlsPhi_; ///< RLS regressor of the last epoch
 }; // Jang1993HybridLearningAlgorithm
 
 }} // Namespace fl::anfis

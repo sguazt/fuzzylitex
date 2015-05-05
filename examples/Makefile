@@ -17,7 +17,7 @@ all: anfis_invkinematics anfis_mackeyglass canfis_invkinematics
 anfis_invkinematics: anfis_invkinematics.o engine.o nodes.o terms.o training_gradient_descent.o training_jang1993_hybrid.o training_training_algorithm.o
 	$(CXX) $(CXXFLAGS) -o anfis_invkinematics anfis_invkinematics.o engine.o nodes.o terms.o training_gradient_descent.o training_jang1993_hybrid.o training_training_algorithm.o $(LDFLAGS)
 
-anfis_mackeyglass: anfis_mackeyglass.o engine.o nodes.o terms.o training_gradient_descent.o training_jang1993_hybrid.o
+anfis_mackeyglass: anfis_mackeyglass.o engine.o nodes.o terms.o training_gradient_descent.o training_jang1993_hybrid.o  training_training_algorithm.o
 	$(CXX) $(CXXFLAGS) -o anfis_mackeyglass anfis_mackeyglass.o engine.o nodes.o terms.o training_gradient_descent.o training_jang1993_hybrid.o training_training_algorithm.o $(LDFLAGS)
 
 canfis_invkinematics: canfis_invkinematics.o engine.o nodes.o terms.o training_gradient_descent.o training_jang1993_hybrid.o

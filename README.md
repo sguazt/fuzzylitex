@@ -46,7 +46,7 @@ This extension is under the `fl::anfis` namespace.
 
 ## References
 
-1. *[Hagan1996]* M.T. Hagan et al., "Neural Network Design," PWS Publishing, 1996.
+1. *[Hagan1996]* M.T. Hagan et al., "Neural Network Design," Boston, MA: PWS Publishing, 1996.
 2. *[Jang1993]* J.-S.R. Jang, "ANFIS: Adaptive-Network-based Fuzzy Inference Systems," IEEE Transactions on Systems, Man, and Cybernetics, 23:3(665-685), 1993.
 3. *[Jang1997]* J.-S.R. Jang et al., "Neuro-Fuzzy and Soft Computing: A Computational Approach to Learning and Machine Intelligence," Prentice-Hall, Inc., 1997.
 4. *[Rojas1996]* R. Rojas, "Neural Networks: A Sistematic Introduction," Springer, 1996.

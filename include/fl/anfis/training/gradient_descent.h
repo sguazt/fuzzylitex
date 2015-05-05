@@ -54,7 +54,7 @@ namespace fl { namespace anfis {
  * algorithm updates the model parameter according to the so called
  * <em>generalized delta rule</em>, whereby, at the \f$n\f$-th iteration of the
  * algorithm, the parameters \f$\alpha\f$ are updated according to gradient of
- * the error measure (e.g., see [1,2]):
+ * the error measure (e.g., see [Mitchell1997,Rojas1996]):
  * \f{align}
  *  \alpha(n) &= \alpha(n-1) + \Delta \alpha(n)
  * \f}
@@ -65,8 +65,8 @@ namespace fl { namespace anfis {
  * gradient descent backpropagation algorithm.
  *
  * References:
- * -# T.M. Mitchell, "Machine Learning," McGraw-Hill, 1997.
- * -# R. Rojas, "Neural Networks: A Sistematic Introduction," Springer, 1996.
+ * -# [Mitchell1997] T.M. Mitchell, "Machine Learning," McGraw-Hill, 1997.
+ * -# [Rojas1996] R. Rojas, "Neural Networks: A Sistematic Introduction," Springer, 1996.
  * .
  *
  * \author Marco Guazzone (marco.guazzone@gmail.com)
@@ -148,6 +148,7 @@ private:
 	fl::scalar curError_; ///< The current value of the error measure
 }; // GradientDescentBackpropagationAlgorithm
 
+
 /**
  * Gradient descent backpropagation learning algorithm with adaptive learning
  * rate based on the step-size, proposed by (J.-S.R. Jang,1993)
@@ -164,7 +165,7 @@ private:
  * algorithm updates the model parameter according to the so called
  * <em>generalized delta rule</em>, whereby, at the \f$n\f$-th iteration of the
  * algorithm, the parameters \f$\alpha\f$ are updated according to gradient of
- * the error measure (e.g., see [3,4]):
+ * the error measure (e.g., see [Mitchell1997,Rojas1996]):
  * \f{align}
  *  \alpha(n) &= \alpha(n-1) + \Delta \alpha(n),\\
  *  \Delta \alpha(n) = - \eta(n) \frac{\partial E}{\partial \alpha}
@@ -177,30 +178,39 @@ private:
  *
  * This version of the gradient descent backpropagation algorithm uses an
  * adaptive learning rate strategy which is based on the <em>step-size</em>, as
- * discussed in [1,2], such that, at the \f$n\f$-th iteration of the algorithm,
- * the learning rate \f$\eta(n)\f$ is updated according to the following formula
- * (see [1,2]):
+ * discussed in [Jang1993,Jang1997], such that, at the \f$n\f$-th iteration of
+ * the algorithm, the learning rate \f$\eta(n)\f$ is updated according to the
+ * following formula (see [Jang1993,Jang1997]):
  * \f[
  *  \eta(n) = \frac{\kappa(n)}{\sqrt{\sum_\alpha \frac{\partial E}{\partial \alpha}}}
  * \f]
  * where \f$\kappa(n)\f$ is the <em>step-size</em> updated at the \f$n\f$-th
  * iteration of the algorithm.
- * The <em>step-size</em> is updated according to the following strategy:
+ * The <em>step-size</em> represents the length of each transition along the
+ * gradient direction in the parameter space and may influence the speed of
+ * convergence.
+ * Specifically, as discussed in [Jang1993], if \f$\kappa\f$ is small, the
+ * gradient method will closely approximate the gradient path, but convergence
+ * will be slow since the gradient must be calculated many times.
+ * On the other hand, if \f$\kappa\f$ is large, convergence will initially be
+ * very fast, but the algorithm will oscillate about the optimum.
+ * Based on this observations, the <em>step-size</em> is updated according to
+ * the following strategy (as suggested by [Jang1993]):
  * - If the error undergoes four consecutive reductions, increase the step-size
- *   by multiplying it by a constant numeric value greater than one.
+ *   by multiplying it by a constant positive numeric value greater than one.
  * - If the error undergoes two consecutive combinations of one increase and one
- *   reduction, decrease the step-size by multiplying it by a constant numeric
- *   value less than one.
+ *   reduction, decrease the step-size by multiplying it by a constant positive
+ *   numeric value less than one.
  * .
  *
  * This class implements both the batch (offline) and stochastic (online)
  * gradient descent backpropagation algorithm.
  *
  * References:
- * -# J.-S.R. Jang, "ANFIS: Adaptive-Network-based Fuzzy Inference Systems," IEEE Transactions on Systems, Man, and Cybernetics, 23:3(665-685), 1993.
- * -# J.-S.R. Jang et al., "Neuro-Fuzzy and Soft Computing: A Computational Approach to Learning and Machine Intelligence," Prentice-Hall, Inc., 1997.
- * -# T.M. Mitchell, "Machine Learning," McGraw-Hill, 1997.
- * -# R. Rojas, "Neural Networks: A Sistematic Introduction," Springer, 1996.
+ * -# [Jang1993] J.-S.R. Jang, "ANFIS: Adaptive-Network-based Fuzzy Inference Systems," IEEE Transactions on Systems, Man, and Cybernetics, 23:3(665-685), 1993.
+ * -# [Jang1997] J.-S.R. Jang et al., "Neuro-Fuzzy and Soft Computing: A Computational Approach to Learning and Machine Intelligence," Prentice-Hall, Inc., 1997.
+ * -# [Mitchell1997] T.M. Mitchell, "Machine Learning," McGraw-Hill, 1997.
+ * -# [Rojas1996] R. Rojas, "Neural Networks: A Sistematic Introduction," Springer, 1996.
  * .
  *
  * \author Marco Guazzone (marco.guazzone@gmail.com)
@@ -296,7 +306,7 @@ private:
  * algorithm updates the model parameter according to the so called
  * <em>generalized delta rule</em>, whereby, at the \f$n\f$-th iteration of the
  * algorithm, the parameters \f$\alpha\f$ are updated according to gradient of
- * the error measure (e.g., see [1]):
+ * the error measure (e.g., see [Hagan1996]):
  * \f{align}
  *  \alpha(n) &= \alpha(n-1) + \Delta \alpha(n),\\
  *  \Delta \alpha(n) = - (1-\mu)\eta \frac{\partial E}{\partial \alpha} + \mu \Delta \alpha(n-1)
@@ -312,22 +322,23 @@ private:
  *
  * Theoretically, the use of the momemtum term should provide the search process
  * with a kind of inertia and could help to avoid excessive oscillations in
- * narrow valleys of the error function [3].
+ * narrow valleys of the error function [Rojas1996].
  *
  * The use of the momentum can sometimes have the effect of keeping the gradient
  * descent search trajectory through small local minima in the error surface, or
  * along flat regions in the surface where the gradient descent search
- * trajectory would stop if there were no momentum [2].
+ * trajectory would stop if there were no momentum [Mitchell1997].
  * It also has the effect of gradually increasing the step size of the search in
- * regions where the gradient is unchanging, thereby speeding convergence [2].
+ * regions where the gradient is unchanging, thereby speeding convergence
+ * [Mitchell1997].
  *
  * This class implements both the batch (offline) and stochastic (online)
  * gradient descent backpropagation algorithm.
  *
  * References:
- * -# M.T. Hagan et al., "Neural Network Design," PWS Publishing, 1996.
- * -# T.M. Mitchell, "Machine Learning," McGraw-Hill, 1997.
- * -# R. Rojas, "Neural Networks: A Sistematic Introduction," Springer, 1996.
+ * -# [Hagan1996] M.T. Hagan et al., "Neural Network Design," Boston, MA: PWS Publishing, 1996.
+ * -# [Mitchell1997] T.M. Mitchell, "Machine Learning," McGraw-Hill, 1997.
+ * -# [Rojas1996] R. Rojas, "Neural Networks: A Sistematic Introduction," Springer, 1996.
  * .
  *
  * \author Marco Guazzone (marco.guazzone@gmail.com)

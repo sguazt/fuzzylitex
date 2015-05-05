@@ -86,9 +86,14 @@
 
 namespace /*<unnamed>*/ {
 
+const std::string Jang1993GradientDescentAlgorithmTag = "gdss";
+const std::string GradientDescentMomentumAlgorithmTag = "gdm";
+const std::string Jang1993HybridAlgorithmTag = "hybrid";
+
 const std::size_t DefaultMaxEpochs = 150;
 const fl::scalar DefaultGoalError = 0;
 const bool DefaultOnlineMode = false;
+const std::string DefaultTrainingAlgorithm = Jang1993HybridAlgorithmTag;
 const fl::scalar DefaultTolerance = 1e-7;
 
 const fl::scalar l1 = 10; // Length of first arm
@@ -118,7 +123,7 @@ void MakeTestSet(fl::DataSet<>& data);
 
 FL_unique_ptr<fl::anfis::Engine> BuildAnfis(const fl::DataSet<>& data, std::size_t numInMFs);
 
-fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& data, std::size_t maxEpochs, fl::scalar goalError, bool online);
+fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& data, const std::string& algo, std::size_t maxEpochs, fl::scalar goalError, bool online);
 
 fl::scalar TestAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& testSet);
 
@@ -139,6 +144,12 @@ void usage(const char* progname)
 	std::cout << "Usage: " << progname << " [options]" << std::endl
 			  << "Options:" << std::endl
 			  << "--help: Show this help message." << std::endl
+			  << "--algo <algorithm-id>: Set the training algorithm." << std::endl
+			  << "  Possible values for '<algorithm-id>' are:" << std::endl
+			  << "  - '" << GradientDescentMomentumAlgorithmTag << "': gradient descent backpropagation with momentum." << std::endl
+			  << "  - '" << Jang1993GradientDescentAlgorithmTag << "': gradient descent backpropagation with adaptive learning rate based on step-size and proposed by (Jang et al.,1993)." << std::endl
+			  << "  - '" << Jang1993HybridAlgorithmTag << "': hybrid algorithm proposed by (Jang et al.,1993)." << std::endl
+			  << "  [default: " << DefaultTrainingAlgorithm << "]" << std::endl
 			  << "--epoch <value>: Set the maximum number of epochs in the training algorithm." << std::endl
 			  << "  [default: " << DefaultMaxEpochs << "]" << std::endl
 			  << "--error <value>: Set the maximum error to achieve in the training algorithm." << std::endl
@@ -423,21 +434,58 @@ FL_unique_ptr<fl::anfis::Engine> BuildAnfis(const fl::DataSet<>& data, std::size
 	return p_anfis;
 }
 
-fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& data, std::size_t maxEpochs, fl::scalar goalError, bool online)
+fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& data, const std::string& algo, std::size_t maxEpochs, fl::scalar goalError, bool online)
 {
 	//  {MATLAB: fis2 = anfis(fis, maxEpochs, [0,0,0,0]);}
 
-	fl::anfis::Jang1993HybridLearningAlgorithm hybridLearner(p_anfis);
-	if (online)
+	FL_unique_ptr<fl::anfis::TrainingAlgorithm> p_trainAlgo;
+
+	if (algo == Jang1993HybridAlgorithmTag)
 	{
-		hybridLearner.setIsOnline(true);
-		hybridLearner.setForgettingFactor(0.98);
+		fl::anfis::Jang1993HybridLearningAlgorithm* p_hybrid = new fl::anfis::Jang1993HybridLearningAlgorithm(p_anfis);
+		if (online)
+		{
+			p_hybrid->setIsOnline(true);
+			p_hybrid->setForgettingFactor(0.98);
+		}
+		else
+		{
+			p_hybrid->setIsOnline(false);
+		}
+		p_trainAlgo.reset(p_hybrid);
+	}
+	else if (algo == Jang1993GradientDescentAlgorithmTag)
+	{
+		fl::anfis::Jang1993GradientDescentBackpropagationAlgorithm* p_gdss = new fl::anfis::Jang1993GradientDescentBackpropagationAlgorithm(p_anfis);
+		if (online)
+		{
+			p_gdss->setIsOnline(true);
+		}
+		else
+		{
+			p_gdss->setIsOnline(false);
+		}
+		p_trainAlgo.reset(p_gdss);
+	}
+	else if (algo == GradientDescentMomentumAlgorithmTag)
+	{
+		fl::anfis::GradientDescentWithMomentumBackpropagationAlgorithm* p_gdm = new fl::anfis::GradientDescentWithMomentumBackpropagationAlgorithm(p_anfis);
+		if (online)
+		{
+			p_gdm->setIsOnline(true);
+		}
+		else
+		{
+			p_gdm->setIsOnline(false);
+		}
+		p_trainAlgo.reset(p_gdm);
 	}
 	else
 	{
-		hybridLearner.setIsOnline(false);
+		throw std::invalid_argument("Unknown learning algorithm '" + algo + "'");
 	}
-	return hybridLearner.train(data, maxEpochs, goalError);
+
+	return p_trainAlgo->train(data, maxEpochs, goalError);
 }
 
 fl::scalar TestAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& testSet)
@@ -479,6 +527,7 @@ fl::scalar TestAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& testSet)
 
 int main(int argc, char* argv[])
 {
+	std::string algo = DefaultTrainingAlgorithm;
 	std::size_t maxEpochs = DefaultMaxEpochs;
 	fl::scalar goalError = DefaultGoalError;
 	bool online = DefaultOnlineMode;
@@ -489,6 +538,15 @@ int main(int argc, char* argv[])
 		{
 			usage(argv[0]);
 			break;
+		}
+		else if (!std::strcmp(argv[i], "--algo"))
+		{
+			++i;
+			if (i < argc)
+			{
+				std::istringstream iss(argv[i]);
+				iss >> algo;
+			}
 		}
 		else if (!std::strcmp(argv[i], "--epoch"))
 		{
@@ -519,6 +577,7 @@ int main(int argc, char* argv[])
 	}
 
 	std::cout << "Options:" << std::endl
+			  << "- algorithm: : " << algo << std::endl
 			  << "- max epochs: " << maxEpochs << std::endl
 			  << "- error goal: " << goalError  << std::endl
 			  << "- online: " << std::boolalpha << online << std::endl
@@ -551,7 +610,7 @@ int main(int argc, char* argv[])
 	fl::scalar rmse = 0;
 
 	std::cout << "Training the ANFIS network..." << std::endl;
-	rmse = TrainAnfis(p_anfis.get(), data, maxEpochs, goalError, online);
+	rmse = TrainAnfis(p_anfis.get(), data, algo, maxEpochs, goalError, online);
 	std::cout << "Trained -> RMSE: " << rmse << std::endl;
 	std::cout << "Trained -> MODEL: " << std::endl
 			  << p_anfis->toString() << std::endl;
