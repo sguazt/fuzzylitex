@@ -27,31 +27,45 @@
 
 
 #include <algorithm>
-#include <boost/type_traits/is_floating_point.hpp>
-#include <boost/utility/enable_if.hpp>
-//#include <cfloat>
 #include <cmath>
 #include <limits>
+
+#ifdef FL_CPP11
+# include <type_traits>
+# define FL_DETAIL_TRAITS_NS std
+#else // FL_CPP11
+# include <boost/type_traits/is_floating_point.hpp>
+# include <boost/utility/enable_if.hpp>
+# define FL_DETAIL_TRAITS_NS boost
+#endif // FL_CPP11
 
 
 namespace fl { namespace detail {
 
-/// See also:
-/// - http://www.cygnus-software.com/papers/comparingfloats/comparingfloats.htm
-/// - http://www.petebecker.com/js/js200012.html
-/// - http://code.google.com/p/googletest/source/browse/trunk/include/gtest/internal/gtest-internal.h
-/// - http://www.parashift.com/c++-faq-lite/newbie.html#faq-29.16
-/// - http://adtmag.com/articles/2000/03/16/comparing-floats-how-to-determine-if-floating-quantities-are-close-enough-once-a-tolerance-has-been.aspx
-/// - http://www.boost.org/doc/libs/1_47_0/libs/test/doc/html/utf/testing-tools/floating_point_comparison.html
-/// - http://learningcppisfun.blogspot.com/2010/04/comparing-floating-point-numbers.html
-/// .
-
+/**
+ * Traits class for floating point types
+ *
+ * \tparam T The floating point type
+ * \tparam Enable_ For SFINAE-based implementation
+ *
+ * See also:
+ * - http://www.cygnus-software.com/papers/comparingfloats/comparingfloats.htm
+ * - http://www.petebecker.com/js/js200012.html
+ * - http://code.google.com/p/googletest/source/browse/trunk/include/gtest/internal/gtest-internal.h
+ * - http://www.parashift.com/c++-faq-lite/newbie.html#faq-29.16
+ * - http://adtmag.com/articles/2000/03/16/comparing-floats-how-to-determine-if-floating-quantities-are-close-enough-once-a-tolerance-has-been.aspx
+ * - http://www.boost.org/doc/libs/1_47_0/libs/test/doc/html/utf/testing-tools/floating_point_comparison.html
+ * - http://learningcppisfun.blogspot.com/2010/04/comparing-floating-point-numbers.html
+ * .
+ *
+ * \author Marco Guazzone (marco.guazzone@gmail.com)
+ */
 template <typename T, typename Enable_ = void>
 struct FloatTraits;
 
-// Specialization for floating point types
+/// Specialization for floating point types
 template <typename T>
-struct FloatTraits<T, typename ::boost::enable_if< ::boost::is_floating_point<T> >::type>
+struct FloatTraits<T, typename FL_DETAIL_TRAITS_NS::enable_if< FL_DETAIL_TRAITS_NS::is_floating_point<T> >::type>
 {
 	/// Default tolerance for floating-point comparison.
 	static const T tolerance;
@@ -135,36 +149,43 @@ struct FloatTraits<T, typename ::boost::enable_if< ::boost::is_floating_point<T>
 		return (x-y) > (std::max(std::abs(x), std::abs(y))*tol);
 	}
 
+	/// Returns true if \a x is approximately equal or definitely less than \a y with respect to the given tolerance \a tol
 	static bool ApproximatelyLessEqual(T x, T y, T tol = tolerance)
 	{
 		return DefinitelyLess(x, y, tol) || ApproximatelyEqual(x, y, tol);
 	}
 
+	/// Returns true if \a x is essentially equal or definitely less than \a y with respect to the given tolerance \a tol
 	static bool EssentiallyLessEqual(T x, T y, T tol = tolerance)
 	{
 		return DefinitelyLess(x, y, tol) || EssentiallyEqual(x, y, tol);
 	}
 
+	/// Returns true if \a x is approximately equal or definitely greater than \a y with respect to the given tolerance \a tol
 	static bool ApproximatelyGreaterEqual(T x, T y, T tol = tolerance)
 	{
 		return DefinitelyGreater(x, y, tol) || ApproximatelyEqual(x, y, tol);
 	}
 
+	/// Returns true if \a x is essentially equal or definitely greater than \a y with respect to the given tolerance \a tol
 	static bool EssentiallyGreaterEqual(T x, T y, T tol = tolerance)
 	{
 		return DefinitelyGreater(x, y, tol) || EssentiallyEqual(x, y, tol);
 	}
 
+	/// Returns true if \a x is approximately equal to zero with respect to the given tolerance \a tol
 	static bool ApproximatelyZero(T x, T tol = tolerance)
 	{
 		return ApproximatelyEqual(x, T(0), tol);
 	}
 
+	/// Returns true if \a x is essentially equal to zero with respect to the given tolerance \a tol
 	static bool EssentiallyZero(T x, T tol = tolerance)
 	{
 		return EssentiallyEqual(x, T(0), tol);
 	}
 
+	/// Returns \a x if \a x is definitely less than \a y with respect to the given tolerance \a tol; otherwise, returns \a y
 	static T DefinitelyMin(T x, T y, T tol = tolerance)
 	{
 		if (DefinitelyLess(x, y, tol))
@@ -174,11 +195,13 @@ struct FloatTraits<T, typename ::boost::enable_if< ::boost::is_floating_point<T>
 		return y;
 	}
 
+	/// Returns \a x if \a x is less than \a y; otherwise, returns \a y
 	static T Min(T x, T y)
 	{
 		return std::min(x, y);
 	}
 
+	/// Returns \a x if \a x is definitely greater than \a y with respect to the given tolerance \a tol; otherwise, returns \a y
 	static T DefinitelyMax(T x, T y, T tol = tolerance)
 	{
 		if (DefinitelyGreater(x, y, tol))
@@ -188,16 +211,26 @@ struct FloatTraits<T, typename ::boost::enable_if< ::boost::is_floating_point<T>
 		return y;
 	}
 
+	/// Returns \a x if \a x is greater than \a y; otherwise, returns \a y
 	static T Max(T x, T y)
 	{
 		return std::max(x, y);
 	}
 
+	/**
+	 * Returns either \a l if \a x is definitely less than \a l with respect to
+	 * the given tolerance \a tol, or \a h if \a x is definitely greater than
+	 * \a h with respect to the given tolerance \a tol, or \a x otherwise
+	 */
 	static T DefinitelyClamp(T x, T l, T h, T tol = tolerance)
 	{
 		return DefinitelyMin(h, DefinitelyMax(l, x));
 	}
 
+	/**
+	 * Returns either \a l if \a x is less than \a l, or \a h if \a x is
+	 * greater than \a h, or \a x otherwise
+	 */
 	static T Clamp(T x, T l, T h)
 	{
 		return Min(h, Max(l, x));
@@ -205,7 +238,7 @@ struct FloatTraits<T, typename ::boost::enable_if< ::boost::is_floating_point<T>
 }; // FloatTraits
 
 template <typename T>
-const T FloatTraits<T, typename boost::enable_if< boost::is_floating_point<T> >::type>::tolerance = static_cast<T>(100)*std::numeric_limits<T>::epsilon();
+const T FloatTraits<T, typename FL_DETAIL_TRAITS_NS::enable_if< FL_DETAIL_TRAITS_NS::is_floating_point<T> >::type>::tolerance = static_cast<T>(100)*std::numeric_limits<T>::epsilon();
 
 }} // Namespace fl::detail
 
