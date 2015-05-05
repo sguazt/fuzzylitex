@@ -24,6 +24,17 @@ This extension is under the `fl::ann` namespace.
 - Only the multilayer perceptron architecture is available
 - Only few variants of the backpropagation algorithm are available
 
+### Requirements
+
+- [Boost C++ library](http://www.boost.org/) and in particular:
+   - Boost.CurrentFunction
+   - Boost.MPL
+   - Boost.Noncopyable
+   - Boost.Random (unless a C++11 compiler is used)
+   - Boost.Utility (unless a C++11 compiler is used)
+   - Boost.TypeErasure
+   - Boost.TypeTraits (unless a C++11 compiler is used)
+
 ## ANFIS Extension
 
 This extension provides both the *Adaptive Neuro Fuzzy Inference System* (ANFIS) and the related *Coactive ANFIS (CANFIS)* model to support multiple outputs.
@@ -43,6 +54,16 @@ This extension is under the `fl::anfis` namespace.
 
 - The only hedge currently supported in the rule antecedent is the *NOT* hedge.
 - The combined gradient descent and least-squares estimation hybrid learning algorithm currently support the Takagi-Sugeno-Kang fuzzy inference system only.
+
+
+### Requirements
+
+Unless a C++11 compiler is used, the following libraries are needed:
+
+- [Boost C++ library](http://www.boost.org/) and in particular:
+   - Boost.CurrentFunction
+   - Boost.Utility
+   - Boost.TypeTraits
 
 
 ## References
