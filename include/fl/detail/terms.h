@@ -40,23 +40,31 @@
 #include <fl/term/Sigmoid.h>
 #include <fl/term/SShape.h>
 #include <fl/term/Triangle.h>
+#include <fl/term/Trapezoid.h>
 #include <fl/term/ZShape.h>
 #include <vector>
 
 
 namespace fl { namespace detail {
 
+/// Returns the parameters associated to the given (pointer to) term \a p_term
 std::vector<fl::scalar> GetTermParameters(const fl::Term* p_term);
 
+/// Sets the parameters defined by the iterator range [\a first, \a last) for the given (pointer to) term \a p_term
 template <typename IterT>
 void SetTermParameters(fl::Term* p_term, IterT first, IterT last);
 
+/// Evaluates the partial derivatives of the given Bell term \a term for the given value \a x with respect to its parameters
 std::vector<fl::scalar> EvalBellTermDerivativeWrtParams(const fl::Bell& term, fl::scalar x);
 
-std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::scalar x);
+/// Evaluates the partial derivatives of the given Trapezoid term \a term for the given value \a x with respect to its parameters
+std::vector<fl::scalar> EvalTrapezoidTermDerivativeWrtParams(const fl::Trapezoid& term, fl::scalar x);
 
-template <typename IterT>
-void SetTermParameters(fl::Term* p_term, IterT first, IterT last);
+/// Evaluates the partial derivatives of the given Triangle term \a term for the given value \a x with respect to its parameters
+std::vector<fl::scalar> EvalTriangleTermDerivativeWrtParams(const fl::Triangle& term, fl::scalar x);
+
+/// Evaluates the partial derivatives of the given (pointer to a) term \a p_term for the given value \a x with respect to its parameters
+std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::scalar x);
 
 
 ////////////////////////
@@ -130,6 +138,14 @@ void SetTermParameters(fl::Term* p_term, IterT first, IterT last)
 		fl::SShape* p_realTerm = dynamic_cast<fl::SShape*>(p_term);
 		p_realTerm->setStart(params[0]);
 		p_realTerm->setEnd(params[1]);
+	}
+	else if (dynamic_cast<fl::Trapezoid*>(p_term))
+	{
+		fl::Trapezoid* p_realTerm = dynamic_cast<fl::Trapezoid*>(p_term);
+		p_realTerm->setVertexA(params[0]);
+		p_realTerm->setVertexB(params[1]);
+		p_realTerm->setVertexC(params[2]);
+		p_realTerm->setVertexD(params[3]);
 	}
 	else if (dynamic_cast<fl::Triangle*>(p_term))
 	{

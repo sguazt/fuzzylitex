@@ -39,6 +39,7 @@
 #include <fl/term/Sigmoid.h>
 #include <fl/term/SShape.h>
 #include <fl/term/Triangle.h>
+#include <fl/term/Trapezoid.h>
 #include <fl/term/ZShape.h>
 #include <stdexcept>
 #include <vector>
@@ -112,6 +113,14 @@ std::vector<fl::scalar> GetTermParameters(const fl::Term* p_term)
 		params.push_back(p_realTerm->getStart());
 		params.push_back(p_realTerm->getEnd());
 	}
+	else if (dynamic_cast<const fl::Trapezoid*>(p_term))
+	{
+		const fl::Trapezoid* p_realTerm = dynamic_cast<const fl::Trapezoid*>(p_term);
+		params.push_back(p_realTerm->getVertexA());
+		params.push_back(p_realTerm->getVertexB());
+		params.push_back(p_realTerm->getVertexC());
+		params.push_back(p_realTerm->getVertexD());
+	}
 	else if (dynamic_cast<const fl::Triangle*>(p_term))
 	{
 		const fl::Triangle* p_realTerm = dynamic_cast<const fl::Triangle*>(p_term);
@@ -129,21 +138,20 @@ std::vector<fl::scalar> GetTermParameters(const fl::Term* p_term)
 	return params;
 }
 
-/**
- * Eval the derivative of the generalized bell function with respect to its parameters
- * \f{align}{
- *  \frac{\partial f(x,c,w,s)}{\partial x} &= -\frac{2s |\frac{x-c}{w}|^{2s-1}}{w (|\frac{x-c}{w}|^{2s}+1)^2},\\
- *  \frac{\partial f(x,c,w,s)}{\partial c} &=  \frac{2s |\frac{x-c}{w}|^{2s-1}}{w (|\frac{x-c}{w}|^{2s}+1)^2},\\
- *  \frac{\partial f(x,c,w,s)}{\partial w} &=  \frac{2s (x-c) |\frac{x-c}{w}|^{2s-1}}{w^2 (|\frac{x-c}{w}|^{2s}+1)^2},\\
- *  \frac{\partial f(x,c,w,s)}{\partial s} &= -\frac{2|\frac{x-c}{w}|^{2s} \log(|\frac{x-c}{w}|)}{(|\frac{x-c}{w}|^{2s}+1)^2}.
- * \f}
- *
- * Mathematica:
- *   f[x_, c_, w_, s_] := 1/(1 + Abs[(x - c)/w]^(2*s))
- *   D[f[x, c, w, s], {{x,c,w,s}}]
- */
 std::vector<fl::scalar> EvalBellTermDerivativeWrtParams(const fl::Bell& term, fl::scalar x)
 {
+	// Eval the derivative of the generalized bell function with respect to its parameters
+	// \f{align}{
+	//  \frac{\partial f(x,c,w,s)}{\partial x} &= -\frac{2s |\frac{x-c}{w}|^{2s-1}}{w (|\frac{x-c}{w}|^{2s}+1)^2},\\
+	//  \frac{\partial f(x,c,w,s)}{\partial c} &=  \frac{2s |\frac{x-c}{w}|^{2s-1}}{w (|\frac{x-c}{w}|^{2s}+1)^2},\\
+	//  \frac{\partial f(x,c,w,s)}{\partial w} &=  \frac{2s (x-c) |\frac{x-c}{w}|^{2s-1}}{w^2 (|\frac{x-c}{w}|^{2s}+1)^2},\\
+	//  \frac{\partial f(x,c,w,s)}{\partial s} &= -\frac{2|\frac{x-c}{w}|^{2s} \log(|\frac{x-c}{w}|)}{(|\frac{x-c}{w}|^{2s}+1)^2}.
+	// \f}
+	//
+	// Mathematica:
+	//   f[x_, c_, w_, s_] := 1/(1 + Abs[(x - c)/w]^(2*s))
+	//   D[f[x, c, w, s], {{x,c,w,s}}]
+
 	const fl::scalar c = term.getCenter();
 	const fl::scalar w = term.getWidth();
 	const fl::scalar s = term.getSlope();
@@ -168,12 +176,95 @@ std::vector<fl::scalar> EvalBellTermDerivativeWrtParams(const fl::Bell& term, fl
 	return res;
 }
 
+std::vector<fl::scalar> EvalTrapezoidTermDerivativeWrtParams(const fl::Trapezoid& term, fl::scalar x)
+{
+	const fl::scalar a = term.getVertexA(); // left feet of the trapezoid
+	const fl::scalar b = term.getVertexB(); // left shoulder of the trapezoid
+	const fl::scalar c = term.getVertexC(); // right shoulder of the trapezoid
+	const fl::scalar d = term.getVertexD(); // right feet of the trapezoid
+
+	const fl::scalar y1 = (b <= x) ? 1 : ((x < a) ? 0 : ((a != b) ? (x-a)/(b-a) : 0));
+	const fl::scalar y2 = (x <= c) ? 1 : ((d < x) ? 0 : ((c != d) ? (d-x)/(d-c) : 0));
+	const fl::scalar y = std::min(y1, y2);
+
+	std::vector<fl::scalar> res(4);
+
+	if (y == y1)
+	{
+		// Vertex A
+		res[0] = (a <= x && x <= b)
+				 ? -(b-x)/detail::Sqr(b-a)
+				 : 0;
+		// Vertex B
+		res[1] = (a <= x && x <= b)
+				 ? -(x-a)/detail::Sqr(b-a)
+				 : 0;
+		// Vertex C
+		res[2] = 0;
+		// Vertex D
+		res[3] = 0;
+	}
+	else
+	{
+		// Vertex A
+		res[0] = 0;
+		// Vertex B
+		res[1] = 0;
+		// Vertex C
+		res[0] = (c <= x && x <= d)
+				 ? (d-x)/detail::Sqr(d-c)
+				 : 0;
+		// Vertex D
+		res[1] = (c <= x && x <= d)
+				 ? (x-c)/detail::Sqr(d-c)
+				 : 0;
+	}
+
+	return res;
+}
+
+std::vector<fl::scalar> EvalTriangleTermDerivativeWrtParams(const fl::Triangle& term, fl::scalar x)
+{
+	const fl::scalar a = term.getVertexA(); // left feet of the triangle
+	const fl::scalar b = term.getVertexB(); // peek of the triangle
+	const fl::scalar c = term.getVertexC(); // right feet of the triangle
+
+	std::vector<fl::scalar> res(3);
+
+	// Vertex A
+	res[0] = (a <= x && x <= b)
+			 ? -(b-x)/detail::Sqr(b-a)
+			 : 0;
+	// Vertex B
+	res[1] = (a <= x && x <= b)
+			 ? -(x-a)/detail::Sqr(b-a)
+			 : ((b <= x && x <= c)
+			 	? -(c-x)/detail::Sqr(c-b)
+			 	: 0);
+	// Vertex C
+	res[2] = (b <= x && x <= c)
+			 ? -(x-b)/detail::Sqr(c-b)
+			 : 0;
+
+	return res;
+}
+
 std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::scalar x)
 {
 	if (dynamic_cast<const fl::Bell*>(p_term))
 	{
 		const fl::Bell* p_bell = dynamic_cast<const fl::Bell*>(p_term);
 		return EvalBellTermDerivativeWrtParams(*p_bell, x);
+	}
+	else if (dynamic_cast<const fl::Trapezoid*>(p_term))
+	{
+		const fl::Trapezoid* p_trap = dynamic_cast<const fl::Trapezoid*>(p_term);
+		return EvalTrapezoidTermDerivativeWrtParams(*p_trap, x);
+	}
+	else if (dynamic_cast<const fl::Triangle*>(p_term))
+	{
+		const fl::Triangle* p_tri= dynamic_cast<const fl::Triangle*>(p_term);
+		return EvalTriangleTermDerivativeWrtParams(*p_tri, x);
 	}
 
 	FL_THROW2(std::runtime_error, "Derivative for term '" + p_term->className() + "' has not been implemented yet");
