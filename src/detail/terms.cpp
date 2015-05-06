@@ -113,19 +113,27 @@ std::vector<fl::scalar> GetTermParameters(const fl::Term* p_term)
 		const fl::Linear* p_realTerm = dynamic_cast<const fl::Linear*>(p_term);
 		params = p_realTerm->coefficients();
 	}
-	if (dynamic_cast<const fl::Ramp*>(p_term))
+	else if (dynamic_cast<const fl::Ramp*>(p_term))
 	{
 		const fl::Ramp* p_realTerm = dynamic_cast<const fl::Ramp*>(p_term);
 		params.push_back(p_realTerm->getStart());
 		params.push_back(p_realTerm->getEnd());
 	}
-	if (dynamic_cast<const fl::Sigmoid*>(p_term))
+	else if (dynamic_cast<const fl::Sigmoid*>(p_term))
 	{
 		const fl::Sigmoid* p_realTerm = dynamic_cast<const fl::Sigmoid*>(p_term);
 		params.push_back(p_realTerm->getInflection());
 		params.push_back(p_realTerm->getSlope());
 	}
-	if (dynamic_cast<const fl::SigmoidProduct*>(p_term))
+	else if (dynamic_cast<const fl::SigmoidDifference*>(p_term))
+	{
+		const fl::SigmoidDifference* p_realTerm = dynamic_cast<const fl::SigmoidDifference*>(p_term);
+		params.push_back(p_realTerm->getLeft());
+		params.push_back(p_realTerm->getRising());
+		params.push_back(p_realTerm->getFalling());
+		params.push_back(p_realTerm->getRight());
+	}
+	else if (dynamic_cast<const fl::SigmoidProduct*>(p_term))
 	{
 		const fl::SigmoidProduct* p_realTerm = dynamic_cast<const fl::SigmoidProduct*>(p_term);
 		params.push_back(p_realTerm->getLeft());

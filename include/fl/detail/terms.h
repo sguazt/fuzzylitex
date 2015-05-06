@@ -166,6 +166,14 @@ void SetTermParameters(fl::Term* p_term, IterT first, IterT last)
 		p_realTerm->setInflection(params[0]);
 		p_realTerm->setSlope(params[1]);
 	}
+	if (dynamic_cast<fl::SigmoidDifference*>(p_term))
+	{
+		fl::SigmoidDifference* p_realTerm = dynamic_cast<fl::SigmoidDifference*>(p_term);
+		p_realTerm->setLeft(params[0]);
+		p_realTerm->setRising(params[1]);
+		p_realTerm->setFalling(params[2]);
+		p_realTerm->setRight(params[3]);
+	}
 	if (dynamic_cast<fl::SigmoidProduct*>(p_term))
 	{
 		fl::SigmoidProduct* p_realTerm = dynamic_cast<fl::SigmoidProduct*>(p_term);
