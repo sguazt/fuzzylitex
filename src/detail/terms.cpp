@@ -140,25 +140,27 @@ std::vector<fl::scalar> GetTermParameters(const fl::Term* p_term)
 
 std::vector<fl::scalar> EvalBellTermDerivativeWrtParams(const fl::Bell& term, fl::scalar x)
 {
-	// Eval the derivative of the generalized bell function with respect to its parameters
-	// \f{align}{
-	//  \frac{\partial f(x,c,w,s)}{\partial x} &= -\frac{2s |\frac{x-c}{w}|^{2s-1}}{w (|\frac{x-c}{w}|^{2s}+1)^2},\\
-	//  \frac{\partial f(x,c,w,s)}{\partial c} &=  \frac{2s |\frac{x-c}{w}|^{2s-1}}{w (|\frac{x-c}{w}|^{2s}+1)^2},\\
-	//  \frac{\partial f(x,c,w,s)}{\partial w} &=  \frac{2s (x-c) |\frac{x-c}{w}|^{2s-1}}{w^2 (|\frac{x-c}{w}|^{2s}+1)^2},\\
-	//  \frac{\partial f(x,c,w,s)}{\partial s} &= -\frac{2|\frac{x-c}{w}|^{2s} \log(|\frac{x-c}{w}|)}{(|\frac{x-c}{w}|^{2s}+1)^2}.
-	// \f}
-	//
-	// Mathematica:
-	//   f[x_, c_, w_, s_] := 1/(1 + Abs[(x - c)/w]^(2*s))
-	//   D[f[x, c, w, s], {{x,c,w,s}}]
+	/*
+	 * Eval the derivative of the generalized bell function with respect to its parameters
+	 * \f{align}{
+	 *  \frac{\partial f(x,c,w,s)}{\partial x} &= -\frac{2s |\frac{x-c}{w}|^{2s-1}}{w (|\frac{x-c}{w}|^{2s}+1)^2},\\
+	 *  \frac{\partial f(x,c,w,s)}{\partial c} &=  \frac{2s |\frac{x-c}{w}|^{2s-1}}{w (|\frac{x-c}{w}|^{2s}+1)^2},\\
+	 *  \frac{\partial f(x,c,w,s)}{\partial w} &=  \frac{2s (x-c) |\frac{x-c}{w}|^{2s-1}}{w^2 (|\frac{x-c}{w}|^{2s}+1)^2},\\
+	 *  \frac{\partial f(x,c,w,s)}{\partial s} &= -\frac{2|\frac{x-c}{w}|^{2s} \log(|\frac{x-c}{w}|)}{(|\frac{x-c}{w}|^{2s}+1)^2}.
+	 * \f}
+	 *
+	 * Mathematica:
+	 *   f[x_, c_, w_, s_] := 1/(1 + Abs[(x - c)/w]^(2*s))
+	 *   D[f[x, c, w, s], {{x,c,w,s}}]
+	 */
 
 	const fl::scalar c = term.getCenter();
 	const fl::scalar w = term.getWidth();
 	const fl::scalar s = term.getSlope();
 
 	const fl::scalar xn = (x-c)/w;
-	const fl::scalar xnp = (xn != 0) ? std::pow(detail::Sqr(xn), s) : 0;
-	const fl::scalar den = detail::Sqr(1+xnp);
+	const fl::scalar xnp = (xn != 0) ? std::pow(Sqr(xn), s) : 0;
+	const fl::scalar den = Sqr(1+xnp);
 
 	std::vector<fl::scalar> res(3);
 
@@ -170,8 +172,39 @@ std::vector<fl::scalar> EvalBellTermDerivativeWrtParams(const fl::Bell& term, fl
 	res[1] = 2.0*s*xnp/(w*den);
 	// Slope parameter
 	res[2] = (x != c && x != (c+w))
-			 ? -std::log(detail::Sqr(xn))*xnp/den
+			 ? -std::log(Sqr(xn))*xnp/den
 			 : 0;
+
+	return res;
+}
+
+std::vector<fl::scalar> EvalGaussianTermDerivativeWrtParams(const fl::Gaussian& term, fl::scalar x)
+{
+	/*
+	 * Eval the derivative of the generalized bell function with respect to its parameters
+	 * \f{align}{
+	 *  \frac{\partial f(x,c,s)}{\partial x} &= -\frac{(x-c) e^{-\frac{(x-c)^2}{2 s^2}}}{s^2},\\
+	 *  \frac{\partial f(x,c,s)}{\partial c} &=  \frac{(x-c) e^{-\frac{(x-c)^2}{2 s^2}}}{s^2},\\
+	 *  \frac{\partial f(x,c,s)}{\partial s} &=  \frac{(x-c)^2 e^{-\frac{(x-c)^2}{2 s^2}}}{s^3}.
+	 * \f}
+	 *
+	 * Mathematica:
+	 *   f[x_, c_, s_] := e^(-(x-c)^2/(2*s^2))
+	 *   D[f[x, c, s], {{x,c,s}}]
+	 */
+
+	const fl::scalar m = term.getMean();
+	const fl::scalar sd = term.getStandardDeviation();
+
+	const fl::scalar fx = std::exp(-Sqr((x-m)/sd)/2.0);
+	const fl::scalar sd2 = Sqr(sd);
+
+	std::vector<fl::scalar> res(2);
+
+	// Mean parameter
+	res[0] = fx*(x-m)/sd2;
+	// Standard deviation parameter
+	res[1] = fx*Sqr(x-m)/(sd2*sd);
 
 	return res;
 }
@@ -183,21 +216,20 @@ std::vector<fl::scalar> EvalTrapezoidTermDerivativeWrtParams(const fl::Trapezoid
 	const fl::scalar c = term.getVertexC(); // right shoulder of the trapezoid
 	const fl::scalar d = term.getVertexD(); // right feet of the trapezoid
 
-	const fl::scalar y1 = (b <= x) ? 1 : ((x < a) ? 0 : ((a != b) ? (x-a)/(b-a) : 0));
-	const fl::scalar y2 = (x <= c) ? 1 : ((d < x) ? 0 : ((c != d) ? (d-x)/(d-c) : 0));
-	const fl::scalar y = std::min(y1, y2);
+	const fl::scalar fx1 = (b <= x) ? 1 : ((x < a) ? 0 : ((a != b) ? (x-a)/(b-a) : 0));
+	const fl::scalar fx2 = (x <= c) ? 1 : ((d < x) ? 0 : ((c != d) ? (d-x)/(d-c) : 0));
 
 	std::vector<fl::scalar> res(4);
 
-	if (y == y1)
+	if (fx1 < fx2)
 	{
 		// Vertex A
 		res[0] = (a <= x && x <= b)
-				 ? -(b-x)/detail::Sqr(b-a)
+				 ? -(b-x)/Sqr(b-a)
 				 : 0;
 		// Vertex B
 		res[1] = (a <= x && x <= b)
-				 ? -(x-a)/detail::Sqr(b-a)
+				 ? -(x-a)/Sqr(b-a)
 				 : 0;
 		// Vertex C
 		res[2] = 0;
@@ -212,11 +244,11 @@ std::vector<fl::scalar> EvalTrapezoidTermDerivativeWrtParams(const fl::Trapezoid
 		res[1] = 0;
 		// Vertex C
 		res[0] = (c <= x && x <= d)
-				 ? (d-x)/detail::Sqr(d-c)
+				 ? (d-x)/Sqr(d-c)
 				 : 0;
 		// Vertex D
 		res[1] = (c <= x && x <= d)
-				 ? (x-c)/detail::Sqr(d-c)
+				 ? (x-c)/Sqr(d-c)
 				 : 0;
 	}
 
@@ -233,17 +265,17 @@ std::vector<fl::scalar> EvalTriangleTermDerivativeWrtParams(const fl::Triangle& 
 
 	// Vertex A
 	res[0] = (a <= x && x <= b)
-			 ? -(b-x)/detail::Sqr(b-a)
+			 ? -(b-x)/Sqr(b-a)
 			 : 0;
 	// Vertex B
 	res[1] = (a <= x && x <= b)
-			 ? -(x-a)/detail::Sqr(b-a)
+			 ? -(x-a)/Sqr(b-a)
 			 : ((b <= x && x <= c)
-			 	? -(c-x)/detail::Sqr(c-b)
+			 	? -(c-x)/Sqr(c-b)
 			 	: 0);
 	// Vertex C
 	res[2] = (b <= x && x <= c)
-			 ? -(x-b)/detail::Sqr(c-b)
+			 ? -(x-b)/Sqr(c-b)
 			 : 0;
 
 	return res;
@@ -255,6 +287,11 @@ std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::
 	{
 		const fl::Bell* p_bell = dynamic_cast<const fl::Bell*>(p_term);
 		return EvalBellTermDerivativeWrtParams(*p_bell, x);
+	}
+	else if (dynamic_cast<const fl::Gaussian*>(p_term))
+	{
+		const fl::Gaussian* p_bell = dynamic_cast<const fl::Gaussian*>(p_term);
+		return EvalGaussianTermDerivativeWrtParams(*p_bell, x);
 	}
 	else if (dynamic_cast<const fl::Trapezoid*>(p_term))
 	{
