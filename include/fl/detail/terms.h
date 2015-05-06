@@ -40,6 +40,7 @@
 #include <fl/term/Linear.h>
 #include <fl/term/PiShape.h>
 #include <fl/term/Ramp.h>
+#include <fl/term/Rectangle.h>
 #include <fl/term/Sigmoid.h>
 #include <fl/term/SigmoidDifference.h>
 #include <fl/term/SigmoidProduct.h>
@@ -79,6 +80,9 @@ std::vector<fl::scalar> EvalGaussianProductTermDerivativeWrtParams(const fl::Gau
 
 /// Evaluates the partial derivatives of the given Pi-shape term \a term for the given value \a x with respect to its parameters
 std::vector<fl::scalar> EvalPiShapeTermDerivativeWrtParams(const fl::PiShape& term, fl::scalar x);
+
+/// Evaluates the partial derivatives of the given rectangle term \a term for the given value \a x with respect to its parameters
+std::vector<fl::scalar> EvalRectangleTermDerivativeWrtParams(const fl::Rectangle& term, fl::scalar x);
 
 /// Evaluates the partial derivatives of the given sigmoid term \a term for the given value \a x with respect to its parameters
 std::vector<fl::scalar> EvalSigmoidTermDerivativeWrtParams(const fl::Sigmoid& term, fl::scalar x);

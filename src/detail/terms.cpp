@@ -39,6 +39,7 @@
 #include <fl/term/Linear.h>
 #include <fl/term/PiShape.h>
 #include <fl/term/Ramp.h>
+#include <fl/term/Rectangle.h>
 #include <fl/term/Sigmoid.h>
 #include <fl/term/SigmoidDifference.h>
 #include <fl/term/SigmoidProduct.h>
@@ -398,6 +399,14 @@ std::vector<fl::scalar> EvalPiShapeTermDerivativeWrtParams(const fl::PiShape& te
 	return res;
 }
 
+std::vector<fl::scalar> EvalRectangleTermDerivativeWrtParams(const fl::Rectangle& term, fl::scalar x)
+{
+	FL_SUPPRESS_UNUSED_VARIABLE_WARNING(term);
+	FL_SUPPRESS_UNUSED_VARIABLE_WARNING(x);
+
+	return std::vector<fl::scalar>(2, 0);
+}
+
 std::vector<fl::scalar> EvalSigmoidTermDerivativeWrtParams(const fl::Sigmoid& term, fl::scalar x)
 {
 	/*
@@ -683,7 +692,11 @@ std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::
 		const fl::PiShape* p_pi = dynamic_cast<const fl::PiShape*>(p_term);
 		return EvalPiShapeTermDerivativeWrtParams(*p_pi, x);
 	}
-
+	else if (dynamic_cast<const fl::Rectangle*>(p_term))
+	{
+		const fl::Rectangle* p_rect = dynamic_cast<const fl::Rectangle*>(p_term);
+		return EvalRectangleTermDerivativeWrtParams(*p_rect, x);
+	}
 	else if (dynamic_cast<const fl::Sigmoid*>(p_term))
 	{
 		const fl::Sigmoid* p_sig = dynamic_cast<const fl::Sigmoid*>(p_term);
