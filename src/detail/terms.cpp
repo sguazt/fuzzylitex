@@ -34,6 +34,8 @@
 #include <fl/term/Constant.h>
 #include <fl/term/Cosine.h>
 #include <fl/term/Discrete.h>
+#include <fl/term/Gaussian.h>
+#include <fl/term/GaussianProduct.h>
 #include <fl/term/Linear.h>
 #include <fl/term/Ramp.h>
 #include <fl/term/Sigmoid.h>
@@ -181,15 +183,15 @@ std::vector<fl::scalar> EvalBellTermDerivativeWrtParams(const fl::Bell& term, fl
 std::vector<fl::scalar> EvalGaussianTermDerivativeWrtParams(const fl::Gaussian& term, fl::scalar x)
 {
 	/*
-	 * Eval the derivative of the generalized bell function with respect to its parameters
+	 * Eval the derivative of the gaussian function with respect to its parameters
 	 * \f{align}{
-	 *  \frac{\partial f(x,c,s)}{\partial x} &= -\frac{(x-c) e^{-\frac{(x-c)^2}{2 s^2}}}{s^2},\\
-	 *  \frac{\partial f(x,c,s)}{\partial c} &=  \frac{(x-c) e^{-\frac{(x-c)^2}{2 s^2}}}{s^2},\\
-	 *  \frac{\partial f(x,c,s)}{\partial s} &=  \frac{(x-c)^2 e^{-\frac{(x-c)^2}{2 s^2}}}{s^3}.
+	 *  \frac{\partial f(x,c,s)}{\partial x} &= -\frac{(x-c) Exp[-\frac{(x-c)^2}{2 s^2}]}{s^2},\\
+	 *  \frac{\partial f(x,c,s)}{\partial c} &=  \frac{(x-c) Exp[-\frac{(x-c)^2}{2 s^2}]}{s^2},\\
+	 *  \frac{\partial f(x,c,s)}{\partial s} &=  \frac{(x-c)^2 Exp[-\frac{(x-c)^2}{2 s^2}]}{s^3}.
 	 * \f}
 	 *
 	 * Mathematica:
-	 *   f[x_, c_, s_] := e^(-(x-c)^2/(2*s^2))
+	 *   f[x_, c_, s_] := Exp[-(x-c)^2/(2*s^2)]
 	 *   D[f[x, c, s], {{x,c,s}}]
 	 */
 
@@ -205,6 +207,51 @@ std::vector<fl::scalar> EvalGaussianTermDerivativeWrtParams(const fl::Gaussian& 
 	res[0] = fx*(x-m)/sd2;
 	// Standard deviation parameter
 	res[1] = fx*Sqr(x-m)/(sd2*sd);
+
+	return res;
+}
+
+std::vector<fl::scalar> EvalGaussianProductTermDerivativeWrtParams(const fl::GaussianProduct& term, fl::scalar x)
+{
+	/*
+	 * Eval the derivative of the gaussian product function with respect to its parameters
+	 * \f{align}{
+	 *  \frac{\partial f(x,c1,s1,c2,s2)}{\partial x}  &= e^{-\frac{(x-c1)^2}{2 s1^2}-\frac{(x-c2)^2}{2 s2^2}} (-\frac{x-c1}{s1^2}-\frac{x-c2}{s2^2}),\\
+	 *  \frac{\partial f(x,c1,s1,c2,s2)}{\partial c1} &= \frac{(x-c1) e^{-\frac{(x-c1)^2}{2 s1^2}-\frac{(x-c2)^2}{2 s2^2}}}{s1^2},\\
+	 *  \frac{\partial f(x,c1,s1,c2,s2)}{\partial s1} &= \frac{(x-c1)^2 e^{-\frac{(x-c1)^2}{2 s1^2}-\frac{(x-c2)^2}{2 s2^2}}}{s1^3},\\
+	 *  \frac{\partial f(x,c1,s1,c2,s2)}{\partial c2} &= \frac{(x-c2) e^{-\frac{(x-c1)^2}{2 s1^2}-\frac{(x-c2)^2}{2 s2^2}}}{s2^2},\\
+	 *  \frac{\partial f(x,c1,s1,c2,s2)}{\partial s2} &= \frac{(x-c2)^2 e^{-\frac{(x-c1)^2}{2 s1^2}-\frac{(x-c2)^2}{2 s2^2}}}{s2^3}.
+	 * \f}
+	 *
+	 * Mathematica:
+	 *   f[x_, c1_, s1_, c2_, s2_] := Exp[-(x-c1)^2/(2*s1^2)]*Exp[-(x-c2)^2/(2*s2^2)]
+	 *   D[f[x, c1, s1, c2, s2], {{x,c1,s1,c2,s2}}]
+	 */
+
+	const fl::scalar m1 = term.getMeanA();
+	const fl::scalar sd1 = term.getStandardDeviationA();
+	const fl::scalar m2 = term.getMeanB();
+	const fl::scalar sd2 = term.getStandardDeviationB();
+
+	const fl::scalar fx1 = (x >= m1) ? 1 : std::exp(-Sqr((x-m1)/sd1)/2.0);
+	const fl::scalar fx2 = (x <= m2) ? 1 : std::exp(-Sqr((x-m2)/sd2)/2.0);
+	const fl::scalar sd1sq = Sqr(sd1);
+	const fl::scalar sd2sq = Sqr(sd2);
+	const fl::scalar dfx1dm = (x >= m1) ? 0 : fx1*(x-m1)/sd1sq;
+	const fl::scalar dfx2dm = (x <= m2) ? 0 : fx2*(x-m2)/sd2sq;
+	const fl::scalar dfx1dsd = (x >= m1) ? 0 : fx1*Sqr(x-m1)/(sd1sq*sd1);
+	const fl::scalar dfx2dsd = (x <= m2) ? 0 : fx2*Sqr(x-m2)/(sd2sq*sd2);
+
+	std::vector<fl::scalar> res(4);
+
+	// Mean parameter of the first gaussian
+	res[0] = dfx1dm*fx2;
+	// Standard deviation parameter of the first gaussian
+	res[1] = dfx1dsd*fx2;
+	// Mean parameter of the second gaussian
+	res[0] = fx1*dfx2dm;
+	// Standard deviation parameter of the second gaussian
+	res[1] = fx1*dfx2dsd;
 
 	return res;
 }
@@ -290,8 +337,13 @@ std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::
 	}
 	else if (dynamic_cast<const fl::Gaussian*>(p_term))
 	{
-		const fl::Gaussian* p_bell = dynamic_cast<const fl::Gaussian*>(p_term);
-		return EvalGaussianTermDerivativeWrtParams(*p_bell, x);
+		const fl::Gaussian* p_gauss = dynamic_cast<const fl::Gaussian*>(p_term);
+		return EvalGaussianTermDerivativeWrtParams(*p_gauss, x);
+	}
+	else if (dynamic_cast<const fl::GaussianProduct*>(p_term))
+	{
+		const fl::GaussianProduct* p_gaussProd = dynamic_cast<const fl::GaussianProduct*>(p_term);
+		return EvalGaussianProductTermDerivativeWrtParams(*p_gaussProd, x);
 	}
 	else if (dynamic_cast<const fl::Trapezoid*>(p_term))
 	{
