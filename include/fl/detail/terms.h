@@ -81,6 +81,9 @@ std::vector<fl::scalar> EvalGaussianProductTermDerivativeWrtParams(const fl::Gau
 /// Evaluates the partial derivatives of the given Pi-shape term \a term for the given value \a x with respect to its parameters
 std::vector<fl::scalar> EvalPiShapeTermDerivativeWrtParams(const fl::PiShape& term, fl::scalar x);
 
+/// Evaluates the partial derivatives of the given ramp term \a term for the given value \a x with respect to its parameters
+std::vector<fl::scalar> EvalRampTermDerivativeWrtParams(const fl::Ramp& term, fl::scalar x);
+
 /// Evaluates the partial derivatives of the given rectangle term \a term for the given value \a x with respect to its parameters
 std::vector<fl::scalar> EvalRectangleTermDerivativeWrtParams(const fl::Rectangle& term, fl::scalar x);
 

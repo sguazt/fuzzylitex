@@ -405,6 +405,39 @@ std::vector<fl::scalar> EvalPiShapeTermDerivativeWrtParams(const fl::PiShape& te
 	return res;
 }
 
+std::vector<fl::scalar> EvalRampTermDerivativeWrtParams(const fl::Ramp& term, fl::scalar x)
+{
+	const fl::scalar s = term.getStart();
+	const fl::scalar e = term.getEnd();
+
+	std::vector<fl::scalar> res(2, 0);
+
+	if (s < e)
+	{
+		if (s < x && x < e)
+		{
+			const fl::scalar den = e-s;
+			const fl::scalar den2 = Sqr(den);
+
+			res[0] = (x-s)/den2 - 1.0/den;
+			res[1] = -(x-s)/den2;
+		}
+	}
+	else if (e < s)
+	{
+		if (e < x && x < s)
+		{
+			const fl::scalar den = s-e;
+			const fl::scalar den2 = Sqr(den);
+
+			res[0] = 1.0/den - (s-x)/den2;
+			res[1] = (s-x)/den2;
+		}
+	}
+
+	return res;
+}
+
 std::vector<fl::scalar> EvalRectangleTermDerivativeWrtParams(const fl::Rectangle& term, fl::scalar x)
 {
 	FL_SUPPRESS_UNUSED_VARIABLE_WARNING(term);
@@ -697,6 +730,11 @@ std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::
 	{
 		const fl::PiShape* p_pi = dynamic_cast<const fl::PiShape*>(p_term);
 		return EvalPiShapeTermDerivativeWrtParams(*p_pi, x);
+	}
+	else if (dynamic_cast<const fl::Ramp*>(p_term))
+	{
+		const fl::Ramp* p_ramp = dynamic_cast<const fl::Ramp*>(p_term);
+		return EvalRampTermDerivativeWrtParams(*p_ramp, x);
 	}
 	else if (dynamic_cast<const fl::Rectangle*>(p_term))
 	{
