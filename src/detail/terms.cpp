@@ -229,6 +229,39 @@ std::vector<fl::scalar> EvalConstantTermDerivativeWrtParams(const fl::Constant& 
 	return std::vector<fl::scalar>(1, 1);
 }
 
+std::vector<fl::scalar> EvalConcaveTermDerivativeWrtParams(const fl::Concave& term, fl::scalar x)
+{
+	const fl::scalar i = term.getInflection();
+	const fl::scalar e = term.getEnd();
+
+	std::vector<fl::scalar> res(2, 0);
+
+	if (i < e)
+	{
+		if (x < e)
+		{
+			const fl::scalar den = 2*e-i-x;
+			const fl::scalar den2 = Sqr(den);
+
+			res[0] = (e-i)/den2 - 1.0/den;
+			res[1] = 1.0/den - 2.0*(e-i)/den2;
+		}
+	}
+	else
+	{
+		if (x > e)
+		{
+			const fl::scalar den = i-2*e+x;
+			const fl::scalar den2 = Sqr(den);
+
+			res[0] = 1.0/den - (e-i)/den2;
+			res[1] = 2.0*(i-e)/den2 - 1.0/den;
+		}
+	}
+
+	return res;
+}
+
 std::vector<fl::scalar> EvalCosineTermDerivativeWrtParams(const fl::Cosine& term, fl::scalar x)
 {
 	/*
@@ -619,6 +652,11 @@ std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::
 	{
 		const fl::Bell* p_bell = dynamic_cast<const fl::Bell*>(p_term);
 		return EvalBellTermDerivativeWrtParams(*p_bell, x);
+	}
+	else if (dynamic_cast<const fl::Concave*>(p_term))
+	{
+		const fl::Concave* p_conc = dynamic_cast<const fl::Concave*>(p_term);
+		return EvalConcaveTermDerivativeWrtParams(*p_conc, x);
 	}
 	else if (dynamic_cast<const fl::Constant*>(p_term))
 	{
