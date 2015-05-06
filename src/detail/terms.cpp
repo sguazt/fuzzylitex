@@ -39,6 +39,7 @@
 #include <fl/term/Linear.h>
 #include <fl/term/Ramp.h>
 #include <fl/term/Sigmoid.h>
+#include <fl/term/SigmoidDifference.h>
 #include <fl/term/SigmoidProduct.h>
 #include <fl/term/SShape.h>
 #include <fl/term/Triangle.h>
@@ -309,19 +310,62 @@ std::vector<fl::scalar> EvalSigmoidTermDerivativeWrtParams(const fl::Sigmoid& te
 	return res;
 }
 
+std::vector<fl::scalar> EvalSigmoidDifferenceTermDerivativeWrtParams(const fl::SigmoidDifference& term, fl::scalar x)
+{
+	/*
+	 * Eval the derivative of the sigmoid function with respect to its parameters
+	 * \f{align}{
+	 *  \frac{\partial f(x,i1,s1,i2,s2)}{\partial x}  &=  \frac{s1 e^{-s1 (x-i1)}}{(e^{-s1 (x-i1)}+1)^2}-\frac{s2 e^{-s2 (x-i2)}}{(e^{-s2 (x-i2)}+1)^2},\\
+	 *  \frac{\partial f(x,i1,s1,i2,s2)}{\partial i1} &= -\frac{s1 e^{-s1 (x-i1)}}{(e^{-s1 (x-i1)}+1)^2},\\
+	 *  \frac{\partial f(x,i1,s1,i2,s2)}{\partial s1} &=  \frac{(x-i1) e^{-s1 (x-i1)}}{(e^{-s1 (x-i1)}+1)^2},\\
+	 *  \frac{\partial f(x,i1,s1,i2,s2)}{\partial i2} &=  \frac{s2 e^{-s2 (x-i2)}}{(e^{-s2 (x-i2)}+1)^2},\\
+	 *  \frac{\partial f(x,i1,s1,i2,s2)}{\partial s2} &= -\frac{(x-i2) e^{-s2 (x-i2)}}{(e^{-s2 (x-i2)}+1)^2}.
+	 * \f}
+	 *
+	 * Mathematica:
+	 *   f[x_, i1_, s1_, i2_, s2_] := 1/(1+Exp[-s1*(x-i1)])-1/(1+Exp[-s2*(x-i2)])
+	 *   D[f[x, i1, s1, i2, s2], {{x,i1,s1,i2,s2}}]
+	 */
+
+	const fl::scalar left = term.getLeft(); // inflection of the first sigmoid
+	const fl::scalar rising = term.getRising(); // slope of the first sigmoid
+	const fl::scalar falling = term.getFalling(); // slope of the second sigmoid
+	const fl::scalar right = term.getRight(); // inflection of the second sigmoid
+
+	const fl::scalar fx1 = 1.0/(1+std::exp(-rising*(x-left)));
+	const fl::scalar fx2 = 1.0/(1+std::exp(-falling*(x-right)));
+	const fl::scalar sgn = (fx1 >= fx2) ? 1 : -1;
+
+	std::vector<fl::scalar> res(4);
+
+	// Inflection parameter of the first sigmoid
+	res[0] = -fx1*(1-fx1)*rising*sgn;
+	// Slope parameter of the first sigmoid
+	res[1] = fx1*(1-fx1)*(x-left)*sgn;
+	// Slope parameter of the second sigmoid
+	res[2] = -fx2*(1-fx2)*(x-right)*sgn;
+	// Inflection parameter of the second sigmoid
+	res[3] = fx2*(1-fx2)*falling*sgn;
+
+	return res;
+}
+
 std::vector<fl::scalar> EvalSigmoidProductTermDerivativeWrtParams(const fl::SigmoidProduct& term, fl::scalar x)
 {
 	/*
 	 * Eval the derivative of the sigmoid function with respect to its parameters
 	 * \f{align}{
-	 *  \frac{\partial f(x,i,s)}{\partial x} &=  \frac{s e^{-s (x-i)}}{(e^{-s (x-i)}+1)^2},\\
-	 *  \frac{\partial f(x,i,s)}{\partial i} &= -\frac{s e^{-s (x-i)}}{(e^{-s (x-i)}+1)^2},\\
-	 *  \frac{\partial f(x,i,s)}{\partial s} &=  \frac{(x-i) e^{-s (x-i)}}{(e^{-s (x-i)}+1)^2}.
+	 *  \frac{\partial f(x,i1,s1,i2,s2)}{\partial x}  &=  \frac{s1 e^{-s1 (x-i1)}}{(e^{-s1 (x-i1)}+1)^2 (e^{-s2 (x-i2)}+1)}+\frac{s2 e^{-s2 (x-i2)}}{(e^{-s1 (x-i1)}+1) (e^{-s2 (x-i2)}+1)^2},\\
+	 *  \frac{\partial f(x,i1,s1,i2,s2)}{\partial i1} &= -\frac{s1 e^{-s1 (x-i1)}}{(e^{-s1 (x-i1)}+1)^2 (e^{-s2 (x-i2)}+1)},\\
+	 *  \frac{\partial f(x,i1,s1,i2,s2)}{\partial s1} &=  \frac{(x-i1}) e^{-s1 (x-i1)}}{(e^{-s1 (x-i1)}+1)^2 (e^{-s2 (x-i2)}+1)},\\
+	 *  \frac{\partial f(x,i1,s1,i2,s2)}{\partial i2} &= -\frac{s2 e^{-s2 (x-i2)}}{(e^{-s1 (x-i1)}+1) (e^{-s2 (x-i2)}+1)^2},\\
+	 *  \frac{\partial f(x,i1,s1,i2,s2)}{\partial s2} &=  \frac{(x-i2) e^{-s2 (x-i2)}}{(e^{-s1 (x-i1)}+1) (e^{-s2 (x-i2)}+1)^2}.
 	 * \f}
 	 *
+	 *
 	 * Mathematica:
-	 *   f[x_, i_, s_] := 1/(1+Exp[-s*(x-i)])
-	 *   D[f[x, i, s], {{x,i,s}}]
+	 *   f[x_, i1_, s1_, i2_, s2_] := 1/((1+Exp[-s1*(x-i1)])*(1+Exp[-s2*(x-i2)]))
+	 *   D[f[x, i1, s1, i2, s2], {{x,i1,s1,i2,s2}}]
 	 */
 
 	const fl::scalar left = term.getLeft(); // inflection of the first sigmoid
@@ -439,6 +483,11 @@ std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::
 	{
 		const fl::Sigmoid* p_sig = dynamic_cast<const fl::Sigmoid*>(p_term);
 		return EvalSigmoidTermDerivativeWrtParams(*p_sig, x);
+	}
+	else if (dynamic_cast<const fl::SigmoidDifference*>(p_term))
+	{
+		const fl::SigmoidDifference* p_sigDiff = dynamic_cast<const fl::SigmoidDifference*>(p_term);
+		return EvalSigmoidDifferenceTermDerivativeWrtParams(*p_sigDiff, x);
 	}
 	else if (dynamic_cast<const fl::SigmoidProduct*>(p_term))
 	{
