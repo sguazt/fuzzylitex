@@ -62,6 +62,9 @@ void SetTermParameters(fl::Term* p_term, IterT first, IterT last);
 /// Evaluates the partial derivatives of the given Bell term \a term for the given value \a x with respect to its parameters
 std::vector<fl::scalar> EvalBellTermDerivativeWrtParams(const fl::Bell& term, fl::scalar x);
 
+/// Evaluates the partial derivatives of the given constant term \a term for the given value \a x with respect to its parameters
+std::vector<fl::scalar> EvalConstantTermDerivativeWrtParams(const fl::Constant& term, fl::scalar x);
+
 /// Evaluates the partial derivatives of the given Gaussian term \a term for the given value \a x with respect to its parameters
 std::vector<fl::scalar> EvalGaussianTermDerivativeWrtParams(const fl::Gaussian& term, fl::scalar x);
 

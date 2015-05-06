@@ -221,6 +221,14 @@ std::vector<fl::scalar> EvalBellTermDerivativeWrtParams(const fl::Bell& term, fl
 	return res;
 }
 
+std::vector<fl::scalar> EvalConstantTermDerivativeWrtParams(const fl::Constant& term, fl::scalar x)
+{
+	FL_SUPPRESS_UNUSED_VARIABLE_WARNING(term);
+	FL_SUPPRESS_UNUSED_VARIABLE_WARNING(x);
+
+	return std::vector<fl::scalar>(1, 1);
+}
+
 std::vector<fl::scalar> EvalGaussianTermDerivativeWrtParams(const fl::Gaussian& term, fl::scalar x)
 {
 	/*
@@ -577,6 +585,11 @@ std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::
 	{
 		const fl::Bell* p_bell = dynamic_cast<const fl::Bell*>(p_term);
 		return EvalBellTermDerivativeWrtParams(*p_bell, x);
+	}
+	if (dynamic_cast<const fl::Constant*>(p_term))
+	{
+		const fl::Constant* p_const = dynamic_cast<const fl::Constant*>(p_term);
+		return EvalConstantTermDerivativeWrtParams(*p_const, x);
 	}
 	else if (dynamic_cast<const fl::Gaussian*>(p_term))
 	{
