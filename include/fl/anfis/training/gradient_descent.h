@@ -74,78 +74,78 @@ namespace fl { namespace anfis {
 class FL_API GradientDescentBackpropagationAlgorithm: public TrainingAlgorithm
 {
 private:
-	typedef TrainingAlgorithm BaseType;
+    typedef TrainingAlgorithm BaseType;
 
 
 public:
-	/**
-	 * Constructor
-	 *
-	 * \param p_anfis Pointer to the ANFIS model to be trained
-	 */
+    /**
+     * Constructor
+     *
+     * \param p_anfis Pointer to the ANFIS model to be trained
+     */
     explicit GradientDescentBackpropagationAlgorithm(Engine* p_anfis = fl::null);
 
-	/// Sets the online/offline mode for the learning algorithm
-	void setIsOnline(bool value);
+    /// Sets the online/offline mode for the learning algorithm
+    void setIsOnline(bool value);
 
-	/// Gets the online/offline mode of the learning algorithm
-	bool isOnline() const;
+    /// Gets the online/offline mode of the learning algorithm
+    bool isOnline() const;
 
 protected:
-	/// Resets the state of the learning algorithm
-	virtual void doReset();
+    /// Resets the state of the learning algorithm
+    virtual void doReset();
 
-	/// Sets the current value of the error measure computed in the current epoch
-	void setCurrentError(fl::scalar value);
+    /// Sets the current value of the error measure computed in the current epoch
+    void setCurrentError(fl::scalar value);
 
-	/// Gets the current value of the error measure computed in the current epoch
-	fl::scalar getCurrentError() const;
+    /// Gets the current value of the error measure computed in the current epoch
+    fl::scalar getCurrentError() const;
 
-	/// Gets the error derivatives wrt node parameters
-	const std::map< Node*, std::vector<fl::scalar> >& getErrorDerivatives() const;
+    /// Gets the error derivatives wrt node parameters
+    const std::map< Node*, std::vector<fl::scalar> >& getErrorDerivatives() const;
 
-	/// Updates the bias of output nodes
-	bool updateBias(const std::vector<fl::scalar>& targetOut, const std::vector<fl::scalar>& actualOut);
+    /// Updates the bias of output nodes
+    bool updateBias(const std::vector<fl::scalar>& targetOut, const std::vector<fl::scalar>& actualOut);
 
 private:
-	/// Initializes the training algorithm
-	void init();
+    /// Initializes the training algorithm
+    void init();
 
-	/// Checks the correctness of the parameters of the training algorithm
-	void check() const;
+    /// Checks the correctness of the parameters of the training algorithm
+    void check() const;
 
-	/// Trains ANFIS for a signle epoch in offline (batch) mode
-	fl::scalar trainSingleEpochOffline(const fl::DataSet<fl::scalar>& data);
+    /// Trains ANFIS for a signle epoch in offline (batch) mode
+    fl::scalar trainSingleEpochOffline(const fl::DataSet<fl::scalar>& data);
 
-	/// Trains ANFIS for a signle epoch in online mode
-	fl::scalar trainSingleEpochOnline(const fl::DataSet<fl::scalar>& data);
+    /// Trains ANFIS for a signle epoch in online mode
+    fl::scalar trainSingleEpochOnline(const fl::DataSet<fl::scalar>& data);
 
-	/// Updates parameters of input terms
-	void updateInputParameters();
+    /// Updates parameters of input terms
+    void updateInputParameters();
 
-	/// Resets state for single epoch training
-	void resetSingleEpoch();
+    /// Resets state for single epoch training
+    void resetSingleEpoch();
 
     /// Trains the ANFIS model for a single epoch only using the given training set \a data
     fl::scalar doTrainSingleEpoch(const fl::DataSet<fl::scalar>& data);
 
-	/// Updates parameters of input terms
-	virtual void doUpdateInputParameters() = 0;
+    /// Updates parameters of input terms
+    virtual void doUpdateInputParameters() = 0;
 
-	/// Updates the bias of output nodes
-	virtual bool doUpdateBias(const std::vector<fl::scalar>& targetOut, const std::vector<fl::scalar>& actualOut) = 0;
+    /// Updates the bias of output nodes
+    virtual bool doUpdateBias(const std::vector<fl::scalar>& targetOut, const std::vector<fl::scalar>& actualOut) = 0;
 
-	/// Resets state for single epoch training
-	virtual void doResetSingleEpoch() = 0;
+    /// Resets state for single epoch training
+    virtual void doResetSingleEpoch() = 0;
 
-	/// Checks the correctness of the parameters of the training algorithm
-	virtual void doCheck() const = 0;
+    /// Checks the correctness of the parameters of the training algorithm
+    virtual void doCheck() const = 0;
 
 
 private:
-	bool online_; ///< \c true in case of online learning; \c false if offline (batch) learning
-	std::map< Node*, std::vector<fl::scalar> > dEdPs_; ///< Error derivatives wrt node parameters
-	fl::scalar curError_; ///< The current value of the error measure
+    bool online_; ///< \c true in case of online learning; \c false if offline (batch) learning
+    std::map< Node*, std::vector<fl::scalar> > dEdPs_; ///< Error derivatives wrt node parameters
+    fl::scalar curError_; ///< The current value of the error measure
 }; // GradientDescentBackpropagationAlgorithm
 
 
@@ -218,76 +218,76 @@ private:
 class FL_API Jang1993GradientDescentBackpropagationAlgorithm: public GradientDescentBackpropagationAlgorithm
 {
 private:
-	typedef GradientDescentBackpropagationAlgorithm BaseType;
+    typedef GradientDescentBackpropagationAlgorithm BaseType;
 
 
 public:
-	/**
-	 * Constructor
-	 *
-	 * \param p_anfis Pointer to the ANFIS model to be trained
-	 * \param ss The initial step size used in the parameter update formula
-	 * \param ssDecrRate The step size decrease rate
-	 * \param ssIncrRate The step size increase rate
-	 */
+    /**
+     * Constructor
+     *
+     * \param p_anfis Pointer to the ANFIS model to be trained
+     * \param ss The initial step size used in the parameter update formula
+     * \param ssDecrRate The step size decrease rate
+     * \param ssIncrRate The step size increase rate
+     */
     explicit Jang1993GradientDescentBackpropagationAlgorithm(Engine* p_anfis = fl::null,
-															 fl::scalar ss = 0.01,
-															 fl::scalar ssDecrRate = 0.9,
-															 fl::scalar ssIncrRate = 1.1);
+                                                             fl::scalar ss = 0.01,
+                                                             fl::scalar ssDecrRate = 0.9,
+                                                             fl::scalar ssIncrRate = 1.1);
 
-	/// Sets the initial step size
-	void setInitialStepSize(fl::scalar value);
+    /// Sets the initial step size
+    void setInitialStepSize(fl::scalar value);
 
-	/// Gets the initial step size
-	fl::scalar getInitialStepSize() const;
+    /// Gets the initial step size
+    fl::scalar getInitialStepSize() const;
 
-	/// Sets the step size decrease rate
-	void setStepSizeDecreaseRate(fl::scalar value);
+    /// Sets the step size decrease rate
+    void setStepSizeDecreaseRate(fl::scalar value);
 
-	/// Gets the step size decrease rate
-	fl::scalar getStepSizeDecreaseRate() const;
+    /// Gets the step size decrease rate
+    fl::scalar getStepSizeDecreaseRate() const;
 
-	/// Sets the step size increase rate
-	void setStepSizeIncreaseRate(fl::scalar value);
+    /// Sets the step size increase rate
+    void setStepSizeIncreaseRate(fl::scalar value);
 
-	/// Gets the step size increase rate
-	fl::scalar getStepSizeIncreaseRate() const;
-
-private:
-	/// Initializes the training algorithm
-	void init();
-
-	/// Updates the step-size (and the learning rate as well)
-	void updateStepSize();
-
-	/// Checks the correctness of the parameters of the training algorithm
-	void doCheck() const;
-
-	/// Gets the number of parameters of each output term
-	std::size_t numberOfOutputTermParameters() const;
-
-	/// Updates parameters of input terms
-	void doUpdateInputParameters();
-
-	/// Updates the bias of output nodes
-	bool doUpdateBias(const std::vector<fl::scalar>& targetOut, const std::vector<fl::scalar>& actualOut);
-
-	/// Resets state for single epoch training
-	void doResetSingleEpoch();
-
-	/// Resets the state of the learning algorithm
-	void doReset();
-
+    /// Gets the step size increase rate
+    fl::scalar getStepSizeIncreaseRate() const;
 
 private:
-	fl::scalar stepSizeInit_; ///< The initial value of the step size
-	fl::scalar stepSizeDecrRate_; ///< The rate at which the step size must be decreased
-	fl::scalar stepSizeIncrRate_; ///< The rate at which the step size must be increased
-	fl::scalar stepSize_; ///< Step size to use in the parameter update formula representing the length of each transition along the gradient direction in the parameter space
-	std::size_t stepSizeErrWindowLen_; ///< Length of the RMSE window used to update the step size
-	std::deque<fl::scalar> stepSizeErrWindow_; ///< Window of RMSEs used to update the step size
-	std::size_t stepSizeIncrCounter_; ///< Counter used to check when to increase the step size
-	std::size_t stepSizeDecrCounter_; ///< Counter used to check when to decrease the step size
+    /// Initializes the training algorithm
+    void init();
+
+    /// Updates the step-size (and the learning rate as well)
+    void updateStepSize();
+
+    /// Checks the correctness of the parameters of the training algorithm
+    void doCheck() const;
+
+    /// Gets the number of parameters of each output term
+    std::size_t numberOfOutputTermParameters() const;
+
+    /// Updates parameters of input terms
+    void doUpdateInputParameters();
+
+    /// Updates the bias of output nodes
+    bool doUpdateBias(const std::vector<fl::scalar>& targetOut, const std::vector<fl::scalar>& actualOut);
+
+    /// Resets state for single epoch training
+    void doResetSingleEpoch();
+
+    /// Resets the state of the learning algorithm
+    void doReset();
+
+
+private:
+    fl::scalar stepSizeInit_; ///< The initial value of the step size
+    fl::scalar stepSizeDecrRate_; ///< The rate at which the step size must be decreased
+    fl::scalar stepSizeIncrRate_; ///< The rate at which the step size must be increased
+    fl::scalar stepSize_; ///< Step size to use in the parameter update formula representing the length of each transition along the gradient direction in the parameter space
+    std::size_t stepSizeErrWindowLen_; ///< Length of the RMSE window used to update the step size
+    std::deque<fl::scalar> stepSizeErrWindow_; ///< Window of RMSEs used to update the step size
+    std::size_t stepSizeIncrCounter_; ///< Counter used to check when to increase the step size
+    std::size_t stepSizeDecrCounter_; ///< Counter used to check when to decrease the step size
 }; // Jang1993GradientDescentBackpropagationAlgorithm
 
 
@@ -346,60 +346,60 @@ private:
 class FL_API GradientDescentWithMomentumBackpropagationAlgorithm: public GradientDescentBackpropagationAlgorithm
 {
 private:
-	typedef GradientDescentBackpropagationAlgorithm BaseType;
+    typedef GradientDescentBackpropagationAlgorithm BaseType;
 
 
 public:
-	/**
-	 * Constructor
-	 *
-	 * \param p_anfis Pointer to the ANFIS model to be trained
-	 * \param learningRate The learning rate parameter
-	 * \param momentum The momentum parameter (set to 0, to disable momentum learning)
-	 */
+    /**
+     * Constructor
+     *
+     * \param p_anfis Pointer to the ANFIS model to be trained
+     * \param learningRate The learning rate parameter
+     * \param momentum The momentum parameter (set to 0, to disable momentum learning)
+     */
     explicit GradientDescentWithMomentumBackpropagationAlgorithm(Engine* p_anfis = fl::null,
-																 fl::scalar learningRate = 0.01,
-																 fl::scalar momentum = 0.9);
+                                                                 fl::scalar learningRate = 0.01,
+                                                                 fl::scalar momentum = 0.9);
 
-	/// Sets the learning rate
-	void setLearningRate(fl::scalar value);
+    /// Sets the learning rate
+    void setLearningRate(fl::scalar value);
 
-	/// Gets the learning rate
-	fl::scalar getLearningRate() const;
+    /// Gets the learning rate
+    fl::scalar getLearningRate() const;
 
-	/// Sets the momentum
-	void setMomentum(fl::scalar value);
+    /// Sets the momentum
+    void setMomentum(fl::scalar value);
 
-	/// Gets the momentum
-	fl::scalar getMomentum() const;
-
-private:
-	/// Initializes the training algorithm
-	void init();
-
-	/// Checks the correctness of the parameters of the training algorithm
-	void doCheck() const;
-
-	/// Gets the number of parameters of each output term
-	std::size_t numberOfOutputTermParameters() const;
-
-	/// Updates parameters of input terms
-	void doUpdateInputParameters();
-
-	/// Updates the bias of output nodes
-	bool doUpdateBias(const std::vector<fl::scalar>& targetOut, const std::vector<fl::scalar>& actualOut);
-
-	/// Resets state for single epoch training
-	void doResetSingleEpoch();
-
-	/// Resets the state of the learning algorithm
-	void doReset();
-
+    /// Gets the momentum
+    fl::scalar getMomentum() const;
 
 private:
-	fl::scalar learnRate_; ///< The learning rate parameter
-	fl::scalar momentum_; ///< The momentum parameter
-	std::map< Node*, std::vector<fl::scalar> > oldDeltaPs_; ///< Old values of parameters changes (only for momentum learning)
+    /// Initializes the training algorithm
+    void init();
+
+    /// Checks the correctness of the parameters of the training algorithm
+    void doCheck() const;
+
+    /// Gets the number of parameters of each output term
+    std::size_t numberOfOutputTermParameters() const;
+
+    /// Updates parameters of input terms
+    void doUpdateInputParameters();
+
+    /// Updates the bias of output nodes
+    bool doUpdateBias(const std::vector<fl::scalar>& targetOut, const std::vector<fl::scalar>& actualOut);
+
+    /// Resets state for single epoch training
+    void doResetSingleEpoch();
+
+    /// Resets the state of the learning algorithm
+    void doReset();
+
+
+private:
+    fl::scalar learnRate_; ///< The learning rate parameter
+    fl::scalar momentum_; ///< The momentum parameter
+    std::map< Node*, std::vector<fl::scalar> > oldDeltaPs_; ///< Old values of parameters changes (only for momentum learning)
 }; // GradientDescentWithMomentumBackpropagationAlgorithm
 
 }} // Namespace fl::anfis

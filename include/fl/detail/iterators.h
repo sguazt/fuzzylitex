@@ -44,19 +44,19 @@ struct iter_placeholder: boost::type_erasure::placeholder { };
 
 //template <typename T>
 //using ForwardIteratorImpl = boost::type_erasure::any<
-//								boost::mpl::vector<
-//								boost::type_erasure::copy_constructible<>,
-//								boost::type_erasure::incrementable<>,
-//								boost::type_erasure::dereferenceable<T>,
-//								boost::type_erasure::equality_comparable<>
-//							>>;
+//                              boost::mpl::vector<
+//                              boost::type_erasure::copy_constructible<>,
+//                              boost::type_erasure::incrementable<>,
+//                              boost::type_erasure::dereferenceable<T>,
+//                              boost::type_erasure::equality_comparable<>
+//                          >>;
 template <typename T>
 using ForwardIteratorImpl = boost::type_erasure::any<
-								boost::mpl::vector<
-									boost::type_erasure::forward_iterator<iter_placeholder, const T&, std::ptrdiff_t, T>
-								>,
-								iter_placeholder
-							>;
+                                boost::mpl::vector<
+                                    boost::type_erasure::forward_iterator<iter_placeholder, const T&, std::ptrdiff_t, T>
+                                >,
+                                iter_placeholder
+                            >;
 
 # define FL_ForwardIteratorType(t) fl::detail::ForwardIteratorImpl<t>
 
@@ -67,20 +67,20 @@ using ForwardIteratorImpl = boost::type_erasure::any<
 template <typename T>
 struct ForwardIteratorImpl
 {
-//	typedef boost::type_erasure::any<
-//					boost::mpl::vector<
-//						boost::type_erasure::copy_constructible<>,
-//						boost::type_erasure::incrementable<>,
-//						boost::type_erasure::dereferenceable<T>,
-//						boost::type_erasure::equality_comparable<>
-//					>
-//				> type;
-	typedef boost::type_erasure::any<
-					boost::mpl::vector<
-						boost::type_erasure::forward_iterator<iter_placeholder, const T&, std::ptrdiff_t, T>
-					>,
-					iter_placeholder
-				> type;
+//  typedef boost::type_erasure::any<
+//                  boost::mpl::vector<
+//                      boost::type_erasure::copy_constructible<>,
+//                      boost::type_erasure::incrementable<>,
+//                      boost::type_erasure::dereferenceable<T>,
+//                      boost::type_erasure::equality_comparable<>
+//                  >
+//              > type;
+    typedef boost::type_erasure::any<
+                    boost::mpl::vector<
+                        boost::type_erasure::forward_iterator<iter_placeholder, const T&, std::ptrdiff_t, T>
+                    >,
+                    iter_placeholder
+                > type;
 };
 
 # define FL_ForwardIteratorType(t) typename fl::detail::ForwardIteratorImpl<t>::type

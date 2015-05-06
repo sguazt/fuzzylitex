@@ -28,6 +28,7 @@
 
 #include <cstddef>
 #include <fl/detail/math.h>
+#include <fl/fuzzylite.h>
 #include <fl/macro.h>
 #include <limits>
 #include <stdexcept>
@@ -55,82 +56,82 @@ namespace fl { namespace detail {
  * \author Marco Guazzone (marco.guazzone@gmail.com)
  */
 template <typename ValueT>
-class RecursiveLeastSquaresEstimator
+class FL_API RecursiveLeastSquaresEstimator
 {
 private:
-	typedef std::vector<ValueT> VectorType; ///< The vector type
-	typedef std::vector< std::vector<ValueT> > MatrixType; ///< The matrix type
+    typedef std::vector<ValueT> VectorType; ///< The vector type
+    typedef std::vector< std::vector<ValueT> > MatrixType; ///< The matrix type
 
 
 public:
-	/// Default constructor
-	RecursiveLeastSquaresEstimator();
+    /// Default constructor
+    RecursiveLeastSquaresEstimator();
 
-	/// Constructs a RLS estimator where \a na is the filter order, \a ni is the input dimension, and \a no is the output dimension
-	RecursiveLeastSquaresEstimator(std::size_t p, std::size_t nu, std::size_t ny, ValueT lambda);
+    /// Constructs a RLS estimator where \a na is the filter order, \a ni is the input dimension, and \a no is the output dimension
+    RecursiveLeastSquaresEstimator(std::size_t p, std::size_t nu, std::size_t ny, ValueT lambda);
 
-	/// Sets the order of the model
-	void setModelOrder(std::size_t order);
+    /// Sets the order of the model
+    void setModelOrder(std::size_t order);
 
-	/// Gets the order of the model
-	std::size_t getModelOrder() const;
+    /// Gets the order of the model
+    std::size_t getModelOrder() const;
 
-	/// Sets the size of the input variable
-	void setInputDimension(std::size_t n);
+    /// Sets the size of the input variable
+    void setInputDimension(std::size_t n);
 
-	/// Gets the size of the input variable
-	std::size_t getInputDimension() const;
+    /// Gets the size of the input variable
+    std::size_t getInputDimension() const;
 
-	/// Sets the size of the output variable
-	void setOutputDimension(std::size_t n);
+    /// Sets the size of the output variable
+    void setOutputDimension(std::size_t n);
 
-	/// Gets the size of the output variable
-	std::size_t getOutputDimension() const;
+    /// Gets the size of the output variable
+    std::size_t getOutputDimension() const;
 
-	/// Sets the forgetting factor
-	void setForgettingFactor(ValueT lambda);
+    /// Sets the forgetting factor
+    void setForgettingFactor(ValueT lambda);
 
-	/// Gets the forgetting factor
-	ValueT getForgettingFactor() const;
+    /// Gets the forgetting factor
+    ValueT getForgettingFactor() const;
 
-	// Sets the inverse of the pseudo covariance matrix
-	//void setCovarianceInverse(const std::vector< std::vector<ValueT> >& P);
+    // Sets the inverse of the pseudo covariance matrix
+    //void setCovarianceInverse(const std::vector< std::vector<ValueT> >& P);
 
-	/// Gets the inverse of the pseudo covariance matrix
-	std::vector< std::vector<ValueT> > getCovarianceInverse() const;
+    /// Gets the inverse of the pseudo covariance matrix
+    std::vector< std::vector<ValueT> > getCovarianceInverse() const;
 
-	// Sets the regressor vector
-	//void setRegressor(const std::vector<ValueT>& phi);
+    // Sets the regressor vector
+    //void setRegressor(const std::vector<ValueT>& phi);
 
-	/// Gets the regressor vector
-	std::vector<ValueT> getRegressor() const;
+    /// Gets the regressor vector
+    std::vector<ValueT> getRegressor() const;
 
-	/// Gets the matrix of estimated parameters
-	std::vector< std::vector<ValueT> > getEstimatedParameters() const;
+    /// Gets the matrix of estimated parameters
+    std::vector< std::vector<ValueT> > getEstimatedParameters() const;
 
-	/// Gets the total number of iteration performed to date
-	std::size_t numberOfIterations() const;
+    /// Gets the total number of iteration performed to date
+    std::size_t numberOfIterations() const;
 
-	/// Resets/initialize the algorithm
-	void reset(ValueT delta = 1.0e+6);
+    /// Resets/initialize the algorithm
+    void reset(ValueT delta = 1.0e+6);
 
-	/// Performs an iteration of the RLS algorithm with respect to the given inputs and outputs, and returns the estimated output
-	template <typename UIterT, typename YIterT>
-	std::vector<ValueT> estimate(UIterT uFirst, UIterT uLast, YIterT yFirst, YIterT yLast);
+    /// Performs an iteration of the RLS algorithm with respect to the given inputs and outputs, and returns the estimated output
+    template <typename UIterT, typename YIterT>
+    std::vector<ValueT> estimate(UIterT uFirst, UIterT uLast, YIterT yFirst, YIterT yLast);
 
-	/// Performs an iteration of the RLS algorithm with respect to the given inputs and outputs, and returns the estimated output
-	std::vector<ValueT> estimate(const std::vector<ValueT>& u, const std::vector<ValueT>& y);
+    /// Performs an iteration of the RLS algorithm with respect to the given inputs and outputs, and returns the estimated output
+    std::vector<ValueT> estimate(const std::vector<ValueT>& u, const std::vector<ValueT>& y);
 
 
 private:
-	std::size_t p_; ///< The model order
-	std::size_t nu_; ///< The input dimension
-	std::size_t ny_; ///< The output dimension
-	ValueT lambda_; ///< Forgetting factor
-	MatrixType Theta_; ///< Parameter matrix
-	MatrixType P_; ///< Covariance matrix
-	VectorType phi_; ///< Regressor vector
-	std::size_t count_; ///< The total number of iterations performed so far
+    std::size_t p_; ///< The model order
+    std::size_t nu_; ///< The input dimension
+    std::size_t ny_; ///< The output dimension
+    ValueT lambda_; ///< Forgetting factor
+    MatrixType Theta_; ///< Parameter matrix
+    MatrixType P_; ///< Covariance matrix
+    VectorType phi_; ///< Regressor vector
+    std::size_t count_; ///< The total number of iterations performed so far
 }; // RecursiveLeastSquares
 
 
@@ -157,226 +158,226 @@ RecursiveLeastSquaresEstimator<ValueT>::RecursiveLeastSquaresEstimator(std::size
   lambda_(lambda),
   count_(0)
 {
-	this->reset();
+    this->reset();
 }
 
 template <typename ValueT>
 void RecursiveLeastSquaresEstimator<ValueT>::setModelOrder(std::size_t order)
 {
-	p_ = order+1;
+    p_ = order+1;
 }
 
 template <typename ValueT>
 std::size_t RecursiveLeastSquaresEstimator<ValueT>::getModelOrder() const
 {
-	return p_-1;
+    return p_-1;
 }
 
 template <typename ValueT>
 void RecursiveLeastSquaresEstimator<ValueT>::setInputDimension(std::size_t n)
 {
-	nu_ = n;
+    nu_ = n;
 }
 
 template <typename ValueT>
 std::size_t RecursiveLeastSquaresEstimator<ValueT>::getInputDimension() const
 {
-	return nu_;
+    return nu_;
 }
 
 template <typename ValueT>
 void RecursiveLeastSquaresEstimator<ValueT>::setOutputDimension(std::size_t n)
 {
-	ny_ = n;
+    ny_ = n;
 }
 
 template <typename ValueT>
 std::size_t RecursiveLeastSquaresEstimator<ValueT>::getOutputDimension() const
 {
-	return ny_;
+    return ny_;
 }
 
 template <typename ValueT>
 void RecursiveLeastSquaresEstimator<ValueT>::setForgettingFactor(ValueT lambda)
 {
-	lambda_ = lambda;
+    lambda_ = lambda;
 }
 
 template <typename ValueT>
 ValueT RecursiveLeastSquaresEstimator<ValueT>::getForgettingFactor() const
 {
-	return lambda_;
+    return lambda_;
 }
 
 //template <typename ValueT>
 //void RecursiveLeastSquaresEstimator<ValueT>::setCovarianceInverse(const std::vector< std::vector<ValueT> >& P)
 //{
-//	P_ = P;
+//  P_ = P;
 //}
 
 template <typename ValueT>
 std::vector< std::vector<ValueT> > RecursiveLeastSquaresEstimator<ValueT>::getCovarianceInverse() const
 {
-	return P_;
+    return P_;
 }
 
 //template <typename ValueT>
 //void RecursiveLeastSquaresEstimator<ValueT>::setRegressor(const std::vector<ValueT>& phi)
 //{
-//	phi_ = phi;
+//  phi_ = phi;
 //}
 
 template <typename ValueT>
 std::vector<ValueT> RecursiveLeastSquaresEstimator<ValueT>::getRegressor() const
 {
-	return phi_;
+    return phi_;
 }
 
 template <typename ValueT>
 std::vector< std::vector<ValueT> > RecursiveLeastSquaresEstimator<ValueT>::getEstimatedParameters() const
 {
-	return Theta_;
+    return Theta_;
 }
 
 template <typename ValueT>
 std::size_t RecursiveLeastSquaresEstimator<ValueT>::numberOfIterations() const
 {
-	return count_;
+    return count_;
 }
 
 template <typename ValueT>
 void RecursiveLeastSquaresEstimator<ValueT>::reset(ValueT delta)
 {
-	//const std::size_t n = ny_+p_*nu_;
-	const std::size_t n = p_*nu_;
+    //const std::size_t n = ny_+p_*nu_;
+    const std::size_t n = p_*nu_;
 
-	phi_.clear();
-	phi_.resize(n, 0);
+    phi_.clear();
+    phi_.resize(n, 0);
 
-	Theta_.clear();
-	Theta_.resize(n);
-	P_.clear();
-	P_.resize(n);
-	for (std::size_t i = 0; i < n; ++i)
-	{
-		Theta_[i].resize(ny_, 0);
-		//Theta_[i].resize(ny_, std::numeric_limits<ValueT>::epsilon());
-		P_[i].resize(n, 0);
-		P_[i][i] = delta;
-	}
+    Theta_.clear();
+    Theta_.resize(n);
+    P_.clear();
+    P_.resize(n);
+    for (std::size_t i = 0; i < n; ++i)
+    {
+        Theta_[i].resize(ny_, 0);
+        //Theta_[i].resize(ny_, std::numeric_limits<ValueT>::epsilon());
+        P_[i].resize(n, 0);
+        P_[i][i] = delta;
+    }
 
-	count_ = 0;
+    count_ = 0;
 }
 
 template <typename ValueT>
 template <typename UIterT, typename YIterT>
 std::vector<ValueT> RecursiveLeastSquaresEstimator<ValueT>::estimate(UIterT uFirst, UIterT uLast, YIterT yFirst, YIterT yLast)
 {
-	return this->estimate(VectorType(uFirst, uLast), VectorType(yFirst, yLast));
+    return this->estimate(VectorType(uFirst, uLast), VectorType(yFirst, yLast));
 }
 
 template <typename ValueT>
 std::vector<ValueT> RecursiveLeastSquaresEstimator<ValueT>::estimate(const std::vector<ValueT>& u, const std::vector<ValueT>& y)
 {
-	if (u.size() != nu_)
-	{
-		FL_THROW2(std::invalid_argument, "Input dimension does not match");
-	}
-	if (y.size() != ny_)
-	{
-		FL_THROW2(std::invalid_argument, "Output dimension does not match");
-	}
-	if (nu_ == 0)
-	{
-		FL_THROW2(std::logic_error, "Wrong input dimension");
-	}
-	if (ny_ == 0)
-	{
-		FL_THROW2(std::logic_error, "Wrong output dimension");
-	}
-	if (p_ == 0)
-	{
-		FL_THROW2(std::logic_error, "Wrong model order");
-	}
+    if (u.size() != nu_)
+    {
+        FL_THROW2(std::invalid_argument, "Input dimension does not match");
+    }
+    if (y.size() != ny_)
+    {
+        FL_THROW2(std::invalid_argument, "Output dimension does not match");
+    }
+    if (nu_ == 0)
+    {
+        FL_THROW2(std::logic_error, "Wrong input dimension");
+    }
+    if (ny_ == 0)
+    {
+        FL_THROW2(std::logic_error, "Wrong output dimension");
+    }
+    if (p_ == 0)
+    {
+        FL_THROW2(std::logic_error, "Wrong model order");
+    }
 
-	++count_;
+    ++count_;
 
-	const std::size_t n = phi_.size();
+    const std::size_t n = phi_.size();
 
 //std::cerr << "COUNT=" << count_ << std::endl;//XXX
 //std::cerr << "y(k)="; fl::detail::VectorOutput(std::cerr, y); std::cerr << std::endl; //XXX
 //std::cerr << "phi(k)="; fl::detail::VectorOutput(std::cerr, phi_); std::cerr << std::endl; //XXX
 //std::cerr << "P(k)="; fl::detail::MatrixOutput(std::cerr, P_); std::cerr << std::endl; //XXX
 //std::cerr << "Theta(k)="; fl::detail::MatrixOutput(std::cerr, Theta_); std::cerr << std::endl; //XXX
-	VectorType yhat;
+    VectorType yhat;
 
-	// Update the regressor vector
-	//  $\phi(k+1) = [u_1(k) ... u_1(k-p+1) ... u_{n_u}(k) ... u_{n_u}(k-p+1)]^T$
-	VectorType phiNew(n, 0);
-	// - Copy the new u into the regressor vector: \phi(k+1) = [u_1(k) 0 ... 0 u_2(k) 0 ... 0 u_{n_u}(k) 0 ... 0]^T
-	for (std::size_t i = 0; i < nu_; ++i)
-	{
-		phiNew[i*p_] = u[i];
-	}
-	// - Append the old na-1 u values into the regressor vector: \phi(k+1) = [u_1(k) u_1(k-1) ... u_1(k-p+1) u_2(k) u_2(k-1) ... u_{n_u}(k-p+1)]^T
-	for (std::size_t i = 1; i < p_; ++i)
-	{
-		for (std::size_t j = 0; j < nu_; ++j)
-		{
-			const std::size_t jna = j*p_;
+    // Update the regressor vector
+    //  $\phi(k+1) = [u_1(k) ... u_1(k-p+1) ... u_{n_u}(k) ... u_{n_u}(k-p+1)]^T$
+    VectorType phiNew(n, 0);
+    // - Copy the new u into the regressor vector: \phi(k+1) = [u_1(k) 0 ... 0 u_2(k) 0 ... 0 u_{n_u}(k) 0 ... 0]^T
+    for (std::size_t i = 0; i < nu_; ++i)
+    {
+        phiNew[i*p_] = u[i];
+    }
+    // - Append the old na-1 u values into the regressor vector: \phi(k+1) = [u_1(k) u_1(k-1) ... u_1(k-p+1) u_2(k) u_2(k-1) ... u_{n_u}(k-p+1)]^T
+    for (std::size_t i = 1; i < p_; ++i)
+    {
+        for (std::size_t j = 0; j < nu_; ++j)
+        {
+            const std::size_t jna = j*p_;
 
-			phiNew[i+jna] = phi_[(i-1)+jna];
-		}
-	}
-	phi_ = phiNew;
+            phiNew[i+jna] = phi_[(i-1)+jna];
+        }
+    }
+    phi_ = phiNew;
 
-	// Update parameter and covariance matrices (to be done only after enough observations have been seen)
-	if (count_ >= p_)
-	{
-			// Compute the Gain:
-			//  $l(k+1) = \frac{P(k)\phi(k+1)}{\lambda(k)+\phi^T(k+1)P(k)\phi(k+1)}$
-			const VectorType l = fl::detail::VectorScalarProduct(
-									fl::detail::MatrixVectorProduct(P_, phi_),
-									1.0/(lambda_
-										 + fl::detail::VectorInnerProduct(
-										   fl::detail::VectorMatrixProduct(phi_, P_), phi_)));
+    // Update parameter and covariance matrices (to be done only after enough observations have been seen)
+    if (count_ >= p_)
+    {
+            // Compute the Gain:
+            //  $l(k+1) = \frac{P(k)\phi(k+1)}{\lambda(k)+\phi^T(k+1)P(k)\phi(k+1)}$
+            const VectorType l = fl::detail::VectorScalarProduct(
+                                    fl::detail::MatrixVectorProduct(P_, phi_),
+                                    1.0/(lambda_
+                                         + fl::detail::VectorInnerProduct(
+                                           fl::detail::VectorMatrixProduct(phi_, P_), phi_)));
 //std::cerr << "l="; fl::detail::VectorOutput(std::cerr, l); std::cerr << std::endl; //XXX
 
-			// Update the covariance matrix by means of the matrix inversion lemma (use the Woodbury's identity: A=B^{-1}+CD^{-1}C^T ==> A^{-1}=B-BC(D+C^TBC)^{-1}C^TB)
-			//  $P(k+1) = \frac{1}{\lambda(k)}\left[I-l(k+1)\Phi^T(k+1)\right]P(k)$
-			//P_ = fl::detail::MatrixScalarProduct(fl::detail::MatrixDiff(P_, fl::detail::MatrixScalarProduct(fl::detail::MatrixProduct(fl::detail::VectorOuterProduct<MatrixType>(fl::detail::MatrixVectorProduct(P_, phi_), phi_), P_), 1.0/(lambda_+fl::detail::VectorInnerProduct(fl::detail::VectorMatrixProduct(phi_, P_), phi_)))), 1.0/lambda_);
-			P_ = fl::detail::MatrixScalarProduct(
-					fl::detail::MatrixProduct(
-						fl::detail::MatrixDiff(
-							fl::detail::MatrixIdentity<MatrixType>(n, n),
-							fl::detail::VectorOuterProduct<MatrixType>(l, phi_)),
-						P_),
-					1.0/lambda_);
+            // Update the covariance matrix by means of the matrix inversion lemma (use the Woodbury's identity: A=B^{-1}+CD^{-1}C^T ==> A^{-1}=B-BC(D+C^TBC)^{-1}C^TB)
+            //  $P(k+1) = \frac{1}{\lambda(k)}\left[I-l(k+1)\Phi^T(k+1)\right]P(k)$
+            //P_ = fl::detail::MatrixScalarProduct(fl::detail::MatrixDiff(P_, fl::detail::MatrixScalarProduct(fl::detail::MatrixProduct(fl::detail::VectorOuterProduct<MatrixType>(fl::detail::MatrixVectorProduct(P_, phi_), phi_), P_), 1.0/(lambda_+fl::detail::VectorInnerProduct(fl::detail::VectorMatrixProduct(phi_, P_), phi_)))), 1.0/lambda_);
+            P_ = fl::detail::MatrixScalarProduct(
+                    fl::detail::MatrixProduct(
+                        fl::detail::MatrixDiff(
+                            fl::detail::MatrixIdentity<MatrixType>(n, n),
+                            fl::detail::VectorOuterProduct<MatrixType>(l, phi_)),
+                        P_),
+                    1.0/lambda_);
 
-			// Computes the output estimate
-			//  $\hat{y}(k) = (\phi^T(k)\Theta(k))^T$
-			yhat = fl::detail::VectorMatrixProduct(phi_, Theta_);
+            // Computes the output estimate
+            //  $\hat{y}(k) = (\phi^T(k)\Theta(k))^T$
+            yhat = fl::detail::VectorMatrixProduct(phi_, Theta_);
 //std::cerr << "yhat(k)="; fl::detail::VectorOutput(std::cerr, yhat); std::cerr << std::endl; //XXX
 
-			// Update parameters estimate
-			//  $\hat{\Theta}(k+1) = \hat{\Theta}(k)+l^T(k+1)(y^T(k+1)-\phi^T(k+1)\hat{\Theta}(k))$
+            // Update parameters estimate
+            //  $\hat{\Theta}(k+1) = \hat{\Theta}(k)+l^T(k+1)(y^T(k+1)-\phi^T(k+1)\hat{\Theta}(k))$
 //std::cerr << "xi(k)="; fl::detail::VectorOutput(std::cerr, fl::detail::VectorDiff(y,yhat)); std::cerr << std::endl; //XXX
-			Theta_ = fl::detail::MatrixSum(
-						Theta_,
-						fl::detail::VectorOuterProduct<MatrixType>(
-							l,
-							fl::detail::VectorDiff(y, yhat)));
-	}
-	else
-	{
-		yhat.resize(ny_, 0);
-	}
+            Theta_ = fl::detail::MatrixSum(
+                        Theta_,
+                        fl::detail::VectorOuterProduct<MatrixType>(
+                            l,
+                            fl::detail::VectorDiff(y, yhat)));
+    }
+    else
+    {
+        yhat.resize(ny_, 0);
+    }
 
 //std::cerr << "phi(k+1)="; fl::detail::VectorOutput(std::cerr, phi_); std::cerr << std::endl; //XXX
 //std::cerr << "P(k+1)="; fl::detail::MatrixOutput(std::cerr, P_); std::cerr << std::endl; //XXX
 //std::cerr << "Theta(k+1)="; fl::detail::MatrixOutput(std::cerr, Theta_); std::cerr << std::endl; //XXX
 
-	return yhat;
+    return yhat;
 }
 
 }} // Namespace fl::detail

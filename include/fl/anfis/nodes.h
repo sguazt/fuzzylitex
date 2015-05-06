@@ -26,7 +26,7 @@
 #define FL_ANFIS_NODES_H
 
 
-#include <boost/noncopyable.hpp>
+//#include <boost/noncopyable.hpp>
 //#include <fl/anfis/engine.h>
 #include <fl/fuzzylite.h>
 #include <fl/hedge/Hedge.h>
@@ -43,226 +43,266 @@ namespace fl { namespace anfis {
 
 class Engine;
 
-class Node//: boost::noncopyable
+/**
+ * Base class for ANFIS nodes
+ *
+ * \author Marco Guazzone (marco.guazzone@gmail.com)
+ */
+class FL_API Node//: boost::noncopyable
 {
 private:
-	FL_DISABLE_COPY(Node)
+    FL_DISABLE_COPY(Node)
 
 public:
-	Node(Engine* p_engine);
+    Node(Engine* p_engine);
 
-	virtual ~Node();
+    virtual ~Node();
 
-	void setEngine(Engine* p_engine);
+    void setEngine(Engine* p_engine);
 
-	Engine* getEngine() const;
+    Engine* getEngine() const;
 
-	std::vector<Node*> inputConnections() const;
+    std::vector<Node*> inputConnections() const;
 
-	std::vector<Node*> outputConnections() const;
+    std::vector<Node*> outputConnections() const;
 
-	std::vector<fl::scalar> inputs() const;
+    std::vector<fl::scalar> inputs() const;
 
-	/// Evals the node function with respect to node inputs
-	fl::scalar eval();
+    /// Evals the node function with respect to node inputs
+    fl::scalar eval();
 
-	/// Evals the derivate of the node function with respect to node inputs
-	std::vector<fl::scalar> evalDerivativeWrtInputs();
+    /// Evals the derivate of the node function with respect to node inputs
+    std::vector<fl::scalar> evalDerivativeWrtInputs();
 
-	/// Evals the derivate of the node function with respect to node parameters
-	std::vector<fl::scalar> evalDerivativeWrtParams();
+    /// Evals the derivate of the node function with respect to node parameters
+    std::vector<fl::scalar> evalDerivativeWrtParams();
 
-	fl::scalar getValue() const;
+    fl::scalar getValue() const;
 
 //protected:
-	void setValue(fl::scalar v);
+    void setValue(fl::scalar v);
 
-	template <typename IterT>
-	void setParams(IterT first, IterT last);
+    template <typename IterT>
+    void setParams(IterT first, IterT last);
 
-	std::vector<fl::scalar> getParams() const;
-
-private:
-	virtual fl::scalar doEval() = 0;
-
-	virtual std::vector<fl::scalar> doEvalDerivativeWrtInputs() = 0;
-
-	virtual std::vector<fl::scalar> doEvalDerivativeWrtParams() = 0;
-
-	virtual void doSetParams(const std::vector<fl::scalar>& params) = 0;
-
-	virtual std::vector<fl::scalar> doGetParams() const = 0;
-
+    std::vector<fl::scalar> getParams() const;
 
 private:
-	Engine* p_engine_;
-	fl::scalar val_;
+    virtual fl::scalar doEval() = 0;
+
+    virtual std::vector<fl::scalar> doEvalDerivativeWrtInputs() = 0;
+
+    virtual std::vector<fl::scalar> doEvalDerivativeWrtParams() = 0;
+
+    virtual void doSetParams(const std::vector<fl::scalar>& params) = 0;
+
+    virtual std::vector<fl::scalar> doGetParams() const = 0;
+
+
+private:
+    Engine* p_engine_;
+    fl::scalar val_;
 }; // Node
 
-class InputNode: public Node
+/**
+ * Node class for the ANFIS input layer
+ *
+ * \author Marco Guazzone (marco.guazzone@gmail.com)
+ */
+class FL_API InputNode: public Node
 {
 public:
-	InputNode(fl::InputVariable* p_var, Engine* p_engine);
+    InputNode(fl::InputVariable* p_var, Engine* p_engine);
 
-	fl::InputVariable* getInputVariable() const;
-
-private:
-	fl::scalar doEval();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtParams();
-
-	void doSetParams(const std::vector<fl::scalar>& params);
-
-	std::vector<fl::scalar> doGetParams() const;
-
+    fl::InputVariable* getInputVariable() const;
 
 private:
-	fl::InputVariable* p_var_;
+    fl::scalar doEval();
+
+    std::vector<fl::scalar> doEvalDerivativeWrtInputs();
+
+    std::vector<fl::scalar> doEvalDerivativeWrtParams();
+
+    void doSetParams(const std::vector<fl::scalar>& params);
+
+    std::vector<fl::scalar> doGetParams() const;
+
+
+private:
+    fl::InputVariable* p_var_;
 }; // InputNode
 
-class FuzzificationNode: public Node
+/**
+ * Node class for the ANFIS fuzzification layer
+ *
+ * \author Marco Guazzone (marco.guazzone@gmail.com)
+ */
+class FL_API FuzzificationNode: public Node
 {
 public:
-	FuzzificationNode(fl::Term* p_term, Engine* p_engine);
+    FuzzificationNode(fl::Term* p_term, Engine* p_engine);
 
-	fl::Term* getTerm() const;
-
-private:
-	fl::scalar doEval();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtParams();
-
-	void doSetParams(const std::vector<fl::scalar>& params);
-
-	std::vector<fl::scalar> doGetParams() const;
-
+    fl::Term* getTerm() const;
 
 private:
-	fl::Term* p_term_;
+    fl::scalar doEval();
+
+    std::vector<fl::scalar> doEvalDerivativeWrtInputs();
+
+    std::vector<fl::scalar> doEvalDerivativeWrtParams();
+
+    void doSetParams(const std::vector<fl::scalar>& params);
+
+    std::vector<fl::scalar> doGetParams() const;
+
+
+private:
+    fl::Term* p_term_;
 }; // FuzzificationNode
 
-class InputHedgeNode: public Node
+/**
+ * Node class for the ANFIS input hedge layer
+ *
+ * \author Marco Guazzone (marco.guazzone@gmail.com)
+ */
+class FL_API InputHedgeNode: public Node
 {
 public:
-	InputHedgeNode(fl::Hedge* p_hedge, Engine* p_engine);
+    InputHedgeNode(fl::Hedge* p_hedge, Engine* p_engine);
 
-	~InputHedgeNode();
+    ~InputHedgeNode();
 
-	fl::Hedge* getHedge() const;
-
-private:
-	fl::scalar doEval();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtParams();
-
-	void doSetParams(const std::vector<fl::scalar>& params);
-
-	std::vector<fl::scalar> doGetParams() const;
-
+    fl::Hedge* getHedge() const;
 
 private:
-	fl::Hedge* p_hedge_;
+    fl::scalar doEval();
+
+    std::vector<fl::scalar> doEvalDerivativeWrtInputs();
+
+    std::vector<fl::scalar> doEvalDerivativeWrtParams();
+
+    void doSetParams(const std::vector<fl::scalar>& params);
+
+    std::vector<fl::scalar> doGetParams() const;
+
+
+private:
+    fl::Hedge* p_hedge_;
 }; // InputHedgeNode
 
-class AntecedentNode: public Node
+/**
+ * Node class for the ANFIS antecedent layer
+ *
+ * \author Marco Guazzone (marco.guazzone@gmail.com)
+ */
+class FL_API AntecedentNode: public Node
 {
 public:
-	AntecedentNode(fl::Norm* p_norm, Engine* p_engine);
+    AntecedentNode(fl::Norm* p_norm, Engine* p_engine);
 
-	fl::Norm* getNorm() const;
-
-private:
-	fl::scalar doEval();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtParams();
-
-	void doSetParams(const std::vector<fl::scalar>& params);
-
-	std::vector<fl::scalar> doGetParams() const;
-
+    fl::Norm* getNorm() const;
 
 private:
-	fl::Norm* p_norm_;
+    fl::scalar doEval();
+
+    std::vector<fl::scalar> doEvalDerivativeWrtInputs();
+
+    std::vector<fl::scalar> doEvalDerivativeWrtParams();
+
+    void doSetParams(const std::vector<fl::scalar>& params);
+
+    std::vector<fl::scalar> doGetParams() const;
+
+
+private:
+    fl::Norm* p_norm_;
 }; // AntecedentNode
 
 
-class ConsequentNode: public Node
+/**
+ * Node class for the ANFIS consequent layer
+ *
+ * \author Marco Guazzone (marco.guazzone@gmail.com)
+ */
+class FL_API ConsequentNode: public Node
 {
 public:
-	ConsequentNode(fl::Term* p_term, /*fl::TNorm* p_tnorm,*/ Engine* p_engine);
+    ConsequentNode(fl::Term* p_term, /*fl::TNorm* p_tnorm,*/ Engine* p_engine);
 
-	fl::Term* getTerm() const;
+    fl::Term* getTerm() const;
 
-//	fl::TNorm* getTNorm() const;
-
-private:
-	fl::scalar doEval();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtParams();
-
-	void doSetParams(const std::vector<fl::scalar>& params);
-
-	std::vector<fl::scalar> doGetParams() const;
-
+//  fl::TNorm* getTNorm() const;
 
 private:
-	fl::Term* p_term_;
-//	fl::TNorm* p_tnorm_;
+    fl::scalar doEval();
+
+    std::vector<fl::scalar> doEvalDerivativeWrtInputs();
+
+    std::vector<fl::scalar> doEvalDerivativeWrtParams();
+
+    void doSetParams(const std::vector<fl::scalar>& params);
+
+    std::vector<fl::scalar> doGetParams() const;
+
+
+private:
+    fl::Term* p_term_;
+//  fl::TNorm* p_tnorm_;
 };
 
-class AccumulationNode: public Node
+/**
+ * Node class for the ANFIS accumulation layer
+ *
+ * \author Marco Guazzone (marco.guazzone@gmail.com)
+ */
+class FL_API AccumulationNode: public Node
 {
 public:
-	explicit AccumulationNode(Engine* p_engine);
+    explicit AccumulationNode(Engine* p_engine);
 
 private:
-	fl::scalar doEval();
+    fl::scalar doEval();
 
-	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
+    std::vector<fl::scalar> doEvalDerivativeWrtInputs();
 
-	std::vector<fl::scalar> doEvalDerivativeWrtParams();
+    std::vector<fl::scalar> doEvalDerivativeWrtParams();
 
-	void doSetParams(const std::vector<fl::scalar>& params);
+    void doSetParams(const std::vector<fl::scalar>& params);
 
-	std::vector<fl::scalar> doGetParams() const;
+    std::vector<fl::scalar> doGetParams() const;
 }; // AccumulationNode
 
-class OutputNode: public Node
+/**
+ * Node class for the ANFIS output layer
+ *
+ * \author Marco Guazzone (marco.guazzone@gmail.com)
+ */
+class FL_API OutputNode: public Node
 {
 public:
-	OutputNode(fl::OutputVariable* p_var, Engine* p_engine);
+    OutputNode(fl::OutputVariable* p_var, Engine* p_engine);
 
-	fl::OutputVariable* getOutputVariable() const;
+    fl::OutputVariable* getOutputVariable() const;
 
-	void setBias(fl::scalar value);
+    void setBias(fl::scalar value);
 
-	fl::scalar getBias() const;
-
-private:
-	fl::scalar doEval();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtInputs();
-
-	std::vector<fl::scalar> doEvalDerivativeWrtParams();
-
-	void doSetParams(const std::vector<fl::scalar>& params);
-
-	std::vector<fl::scalar> doGetParams() const;
-
+    fl::scalar getBias() const;
 
 private:
-	fl::OutputVariable* p_var_;
-	fl::scalar bias_; /// The value to use in place of the output value in case of zero firing strength
+    fl::scalar doEval();
+
+    std::vector<fl::scalar> doEvalDerivativeWrtInputs();
+
+    std::vector<fl::scalar> doEvalDerivativeWrtParams();
+
+    void doSetParams(const std::vector<fl::scalar>& params);
+
+    std::vector<fl::scalar> doGetParams() const;
+
+
+private:
+    fl::OutputVariable* p_var_;
+    fl::scalar bias_; /// The value to use in place of the output value in case of zero firing strength
 }; // OutputNode
 
 
@@ -270,10 +310,11 @@ private:
 // Template definitions
 ////////////////////////
 
+
 template <typename IterT>
 void Node::setParams(IterT first, IterT last)
 {
-	this->doSetParams(std::vector<fl::scalar>(first, last));
+    this->doSetParams(std::vector<fl::scalar>(first, last));
 }
 
 }} // Namespace fl::anfis

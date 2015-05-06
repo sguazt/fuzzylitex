@@ -40,19 +40,19 @@ namespace fl { namespace detail {
 // Poor man random number generation
 //double RandUnif01(unsigned int& state)
 //{
-//	return std::rand_r(&state)/(static_cast<double>(RAND_MAX)+1.0);
+//  return std::rand_r(&state)/(static_cast<double>(RAND_MAX)+1.0);
 //}
 //
 //int RandUnif(int from, int thru)
 //{
-//	static unsigned int state = 1;
-//	return RandUnif01(&state)*(thru-from+1) + min;
+//  static unsigned int state = 1;
+//  return RandUnif01(&state)*(thru-from+1) + min;
 //}
 //
 //double RandUnif(double from, double upto)
 //{
-//	static unsigned int state = 1;
-//	return RandUnif01(&state)*(upto-from) + min;
+//  static unsigned int state = 1;
+//  return RandUnif01(&state)*(upto-from) + min;
 //}
 
 #ifdef FL_CPP11

@@ -1,5 +1,5 @@
 /**
- * \file fl/anfis/training/training_algorithm.cpp
+ * \file anfis/training/training_algorithm.cpp
  *
  * \brief Definitions for the base ANFIS training algorithm class
  *
@@ -38,53 +38,53 @@ TrainingAlgorithm::TrainingAlgorithm(Engine* p_anfis)
 
 void TrainingAlgorithm::setEngine(Engine* p_anfis)
 {
-	p_anfis_ = p_anfis;
+    p_anfis_ = p_anfis;
 }
 
 Engine* TrainingAlgorithm::getEngine() const
 {
-	return p_anfis_;
+    return p_anfis_;
 }
 
 fl::scalar TrainingAlgorithm::train(const fl::DataSet<fl::scalar>& data,
-								   std::size_t maxEpochs,
-								   fl::scalar errorGoal)
+                                   std::size_t maxEpochs,
+                                   fl::scalar errorGoal)
 {
-	this->reset();
+    this->reset();
 
-	fl::scalar rmse = 0;
-	for (std::size_t epoch = 0; epoch < maxEpochs; ++epoch)
-	{
-		FL_DEBUG_TRACE("TRAINING - EPOCH #" << epoch);
+    fl::scalar rmse = 0;
+    for (std::size_t epoch = 0; epoch < maxEpochs; ++epoch)
+    {
+        FL_DEBUG_TRACE("TRAINING - EPOCH #" << epoch);
 
-		rmse = this->trainSingleEpoch(data);
+        rmse = this->trainSingleEpoch(data);
 
-		FL_DEBUG_TRACE("TRAINING - EPOCH #" << epoch << " -> RMSE: " << rmse);
+        FL_DEBUG_TRACE("TRAINING - EPOCH #" << epoch << " -> RMSE: " << rmse);
 
-		if (fl::detail::FloatTraits<fl::scalar>::EssentiallyLessEqual(rmse, errorGoal))
-		{
-			break;
-		}
-	}
-	return rmse;
+        if (fl::detail::FloatTraits<fl::scalar>::EssentiallyLessEqual(rmse, errorGoal))
+        {
+            break;
+        }
+    }
+    return rmse;
 }
 
 fl::scalar TrainingAlgorithm::trainSingleEpoch(const fl::DataSet<fl::scalar>& data)
 {
-	p_anfis_->setIsLearning(true);
+    p_anfis_->setIsLearning(true);
 
-	fl::scalar rmse = 0;
+    fl::scalar rmse = 0;
 
-	rmse = this->doTrainSingleEpoch(data);
+    rmse = this->doTrainSingleEpoch(data);
 
-	p_anfis_->setIsLearning(false);
+    p_anfis_->setIsLearning(false);
 
-	return rmse;
+    return rmse;
 }
 
 void TrainingAlgorithm::reset()
 {
-	this->doReset();
+    this->doReset();
 }
 
 }} // Namespace fl::anfis
