@@ -191,6 +191,12 @@ void SetTermParameters(fl::Term* p_term, IterT first, IterT last)
 		p_realTerm->setStart(params[0]);
 		p_realTerm->setEnd(params[1]);
 	}
+	else if (dynamic_cast<fl::Rectangle*>(p_term))
+	{
+		fl::Rectangle* p_realTerm = dynamic_cast<fl::Rectangle*>(p_term);
+		p_realTerm->setStart(params[0]);
+		p_realTerm->setEnd(params[1]);
+	}
 	else if (dynamic_cast<fl::Sigmoid*>(p_term))
 	{
 		fl::Sigmoid* p_realTerm = dynamic_cast<fl::Sigmoid*>(p_term);

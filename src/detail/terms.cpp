@@ -129,6 +129,12 @@ std::vector<fl::scalar> GetTermParameters(const fl::Term* p_term)
 		params.push_back(p_realTerm->getStart());
 		params.push_back(p_realTerm->getEnd());
 	}
+	else if (dynamic_cast<const fl::Rectangle*>(p_term))
+	{
+		const fl::Rectangle* p_realTerm = dynamic_cast<const fl::Rectangle*>(p_term);
+		params.push_back(p_realTerm->getStart());
+		params.push_back(p_realTerm->getEnd());
+	}
 	else if (dynamic_cast<const fl::Sigmoid*>(p_term))
 	{
 		const fl::Sigmoid* p_realTerm = dynamic_cast<const fl::Sigmoid*>(p_term);
