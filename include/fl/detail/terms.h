@@ -76,6 +76,9 @@ std::vector<fl::scalar> EvalSigmoidDifferenceTermDerivativeWrtParams(const fl::S
 /// Evaluates the partial derivatives of the given sigmoid product term \a term for the given value \a x with respect to its parameters
 std::vector<fl::scalar> EvalSigmoidProductTermDerivativeWrtParams(const fl::SigmoidProduct& term, fl::scalar x);
 
+/// Evaluates the partial derivatives of the given S-shape term \a term for the given value \a x with respect to its parameters
+std::vector<fl::scalar> EvalSShapeTermDerivativeWrtParams(const fl::SShape& term, fl::scalar x);
+
 /// Evaluates the partial derivatives of the given Trapezoid term \a term for the given value \a x with respect to its parameters
 std::vector<fl::scalar> EvalTrapezoidTermDerivativeWrtParams(const fl::Trapezoid& term, fl::scalar x);
 

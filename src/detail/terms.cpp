@@ -398,6 +398,39 @@ std::vector<fl::scalar> EvalSigmoidProductTermDerivativeWrtParams(const fl::Sigm
 	return res;
 }
 
+std::vector<fl::scalar> EvalSShapeTermDerivativeWrtParams(const fl::SShape& term, fl::scalar x)
+{
+	const fl::scalar start = term.getStart();
+	const fl::scalar end = term.getEnd();
+
+	const fl::scalar mid = (start+end)/2.0;
+	const fl::scalar ems = end-start;
+	const fl::scalar ems3 = Sqr(ems)*ems;
+
+	std::vector<fl::scalar> res(2);
+
+	if (start <= x && x <= mid)
+	{
+		// Start parameter
+		res[0] = -4.0*(x-start)*(end-x)/ems3;
+		// End parameter
+		res[1] = -4.0*Sqr(x-start)/ems3;
+	}
+	else if (mid <= x && x <= end)
+	{
+		// Start parameter
+		res[0] = -4.0*Sqr(end-x)/ems3;
+		// End parameter
+		res[1] = -4.0*(x-start)*(end-x)/ems3;
+	}
+	else
+	{
+		res[0] = res[1] = 0;
+	}
+
+	return res;
+}
+
 std::vector<fl::scalar> EvalTrapezoidTermDerivativeWrtParams(const fl::Trapezoid& term, fl::scalar x)
 {
 	const fl::scalar a = term.getVertexA(); // left feet of the trapezoid
@@ -501,6 +534,11 @@ std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::
 	{
 		const fl::SigmoidProduct* p_sigProd = dynamic_cast<const fl::SigmoidProduct*>(p_term);
 		return EvalSigmoidProductTermDerivativeWrtParams(*p_sigProd, x);
+	}
+	else if (dynamic_cast<const fl::SShape*>(p_term))
+	{
+		const fl::SShape* p_ss = dynamic_cast<const fl::SShape*>(p_term);
+		return EvalSShapeTermDerivativeWrtParams(*p_ss, x);
 	}
 	else if (dynamic_cast<const fl::Trapezoid*>(p_term))
 	{
