@@ -124,6 +124,20 @@ void SetTermParameters(fl::Term* p_term, IterT first, IterT last)
 		}
 		p_realTerm->setXY(pairs);
 	}
+	else if (dynamic_cast<fl::Gaussian*>(p_term))
+	{
+		fl::Gaussian* p_realTerm = dynamic_cast<fl::Gaussian*>(p_term);
+		p_realTerm->setMean(params[0]);
+		p_realTerm->setStandardDeviation(params[1]);
+	}
+	else if (dynamic_cast<fl::GaussianProduct*>(p_term))
+	{
+		fl::GaussianProduct* p_realTerm = dynamic_cast<fl::GaussianProduct*>(p_term);
+		p_realTerm->setMeanA(params[0]);
+		p_realTerm->setStandardDeviationA(params[1]);
+		p_realTerm->setMeanB(params[2]);
+		p_realTerm->setStandardDeviationB(params[3]);
+	}
 	else if (dynamic_cast<fl::Linear*>(p_term))
 	{
 		fl::Linear* p_realTerm = dynamic_cast<fl::Linear*>(p_term);

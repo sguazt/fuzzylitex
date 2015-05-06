@@ -92,6 +92,20 @@ std::vector<fl::scalar> GetTermParameters(const fl::Term* p_term)
 			params.push_back(pairs[p].second);
 		}
 	}
+	else if (dynamic_cast<const fl::Gaussian*>(p_term))
+	{
+		const fl::Gaussian* p_realTerm = dynamic_cast<const fl::Gaussian*>(p_term);
+		params.push_back(p_realTerm->getMean());
+		params.push_back(p_realTerm->getStandardDeviation());
+	}
+	else if (dynamic_cast<const fl::GaussianProduct*>(p_term))
+	{
+		const fl::GaussianProduct* p_realTerm = dynamic_cast<const fl::GaussianProduct*>(p_term);
+		params.push_back(p_realTerm->getMeanA());
+		params.push_back(p_realTerm->getStandardDeviationA());
+		params.push_back(p_realTerm->getMeanB());
+		params.push_back(p_realTerm->getStandardDeviationB());
+	}
 	else if (dynamic_cast<const fl::Linear*>(p_term))
 	{
 		const fl::Linear* p_realTerm = dynamic_cast<const fl::Linear*>(p_term);
