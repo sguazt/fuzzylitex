@@ -229,6 +229,40 @@ std::vector<fl::scalar> EvalConstantTermDerivativeWrtParams(const fl::Constant& 
 	return std::vector<fl::scalar>(1, 1);
 }
 
+std::vector<fl::scalar> EvalCosineTermDerivativeWrtParams(const fl::Cosine& term, fl::scalar x)
+{
+	/*
+	 * Eval the derivative of the generalized cosine function with respect to its parameters
+	 * \f{align}{
+	 *  \frac{\partial f(x,c,w)}{\partial x} &= -\frac{\pi  \sin (\frac{2 \pi (x-c)}{w})}{w},\\
+	 *  \frac{\partial f(x,c,w)}{\partial c} &=  \frac{\pi  \sin (\frac{2 \pi (x-c)}{w})}{w},\\
+	 *  \frac{\partial f(x,c,w)}{\partial w} &=  \frac{\pi  (x-c) \sin (\frac{2 \pi (x-c)}{w})}{w^2}.
+	 * \f}
+	 *
+	 * Mathematica:
+	 *   f[x_, c_, w_] := (1+Cos[2/w*\pi*(x-c)])/2
+	 *   D[f[x, c, w], {{x,c,w}}]
+	 */
+
+	const fl::scalar c = term.getCenter();
+	const fl::scalar w = term.getWidth();
+
+	std::vector<fl::scalar> res(2, 0);
+
+	if ((c-w)/2.0 <= x && x <= (c+w)/2.0)
+	{
+		const fl::scalar pi = 4.0*std::atan(1);
+		const fl::scalar s = std::sin(2.0*pi*(x-c)/w);
+
+		// Center parameter
+		res[0] = pi*s/w;
+		// Width parameter
+		res[1] = pi*(x-c)*s/Sqr(w);
+	}
+
+	return res;
+}
+
 std::vector<fl::scalar> EvalGaussianTermDerivativeWrtParams(const fl::Gaussian& term, fl::scalar x)
 {
 	/*
@@ -586,10 +620,15 @@ std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::
 		const fl::Bell* p_bell = dynamic_cast<const fl::Bell*>(p_term);
 		return EvalBellTermDerivativeWrtParams(*p_bell, x);
 	}
-	if (dynamic_cast<const fl::Constant*>(p_term))
+	else if (dynamic_cast<const fl::Constant*>(p_term))
 	{
 		const fl::Constant* p_const = dynamic_cast<const fl::Constant*>(p_term);
 		return EvalConstantTermDerivativeWrtParams(*p_const, x);
+	}
+	else if (dynamic_cast<const fl::Cosine*>(p_term))
+	{
+		const fl::Cosine* p_cos = dynamic_cast<const fl::Cosine*>(p_term);
+		return EvalCosineTermDerivativeWrtParams(*p_cos, x);
 	}
 	else if (dynamic_cast<const fl::Gaussian*>(p_term))
 	{
