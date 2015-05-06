@@ -32,11 +32,11 @@
 
 #ifdef FL_CPP11
 # include <type_traits>
-# define FL_DETAIL_TRAITS_NS std
+//# define FL_DETAIL_TRAITS_NS std
 #else // FL_CPP11
 # include <boost/type_traits/is_floating_point.hpp>
 # include <boost/utility/enable_if.hpp>
-# define FL_DETAIL_TRAITS_NS boost
+//# define FL_DETAIL_TRAITS_NS boost
 #endif // FL_CPP11
 
 
@@ -65,7 +65,11 @@ struct FloatTraits;
 
 /// Specialization for floating point types
 template <typename T>
-struct FloatTraits<T, typename FL_DETAIL_TRAITS_NS::enable_if< FL_DETAIL_TRAITS_NS::is_floating_point<T> >::type>
+#ifdef FL_CPP11
+struct FloatTraits<T, typename std::enable_if<std::is_floating_point<T>::value>::type>
+#else
+struct FloatTraits<T, typename boost::enable_if< boost::is_floating_point<T> >::type>
+#endif // FL_CPP11
 {
 	/// Default tolerance for floating-point comparison.
 	static const T tolerance;
@@ -238,7 +242,11 @@ struct FloatTraits<T, typename FL_DETAIL_TRAITS_NS::enable_if< FL_DETAIL_TRAITS_
 }; // FloatTraits
 
 template <typename T>
-const T FloatTraits<T, typename FL_DETAIL_TRAITS_NS::enable_if< FL_DETAIL_TRAITS_NS::is_floating_point<T> >::type>::tolerance = static_cast<T>(100)*std::numeric_limits<T>::epsilon();
+#ifdef FL_CPP11
+const T FloatTraits<T, typename std::enable_if<std::is_floating_point<T>::value>::type>::tolerance = static_cast<T>(100)*std::numeric_limits<T>::epsilon();
+#else
+const T FloatTraits<T, typename boost::enable_if< boost::is_floating_point<T> >::type>::tolerance = static_cast<T>(100)*std::numeric_limits<T>::epsilon();
+#endif // FL_CPP11
 
 }} // Namespace fl::detail
 
