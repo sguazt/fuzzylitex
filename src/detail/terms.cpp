@@ -212,7 +212,7 @@ std::vector<fl::scalar> EvalGaussianTermDerivativeWrtParams(const fl::Gaussian& 
 	const fl::scalar m = term.getMean();
 	const fl::scalar sd = term.getStandardDeviation();
 
-	const fl::scalar fx = std::exp(-Sqr((x-m)/sd)/2.0);
+	const fl::scalar fx = term.membership(x);
 	const fl::scalar sd2 = Sqr(sd);
 
 	std::vector<fl::scalar> res(2);
@@ -266,6 +266,36 @@ std::vector<fl::scalar> EvalGaussianProductTermDerivativeWrtParams(const fl::Gau
 	res[0] = fx1*dfx2dm;
 	// Standard deviation parameter of the second gaussian
 	res[1] = fx1*dfx2dsd;
+
+	return res;
+}
+
+std::vector<fl::scalar> EvalSigmoidTermDerivativeWrtParams(const fl::Sigmoid& term, fl::scalar x)
+{
+	/*
+	 * Eval the derivative of the sigmoid function with respect to its parameters
+	 * \f{align}{
+	 *  \frac{\partial f(x,i,s)}{\partial x} &=  \frac{s e^{-s (x-i)}}{(e^{-s (x-i)}+1)^2},\\
+	 *  \frac{\partial f(x,i,s)}{\partial i} &= -\frac{s e^{-s (x-i)}}{(e^{-s (x-i)}+1)^2},\\
+	 *  \frac{\partial f(x,i,s)}{\partial s} &=  \frac{(x-i) e^{-s (x-i)}}{(e^{-s (x-i)}+1)^2}.
+	 * \f}
+	 *
+	 * Mathematica:
+	 *   f[x_, i_, s_] := 1/(1+Exp[-s*(x-i)])
+	 *   D[f[x, i, s], {{x,i,s}}]
+	 */
+
+	const fl::scalar inflection = term.getInflection();
+	const fl::scalar slope = term.getSlope();
+
+	const fl::scalar fx = term.membership(x);
+
+	std::vector<fl::scalar> res(2);
+
+	// Inflection parameter
+	res[0] = -fx*(1-fx)*slope;
+	// Slope parameter
+	res[1] = fx*(1-fx)*(x-inflection);
 
 	return res;
 }
@@ -358,6 +388,11 @@ std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::
 	{
 		const fl::GaussianProduct* p_gaussProd = dynamic_cast<const fl::GaussianProduct*>(p_term);
 		return EvalGaussianProductTermDerivativeWrtParams(*p_gaussProd, x);
+	}
+	else if (dynamic_cast<const fl::Sigmoid*>(p_term))
+	{
+		const fl::Sigmoid* p_sig = dynamic_cast<const fl::Sigmoid*>(p_term);
+		return EvalSigmoidTermDerivativeWrtParams(*p_sig, x);
 	}
 	else if (dynamic_cast<const fl::Trapezoid*>(p_term))
 	{
