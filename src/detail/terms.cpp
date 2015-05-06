@@ -39,6 +39,7 @@
 #include <fl/term/Linear.h>
 #include <fl/term/Ramp.h>
 #include <fl/term/Sigmoid.h>
+#include <fl/term/SigmoidProduct.h>
 #include <fl/term/SShape.h>
 #include <fl/term/Triangle.h>
 #include <fl/term/Trapezoid.h>
@@ -263,9 +264,9 @@ std::vector<fl::scalar> EvalGaussianProductTermDerivativeWrtParams(const fl::Gau
 	// Standard deviation parameter of the first gaussian
 	res[1] = dfx1dsd*fx2;
 	// Mean parameter of the second gaussian
-	res[0] = fx1*dfx2dm;
+	res[2] = fx1*dfx2dm;
 	// Standard deviation parameter of the second gaussian
-	res[1] = fx1*dfx2dsd;
+	res[3] = fx1*dfx2dsd;
 
 	return res;
 }
@@ -296,6 +297,43 @@ std::vector<fl::scalar> EvalSigmoidTermDerivativeWrtParams(const fl::Sigmoid& te
 	res[0] = -fx*(1-fx)*slope;
 	// Slope parameter
 	res[1] = fx*(1-fx)*(x-inflection);
+
+	return res;
+}
+
+std::vector<fl::scalar> EvalSigmoidProductTermDerivativeWrtParams(const fl::SigmoidProduct& term, fl::scalar x)
+{
+	/*
+	 * Eval the derivative of the sigmoid function with respect to its parameters
+	 * \f{align}{
+	 *  \frac{\partial f(x,i,s)}{\partial x} &=  \frac{s e^{-s (x-i)}}{(e^{-s (x-i)}+1)^2},\\
+	 *  \frac{\partial f(x,i,s)}{\partial i} &= -\frac{s e^{-s (x-i)}}{(e^{-s (x-i)}+1)^2},\\
+	 *  \frac{\partial f(x,i,s)}{\partial s} &=  \frac{(x-i) e^{-s (x-i)}}{(e^{-s (x-i)}+1)^2}.
+	 * \f}
+	 *
+	 * Mathematica:
+	 *   f[x_, i_, s_] := 1/(1+Exp[-s*(x-i)])
+	 *   D[f[x, i, s], {{x,i,s}}]
+	 */
+
+	const fl::scalar left = term.getLeft(); // inflection of the first sigmoid
+	const fl::scalar rising = term.getRising(); // slope of the first sigmoid
+	const fl::scalar falling = term.getFalling(); // slope of the second sigmoid
+	const fl::scalar right = term.getRight(); // inflection of the second sigmoid
+
+	const fl::scalar fx1 = 1.0/(1+std::exp(-rising*(x-left)));
+	const fl::scalar fx2 = 1.0/(1+std::exp(-falling*(x-right)));
+
+	std::vector<fl::scalar> res(4);
+
+	// Inflection parameter of the first sigmoid
+	res[0] = -fx1*(1-fx1)*rising*fx2;
+	// Slope parameter of the first sigmoid
+	res[1] = fx1*(1-fx1)*(x-left)*fx2;
+	// Slope parameter of the second sigmoid
+	res[2] = fx1*fx2*(1-fx2)*(x-right);
+	// Inflection parameter of the second sigmoid
+	res[3] = -fx1*fx2*(1-fx2)*falling;
 
 	return res;
 }
@@ -334,11 +372,11 @@ std::vector<fl::scalar> EvalTrapezoidTermDerivativeWrtParams(const fl::Trapezoid
 		// Vertex B
 		res[1] = 0;
 		// Vertex C
-		res[0] = (c <= x && x <= d)
+		res[2] = (c <= x && x <= d)
 				 ? (d-x)/Sqr(d-c)
 				 : 0;
 		// Vertex D
-		res[1] = (c <= x && x <= d)
+		res[3] = (c <= x && x <= d)
 				 ? (x-c)/Sqr(d-c)
 				 : 0;
 	}
@@ -393,6 +431,11 @@ std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::
 	{
 		const fl::Sigmoid* p_sig = dynamic_cast<const fl::Sigmoid*>(p_term);
 		return EvalSigmoidTermDerivativeWrtParams(*p_sig, x);
+	}
+	else if (dynamic_cast<const fl::SigmoidProduct*>(p_term))
+	{
+		const fl::SigmoidProduct* p_sigProd = dynamic_cast<const fl::SigmoidProduct*>(p_term);
+		return EvalSigmoidProductTermDerivativeWrtParams(*p_sigProd, x);
 	}
 	else if (dynamic_cast<const fl::Trapezoid*>(p_term))
 	{
