@@ -37,6 +37,7 @@
 #include <fl/term/Gaussian.h>
 #include <fl/term/GaussianProduct.h>
 #include <fl/term/Linear.h>
+#include <fl/term/PiShape.h>
 #include <fl/term/Ramp.h>
 #include <fl/term/Sigmoid.h>
 #include <fl/term/SigmoidDifference.h>
@@ -284,6 +285,32 @@ std::vector<fl::scalar> EvalGaussianProductTermDerivativeWrtParams(const fl::Gau
 	res[2] = fx1*dfx2dm;
 	// Standard deviation parameter of the second gaussian
 	res[3] = fx1*dfx2dsd;
+
+	return res;
+}
+
+std::vector<fl::scalar> EvalPiShapeTermDerivativeWrtParams(const fl::PiShape& term, fl::scalar x)
+{
+	const fl::scalar bl = term.getBottomLeft(); // The left feed of the Pi-Shape
+	const fl::scalar tl = term.getTopLeft(); // The left shoulder of the Pi-Shape
+	const fl::scalar tr = term.getTopRight(); // The right shoulder of the Pi-Shape
+	const fl::scalar br = term.getBottomRight(); // The right feed of the Pi-Shape
+
+	fl::SShape smf("", bl, tl);
+	fl::ZShape zmf("", tr, br);
+	const std::vector<fl::scalar> dsmf = EvalSShapeTermDerivativeWrtParams(smf, x);
+	const std::vector<fl::scalar> dzmf = EvalZShapeTermDerivativeWrtParams(zmf, x);
+
+	std::vector<fl::scalar> res(4);
+
+	// Bottom left
+	res[0] = dsmf[0]*zmf.membership(x);
+	// Top left
+	res[1] = dsmf[1]*zmf.membership(x);
+	// Top right
+	res[2] = dzmf[0]*smf.membership(x);
+	// Bottom right
+	res[3] = dzmf[1]*smf.membership(x);
 
 	return res;
 }
@@ -553,6 +580,12 @@ std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::
 		const fl::GaussianProduct* p_gaussProd = dynamic_cast<const fl::GaussianProduct*>(p_term);
 		return EvalGaussianProductTermDerivativeWrtParams(*p_gaussProd, x);
 	}
+	else if (dynamic_cast<const fl::PiShape*>(p_term))
+	{
+		const fl::PiShape* p_pi = dynamic_cast<const fl::PiShape*>(p_term);
+		return EvalPiShapeTermDerivativeWrtParams(*p_pi, x);
+	}
+
 	else if (dynamic_cast<const fl::Sigmoid*>(p_term))
 	{
 		const fl::Sigmoid* p_sig = dynamic_cast<const fl::Sigmoid*>(p_term);

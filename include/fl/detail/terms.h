@@ -38,6 +38,7 @@
 #include <fl/term/Gaussian.h>
 #include <fl/term/GaussianProduct.h>
 #include <fl/term/Linear.h>
+#include <fl/term/PiShape.h>
 #include <fl/term/Ramp.h>
 #include <fl/term/Sigmoid.h>
 #include <fl/term/SigmoidDifference.h>
@@ -67,6 +68,9 @@ std::vector<fl::scalar> EvalGaussianTermDerivativeWrtParams(const fl::Gaussian& 
 /// Evaluates the partial derivatives of the given Gaussian product term \a term for the given value \a x with respect to its parameters
 std::vector<fl::scalar> EvalGaussianProductTermDerivativeWrtParams(const fl::GaussianProduct& term, fl::scalar x);
 
+/// Evaluates the partial derivatives of the given Pi-shape term \a term for the given value \a x with respect to its parameters
+std::vector<fl::scalar> EvalPiShapeTermDerivativeWrtParams(const fl::PiShape& term, fl::scalar x);
+
 /// Evaluates the partial derivatives of the given sigmoid term \a term for the given value \a x with respect to its parameters
 std::vector<fl::scalar> EvalSigmoidTermDerivativeWrtParams(const fl::Sigmoid& term, fl::scalar x);
 
@@ -86,7 +90,7 @@ std::vector<fl::scalar> EvalTrapezoidTermDerivativeWrtParams(const fl::Trapezoid
 std::vector<fl::scalar> EvalTriangleTermDerivativeWrtParams(const fl::Triangle& term, fl::scalar x);
 
 /// Evaluates the partial derivatives of the given Z-shape term \a term for the given value \a x with respect to its parameters
-std::vector<fl::scalar> EvalZShapeTermDerivativeWrtParams(const fl::SShape& term, fl::scalar x);
+std::vector<fl::scalar> EvalZShapeTermDerivativeWrtParams(const fl::ZShape& term, fl::scalar x);
 
 /// Evaluates the partial derivatives of the given (pointer to a) term \a p_term for the given value \a x with respect to its parameters
 std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::scalar x);
