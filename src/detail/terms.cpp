@@ -114,6 +114,14 @@ std::vector<fl::scalar> GetTermParameters(const fl::Term* p_term)
 		const fl::Linear* p_realTerm = dynamic_cast<const fl::Linear*>(p_term);
 		params = p_realTerm->coefficients();
 	}
+	else if (dynamic_cast<const fl::PiShape*>(p_term))
+	{
+		const fl::PiShape* p_realTerm = dynamic_cast<const fl::PiShape*>(p_term);
+		params.push_back(p_realTerm->getBottomLeft());
+		params.push_back(p_realTerm->getTopLeft());
+		params.push_back(p_realTerm->getTopRight());
+		params.push_back(p_realTerm->getBottomRight());
+	}
 	else if (dynamic_cast<const fl::Ramp*>(p_term))
 	{
 		const fl::Ramp* p_realTerm = dynamic_cast<const fl::Ramp*>(p_term);

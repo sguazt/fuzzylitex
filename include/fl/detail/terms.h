@@ -164,19 +164,27 @@ void SetTermParameters(fl::Term* p_term, IterT first, IterT last)
 		fl::Linear* p_realTerm = dynamic_cast<fl::Linear*>(p_term);
 		p_realTerm->setCoefficients(params);
 	}
-	if (dynamic_cast<fl::Ramp*>(p_term))
+	else if (dynamic_cast<fl::PiShape*>(p_term))
+	{
+		fl::PiShape* p_realTerm = dynamic_cast<fl::PiShape*>(p_term);
+		p_realTerm->setBottomLeft(params[0]);
+		p_realTerm->setTopLeft(params[1]);
+		p_realTerm->setTopRight(params[2]);
+		p_realTerm->setBottomRight(params[3]);
+	}
+	else if (dynamic_cast<fl::Ramp*>(p_term))
 	{
 		fl::Ramp* p_realTerm = dynamic_cast<fl::Ramp*>(p_term);
 		p_realTerm->setStart(params[0]);
 		p_realTerm->setEnd(params[1]);
 	}
-	if (dynamic_cast<fl::Sigmoid*>(p_term))
+	else if (dynamic_cast<fl::Sigmoid*>(p_term))
 	{
 		fl::Sigmoid* p_realTerm = dynamic_cast<fl::Sigmoid*>(p_term);
 		p_realTerm->setInflection(params[0]);
 		p_realTerm->setSlope(params[1]);
 	}
-	if (dynamic_cast<fl::SigmoidDifference*>(p_term))
+	else if (dynamic_cast<fl::SigmoidDifference*>(p_term))
 	{
 		fl::SigmoidDifference* p_realTerm = dynamic_cast<fl::SigmoidDifference*>(p_term);
 		p_realTerm->setLeft(params[0]);
@@ -184,7 +192,7 @@ void SetTermParameters(fl::Term* p_term, IterT first, IterT last)
 		p_realTerm->setFalling(params[2]);
 		p_realTerm->setRight(params[3]);
 	}
-	if (dynamic_cast<fl::SigmoidProduct*>(p_term))
+	else if (dynamic_cast<fl::SigmoidProduct*>(p_term))
 	{
 		fl::SigmoidProduct* p_realTerm = dynamic_cast<fl::SigmoidProduct*>(p_term);
 		p_realTerm->setLeft(params[0]);
