@@ -503,6 +503,39 @@ std::vector<fl::scalar> EvalTriangleTermDerivativeWrtParams(const fl::Triangle& 
 	return res;
 }
 
+std::vector<fl::scalar> EvalZShapeTermDerivativeWrtParams(const fl::ZShape& term, fl::scalar x)
+{
+	const fl::scalar start = term.getStart();
+	const fl::scalar end = term.getEnd();
+
+	const fl::scalar mid = (start+end)/2.0;
+	const fl::scalar ems = end-start;
+	const fl::scalar ems3 = Sqr(ems)*ems;
+
+	std::vector<fl::scalar> res(2);
+
+	if (start <= x && x <= mid)
+	{
+		// Start parameter
+		res[0] = 4.0*(x-start)*(end-x)/ems3;
+		// End parameter
+		res[1] = 4.0*Sqr(x-start)/ems3;
+	}
+	else if (mid <= x && x <= end)
+	{
+		// Start parameter
+		res[0] = 4.0*Sqr(end-x)/ems3;
+		// End parameter
+		res[1] = 4.0*(x-start)*(end-x)/ems3;
+	}
+	else
+	{
+		res[0] = res[1] = 0;
+	}
+
+	return res;
+}
+
 std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::scalar x)
 {
 	if (dynamic_cast<const fl::Bell*>(p_term))
@@ -549,6 +582,11 @@ std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::
 	{
 		const fl::Triangle* p_tri= dynamic_cast<const fl::Triangle*>(p_term);
 		return EvalTriangleTermDerivativeWrtParams(*p_tri, x);
+	}
+	else if (dynamic_cast<const fl::ZShape*>(p_term))
+	{
+		const fl::ZShape* p_zs = dynamic_cast<const fl::ZShape*>(p_term);
+		return EvalZShapeTermDerivativeWrtParams(*p_zs, x);
 	}
 
 	FL_THROW2(std::runtime_error, "Derivative for term '" + p_term->className() + "' has not been implemented yet");

@@ -85,6 +85,9 @@ std::vector<fl::scalar> EvalTrapezoidTermDerivativeWrtParams(const fl::Trapezoid
 /// Evaluates the partial derivatives of the given Triangle term \a term for the given value \a x with respect to its parameters
 std::vector<fl::scalar> EvalTriangleTermDerivativeWrtParams(const fl::Triangle& term, fl::scalar x);
 
+/// Evaluates the partial derivatives of the given Z-shape term \a term for the given value \a x with respect to its parameters
+std::vector<fl::scalar> EvalZShapeTermDerivativeWrtParams(const fl::SShape& term, fl::scalar x);
+
 /// Evaluates the partial derivatives of the given (pointer to a) term \a p_term for the given value \a x with respect to its parameters
 std::vector<fl::scalar> EvalTermDerivativeWrtParams(const fl::Term* p_term, fl::scalar x);
 
