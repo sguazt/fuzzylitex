@@ -68,7 +68,7 @@ inline
 int RandUnif(int from, int thru)
 {
     static std::uniform_int_distribution<> d {};
-    using parm_t = decltype(d)::param_type;
+    using parm_t = typename decltype(d)::param_type;
     return d(GlobalUrng(), parm_t{from, thru});
 }
 
@@ -76,7 +76,7 @@ template <typename EngineT>
 int RandUnif(int from, int thru, EngineT& eng)
 {
     static std::uniform_int_distribution<> d {};
-    using parm_t = decltype(d)::param_type;
+    using parm_t = typename decltype(d)::param_type;
     return d(eng, parm_t{from, thru});
 }
 
@@ -84,7 +84,7 @@ template <typename RealT>
 RealT RandUnif(RealT from, RealT upto)
 {
     static std::uniform_real_distribution<RealT> d {};
-    using parm_t = decltype(d)::param_type;
+    using parm_t = typename decltype(d)::param_type;
     return d(GlobalUrng(), parm_t{from, upto});
 }
 
@@ -92,7 +92,7 @@ template <typename RealT, typename EngineT>
 RealT RandUnif(RealT from, RealT upto, EngineT& eng)
 {
     static std::uniform_real_distribution<RealT> d {};
-    using parm_t = decltype(d)::param_type;
+    using parm_t = typename decltype(d)::param_type;
     return d(eng, parm_t{from, upto});
 }
 
@@ -100,7 +100,7 @@ template <typename RealT>
 RealT RandNormal(RealT mean, RealT sd)
 {
     static std::normal_distribution<RealT> d {};
-    using parm_t = decltype(d)::param_type;
+    using parm_t = typename decltype(d)::param_type;
     return d(GlobalUrng(), parm_t{mean, sd});
 }
 
@@ -108,7 +108,7 @@ template <typename RealT, typename EngineT>
 RealT RandNormal(RealT mean, RealT sd, EngineT& eng)
 {
     static std::normal_distribution<RealT> d {};
-    using parm_t = decltype(d)::param_type;
+    using parm_t = typename decltype(d)::param_type;
     return d(eng, parm_t{mean, sd});
 }
 
