@@ -2,7 +2,8 @@
  * \file anfis_mackeyglass.cpp
  *
  * Based on the MATLAB Fuzzy Logic Toolbox example:
- *  "Predict Chaotic Time-Series" (see [1,2]).
+ *  "Predict Chaotic Time-Series"
+ * See [1,2], in the references below.
  * The following is a description of the problem as found in [1,2].
  *
  * This example uses an ANFIS model to predict a time series that is generated
