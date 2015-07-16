@@ -29,6 +29,8 @@
 #include <cstddef>
 #include <fl/macro.h>
 #include <fl/fuzzylite.h>
+#include <iomanip>
+#include <sstream>
 #include <stdexcept>
 #include <vector>
 
@@ -112,6 +114,13 @@ public:
 
     const DataSetEntry<ValueT>& get(std::size_t idx) const;
 
+	template <typename IterT>
+	void setLabels(IterT first, IterT last);
+
+	std::string getLabel(std::size_t idx) const;
+
+	std::vector<std::string> labels() const;
+
     std::size_t size() const;
 
     bool empty() const;
@@ -128,11 +137,17 @@ public:
 
     void clear();
 
+	std::vector< std::vector<ValueT> > data() const;
+
+private:
+	void setDefaultLabels();
+
 
 private:
     std::size_t ni_; ///< Number of inputs in each entry
     std::size_t no_; ///< Number of outputs in each entry
-    EntryContainer entries_;
+    EntryContainer entries_; ///< The collection of data entries
+	std::vector<std::string> labels_; ///< The labels associated to data entry components
 };
 
 
@@ -313,13 +328,58 @@ typename DataSet<ValueT>::EntryIterator DataSet<ValueT>::erase(typename DataSet<
 template <typename ValueT>
 void DataSet<ValueT>::set(const DataSetEntry<ValueT>& entry, std::size_t idx) const
 {
+	if (idx >= entries_.size())
+	{
+		FL_THROW2(std::invalid_argument, "Entry index is out-of-range");
+	}
+
     return entries_[idx] = entry;
 }
 
 template <typename ValueT>
 const DataSetEntry<ValueT>& DataSet<ValueT>::get(std::size_t idx) const
 {
+	if (idx >= entries_.size())
+	{
+		FL_THROW2(std::invalid_argument, "Entry index is out-of-range");
+	}
+
     return entries_.at(idx);
+}
+
+template <typename ValueT>
+template <typename IterT>
+void DataSet<ValueT>::setLabels(IterT first, IterT last)
+{
+    labels_.clear();
+    labels_.assign(first, last);
+}
+
+template <typename ValueT>
+std::string DataSet<ValueT>::getLabel(std::size_t idx) const
+{
+	if (labels_.size() < (ni_+no_))
+	{
+		labels_ = this->setDefaultLabels();
+	}
+
+	if (idx >= labels_.size())
+	{
+		FL_THROW2(std::invalid_argument, "Label index is out-of-range");
+	}
+
+	return labels_.at(idx);
+}
+
+template <typename ValueT>
+std::vector<std::string> DataSet<ValueT>::labels() const
+{
+	if (labels_.size() < (ni_+no_))
+	{
+		labels_ = this->setDefaultLabels();
+	}
+
+	return labels_;
 }
 
 template <typename ValueT>
@@ -374,6 +434,48 @@ template <typename ValueT>
 void DataSet<ValueT>::clear()
 {
     entries_.clear();
+	labels_.clear();
+}
+
+template <typename ValueT>
+void DataSet<ValueT>::setDefaultLabels()
+{
+	const std::size_t n = ni_+no_;
+	const std::size_t width = std::floor(std::log10(n))+1;
+
+	labels_.resize(n);
+	for (std::size_t i = labels_.size(); i < n; ++i)
+	{
+		std::ostringstream oss;
+		oss << "L" << std::setfill('0') << std::setw(width) << i;
+		labels_[i] = oss.str();
+	}
+}
+
+template <typename ValueT>
+std::vector< std::vector<ValueT> > DataSet<ValueT>::data() const
+{
+	std::vector< std::vector<ValueT> > rawData;
+
+	for (ConstEntryIterator it = entries_.begin(),
+							endIt = entries_.end();
+		 it != endIt;
+		 ++it)
+	{
+		std::vector<ValueT> rawEntry;
+//		for (typename DataSetEntry<ValueT>::ConstInputIterator entryIt = it->inputBegin(),
+//															   entryEndIt = it->inputEnd();
+//			 entryIt != entryEndIt;
+//			 ++entryIt)
+//		{
+//			rawEntry.push_back(*entry
+		rawEntry.assign(it->inputBegin(), it->inputEnd());
+		rawEntry.insert(rawEntry.end(), it->outputBegin(), it->outputEnd());
+
+		rawData.push_back(rawEntry);
+	}
+
+	return rawData;
 }
 
 } // Namespace fl
