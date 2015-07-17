@@ -36,6 +36,7 @@
 #include <fl/detail/traits.h>
 #include <fl/fuzzylite.h>
 #include <fl/macro.h>
+#include <stdexcept>
 #include <vector>
 
 
@@ -123,484 +124,117 @@ private:
 
 public:
 	/// The default constructor
-	SubtractiveClustering()
-	: squashFactor_(DefaultSquashingFactor),
-	  acceptRatio_(DefaultAcceptanceRatio),
-	  rejectRatio_(DefaultRejectionRatio)
-	{
-	}
+	SubtractiveClustering();
 
 	/// The copy constructor
-	SubtractiveClustering(const SubtractiveClustering& other)
-	: radii_(other.radii_),
-	  squashFactor_(other.squashFactor_),
-	  acceptRatio_(other.acceptRatio_),
-	  rejectRatio_(other.rejectRatio_),
-	  lbounds_(other.lbounds_),
-	  ubounds_(other.lbounds_),
-	  centers_(other.centers_),
-	  sigma_(other.sigma_)
-	{
-	}
+	SubtractiveClustering(const SubtractiveClustering& other);
 
 	FL_DEFAULT_MOVE(SubtractiveClustering)
 
-	SubtractiveClustering& operator=(const SubtractiveClustering& rhs)
-	{
-		if (this != &rhs)
-		{
-			radii_ = rhs.radii_;
-			squashFactor_ = rhs.squashFactor_;
-			acceptRatio_ = rhs.acceptRatio_;
-			rejectRatio_ = rhs.rejectRatio_;
-			lbounds_ = rhs.lbounds_;
-			ubounds_ = rhs.lbounds_;
-			centers_ = rhs.centers_;
-			sigma_ = rhs.sigma_;
-		}
-
-		return *this;
-	}
+	SubtractiveClustering& operator=(const SubtractiveClustering& rhs);
 
 	/**
 	 * Sets the cluster radius for each data dimension used to determine the
 	 * range of influence of a (dimension of a) cluster center.
 	 */
-	void setRadii(const std::vector<fl::scalar>& radii)
-	{
-		radii_ =  radii;
-	}
+	void setRadii(const std::vector<fl::scalar>& radii);
 
 	/**
 	 * Sets the cluster radius for each data dimension used to determine the
 	 * range of influence of a (dimension of a) cluster center.
 	 */
-	void setRadii(fl::scalar radii, std::size_t n)
-	{
-		radii_ =  std::vector<fl::scalar>(n, radii);
-	}
+	void setRadii(fl::scalar radii, std::size_t n);
 
 	/**
 	 * Returns the cluster radius for each data dimension used to determine the
 	 * range of influence of a (dimension of a) cluster center.
 	 */
-	std::vector<fl::scalar> radii() const
-	{
-		return radii_;
-	}
+	std::vector<fl::scalar> radii() const;
 
 	/**
 	 * Sets the squashing factor used to discourage the formation of new cluster
 	 * centers within an existing cluster.
 	 */
-	void setSquashingFactor(fl::scalar value)
-	{
-		squashFactor_ = value;
-	}
+	void setSquashingFactor(fl::scalar value);
 
 	/**
 	 * Returns the squashing factor used to discourage the formation of new
 	 * cluster centers within an existing cluster.
 	 */
-	fl::scalar getSquashingFactor() const
-	{
-		return squashFactor_;
-	}
+	fl::scalar getSquashingFactor() const;
 
 	/**
 	 * Sets the acceptance ratio threshold above which a data point is accepted
 	 * as a cluster center.
 	 */
-	void setAcceptanceRatio(fl::scalar value)
-	{
-		acceptRatio_ = value;
-	}
+	void setAcceptanceRatio(fl::scalar value);
 
 	/**
 	 * Returns the acceptance ratio threshold above which a data point is
 	 * accepted as a cluster center.
 	 */
-	fl::scalar getAcceptanceRatio() const
-	{
-		return acceptRatio_;
-	}
+	fl::scalar getAcceptanceRatio() const;
 
 	/**
 	 * Sets the rejection ratio threshold below which a data point is rejected
 	 * as a cluster center.
 	 */
-	void setRejectionRatio(fl::scalar value)
-	{
-		rejectRatio_ = value;
-	}
+	void setRejectionRatio(fl::scalar value);
 
 	/**
 	 * Returns the rejection ratio threshold below which a data point is
 	 * rejected as a cluster center.
 	 */
-	fl::scalar getRejectionRatio() const
-	{
-		return rejectRatio_;
-	}
+	fl::scalar getRejectionRatio() const;
 
 	/**
 	 * Sets the lower bound for each data dimension used to normalize data
 	 * points into a unit hyperbox
 	 */
-	void setLowerBounds(const std::vector<fl::scalar>& value)
-	{
-		lbounds_ = value;
-	}
+	void setLowerBounds(const std::vector<fl::scalar>& value);
 
 	/**
 	 * Returns the lower bound for each data dimension used to normalize data
 	 * points into a unit hyperbox
 	 */
-	std::vector<fl::scalar> lowerBounds() const
-	{
-		return lbounds_;
-	}
+	std::vector<fl::scalar> lowerBounds() const;
 
 	/**
 	 * Sets the upper bound for each data dimension used to normalize data
 	 * points into a unit hyperbox
 	 */
-	void setUpperBounds(const std::vector<fl::scalar>& value)
-	{
-		ubounds_ = value;
-	}
+	void setUpperBounds(const std::vector<fl::scalar>& value);
 
 	/**
 	 * Returns the upper bound for each data dimension used to normalize data
 	 * points into a unit hyperbox
 	 */
-	std::vector<fl::scalar> upperBounds() const
-	{
-		return ubounds_;
-	}
+	std::vector<fl::scalar> upperBounds() const;
 
 	/**
 	 * Sets the lower and upper bounds for each data dimension used to normalize
 	 * data points into a unit hyperbox
 	 */
-	void setBounds(const std::vector<fl::scalar>& lower, const std::vector<fl::scalar>& upper)
-	{
-		this->setLowerBounds(lower);
-		this->setUpperBounds(upper);
-	}
+	void setBounds(const std::vector<fl::scalar>& lower, const std::vector<fl::scalar>& upper);
 
 	/**
-	 * Returns the lower and upper bounds for each data dimension used to
-	 * normalize data points into a unit hyperbox
+	 * Returns the lower and upper bounds as a matrix, where the first column is
+	 * for lower bounds and the second column is for upper bounds.
 	 */
-	std::vector<std::vector<fl::scalar> > bounds() const
-	{
-		std::vector<std::vector<fl::scalar> > res;
-		res.push_back(lbounds_);
-		res.push_back(ubounds_);
+	std::vector<std::vector<fl::scalar> > bounds() const;
 
-		return res;
-	}
+	/// Resets the internal state of the clustering algorithm
+	void reset();
 
-	void reset()
-	{
-		lbounds_.clear();
-		ubounds_.clear();
-		radii_.clear();
-		squashFactor_ = DefaultSquashingFactor;
-		acceptRatio_ = DefaultAcceptanceRatio;
-		rejectRatio_ = DefaultRejectionRatio;
-		centers_.clear();
-		sigma_.clear();
-	}
-
+	/// Applies the clustering algorithm to the given dataset
 	template <typename MatrixT>
-	void cluster(const MatrixT& data)
-	{
-		const std::size_t nr = data.size(); // Number of data points
-		if (nr == 0)
-		{
-			FL_THROW("Data set must have at least one point");
-		}
-
-		const std::size_t nc = data[0].size(); // Number of data parameters
-
-		// Adjust radii parameters (if needed)
-		if (radii_.size() < nc)
-		{
-			// Enlarge and set default value
-			radii_.insert(radii_.end(), nc-radii_.size(), DefaultRadius);
-		}
-		else if (radii_.size() > nc)
-		{
-			// Shrink to fit current input data dimension
-			radii_.resize(nc);
-		}
-
-		// Precomputes distance multipliers for accumulating and squashing potentials
-		std::vector<fl::scalar> squash(radii_.size());
-		std::vector<fl::scalar> accum(radii_.size());
-		for (std::size_t i = 0; i < nc; ++i)
-		{
-			accum[i] = 1.0/radii_[i];
-			squash[i] = 1.0/(squashFactor_*radii_[i]);
-		}
-
-		// Normalize data
-
-		// - Checks/sets data bounds
-		bool clearLBounds = false;
-		bool clearUBounds = false;
-		if (lbounds_.size() == 0 || ubounds_.size() == 0)
-		{
-			// No bound given => Use min and max values
-			if (lbounds_.size() == 0)
-			{
-				clearLBounds = true;
-				lbounds_.resize(nc, std::numeric_limits<fl::scalar>::max());
-			}
-			if (ubounds_.size() == 0)
-			{
-				clearUBounds = true;
-				ubounds_.resize(nc, std::numeric_limits<fl::scalar>::min());
-			}
-			if (clearLBounds || clearUBounds)
-			{
-				for (std::size_t j = 0; j < nc; ++j)
-				{
-					for (std::size_t i = 0; i < nr; ++i)
-					{
-						if (clearLBounds && lbounds_[j] > data[i][j])
-						{
-							lbounds_[j] = data[i][j];
-						}
-						if (clearUBounds && ubounds_[j] < data[i][j])
-						{
-							ubounds_[j] = data[i][j];
-						}
-					}
-				}
-			}
-			// For zero-range data, compute a small artificial range
-			for (std::size_t j = 0; j < nc; ++j)
-			{
-				if (fl::detail::FloatTraits<fl::scalar>::ApproximatelyEqual(lbounds_[j], ubounds_[j]))
-				{
-					if (clearLBounds)
-					{
-						lbounds_[j] -= 0.0001*(1+std::abs(lbounds_[j]));
-					}
-					if (clearUBounds)
-					{
-						ubounds_[j] += 0.0001*(1+std::abs(ubounds_[j]));
-					}
-				}
-			}
-		}
-		else
-		{
-			// Check size
-			if (lbounds_.size() != nc || ubounds_.size() != nc)
-			{
-				FL_THROW("Wrong dimension for data bound vectors");
-			}
-			// Check zero-range data
-			for (std::size_t i = 0; i < nc; ++i)
-			{
-				if (fl::detail::FloatTraits<fl::scalar>::ApproximatelyEqual(lbounds_[i], ubounds_[i]))
-				{
-					FL_THROW("Found zero data-range in data bound vector");
-				}
-			}
-		}
-		// - Does data normalization
-		std::vector< std::vector<fl::scalar> > datan(nr);
-		for (std::size_t i = 0; i < nr; ++i)
-		{
-			datan[i].resize(nc);
-			for (std::size_t j = 0; j < nc; ++j)
-			{
-				datan[i][j] = std::min(std::max((data[i][j]-lbounds_[j])/(ubounds_[j]-lbounds_[j]), 0.0), 1.0);
-			}
-		}
-
-		// Computes potential values
-
-		// - Potential values for each data point
-		std::vector<fl::scalar> potentials(nr, 0);
-
-		// - Computes the initial potential values.
-		//   Also, find the data point with the highest potential.
-		//   The highest potential will be used as a reference for
-		//   accepting/rejecting other data points as cluster centers.
-		fl::scalar maxPotential = -1; // -1 is OK since potentials cannot be negative values
-		std::size_t maxPotentialIdx = 0;
-		for (std::size_t i = 0; i < nr; ++i)
-		{
-			const std::vector<fl::scalar>& point = datan[i];
-			for (std::size_t k = 0; k < nr; ++k)
-			{
-				fl::scalar distSq = 0; // the squared distance
-				for (std::size_t j = 0; j < nc; ++j)
-				{
-					const fl::scalar dist = (point[j]-datan[k][j])*accum[j];
-					distSq += fl::detail::Sqr(dist);
-				}
-				potentials[i] += std::exp(-4.0*distSq);
-			}
-
-			// Update max potential
-			if (maxPotential < potentials[i])
-			{
-				maxPotential = potentials[i];
-				maxPotentialIdx = i;
-			}
-		}
-
-		// Start iteratively finding cluster centers and subtracting potential
-		// from neighboring data points. 
-		bool findMore = true;
-		const fl::scalar refPotential = maxPotential;
-		centers_.clear();
-		while (findMore && maxPotential > 0)
-		{
-			const fl::scalar maxPotentialRatio = maxPotential/refPotential;
-			const std::vector<fl::scalar>& maxPotentialPoint = datan[maxPotentialIdx];
-
-			bool removePoint = false;
-			findMore = false;
-			if (maxPotentialRatio > acceptRatio_)
-			{
-				// The new peak value is significant -> accept
-				findMore = true;
-			}
-			else if (maxPotentialRatio > rejectRatio_)
-			{
-				// Accept this data point only if it achieves a good balance between having a reasonable potential and being far from all existing cluster centers
-				fl::scalar minDistSq = -1;//std::numeric_limits<fl::scalar>::infinity();
-
-				for (std::size_t i = 0,
-								 ni = centers_.size();
-					 i < ni;
-					 ++i)
-				{
-					fl::scalar distSq = 0;
-					for (std::size_t j = 0; j < nc; ++j)
-					{
-						const fl::scalar dist = (maxPotentialPoint[j]-centers_[i][j])*accum[j];
-						distSq += fl::detail::Sqr(dist);
-					}
-					if (minDistSq < 0 || distSq < minDistSq)
-					{
-						minDistSq = distSq;
-					}
-				}
-
-				fl::scalar minDist = std::sqrt(minDistSq);
-				if ((maxPotentialRatio+minDist) >= 1)
-				{
-					// Tentatively accept this data point as a cluster center
-					findMore = true;
-				}
-				else
-				{
-					// Remove this data point from further consideration and continue
-					findMore = true;
-					removePoint = true;
-				}
-			}
-
-			if (findMore)
-			{
-				if (removePoint)
-				{
-					potentials[maxPotentialIdx] = 0;
-					// Recompute max potential
-					maxPotential = -1; // -1 is OK since potentials cannot be negative values
-					for (std::size_t i = 0; i < nr; ++i)
-					{
-						if (maxPotential < potentials[i])
-						{
-							maxPotential = potentials[i];
-							maxPotentialIdx = i;
-						}
-					}
-				}
-				else
-				{
-					// Adds the data point to the list of cluster centers
-					centers_.push_back(maxPotentialPoint);
-
-					FL_DEBUG_TRACE("Found cluster #" << centers_.size() << ", potential = " << maxPotentialRatio);
-
-					// subtract potential from data points near the new cluster center
-					for (std::size_t i = 0; i < nr; ++i)
-					{
-						fl::scalar distSq = 0;
-						for (std::size_t j = 0; j < nc; ++j)
-						{
-							const fl::scalar dist = (maxPotentialPoint[j]-datan[i][j])*squash[j];
-							distSq += fl::detail::Sqr(dist);
-						}
-						potentials[i] = std::max(potentials[i]-maxPotential*std::exp(-4.0*distSq), 0.0);
-					}
-
-					// Finds the data point with the highest remaining potential
-					maxPotential = -1; // OK since potentials cannot be negative values
-					for (std::size_t i = 0; i < nr; ++i)
-					{
-						if (maxPotential < potentials[i])
-						{
-							maxPotential = potentials[i];
-							maxPotentialIdx = i;
-						}
-					}
-				}
-			}
-		}
-
-		// Scale the cluster centers from the normalized values back to values in
-		// the original range
-		for (std::size_t i = 0,
-						 numClusters = centers_.size();
-			 i < numClusters;
-			 ++i)
-		{
-			for (std::size_t j = 0; j < nc; ++j)
-			{
-				centers_[i][j] = centers_[i][j]*(ubounds_[j]-lbounds_[j]) + lbounds_[j];
-			}
-		}
-
-		// Compute the range of influence of the cluster centers for each data
-		// dimension
-		sigma_.resize(nc);
-		for (std::size_t i = 0; i < nc; ++i)
-		{
-			sigma_[i] = (radii_[i]*(ubounds_[i]-lbounds_[i]))/std::sqrt(8.0);
-		}
-
-		//if (clearLBounds)
-		//{
-		//	lbounds_.clear();
-		//}
-		//if (clearUBounds)
-		//{
-		//	ubounds_.clear();
-		//}
-	}
+	void cluster(const MatrixT& data);
 
 	/// Returns the found cluster centers
-	std::vector< std::vector<fl::scalar> > clusterCenters() const
-	{
-		return centers_;
-	}
+	std::vector< std::vector<fl::scalar> > centers() const;
 
 	/// Returns the number of found clusters
-	std::size_t numOfClusters() const
-	{
-		return centers_.size();
-	}
+	std::size_t numOfClusters() const;
 
 	/**
 	 * Returns the range of influence of the found clusters in each of the data
@@ -608,10 +242,7 @@ public:
 	 *
 	 * All cluster centers share the same set of sigma values.
 	 */
-	std::vector<fl::scalar> rangeOfInfluence() const
-	{
-		return sigma_;
-	}
+	std::vector<fl::scalar> rangeOfInfluence() const;
 
 
 private:
@@ -625,13 +256,282 @@ private:
 	std::vector<fl::scalar> sigma_; ///< Range of influence of the cluster centers
 }; // SubtractiveClustering
 
-const fl::scalar SubtractiveClustering::DefaultRadius = 0.5;
 
-const fl::scalar SubtractiveClustering::DefaultSquashingFactor = 1.25;
+template <typename MatrixT>
+void SubtractiveClustering::cluster(const MatrixT& data)
+{
+	const std::size_t nr = data.size(); // Number of data points
+	if (nr == 0)
+	{
+		FL_THROW("Data set must have at least one point");
+	}
 
-const fl::scalar SubtractiveClustering::DefaultAcceptanceRatio = 0.5;
+	const std::size_t nc = data[0].size(); // Number of data parameters
 
-const fl::scalar SubtractiveClustering::DefaultRejectionRatio = 0.15;
+	// Adjust radii parameters (if needed)
+	if (radii_.size() < nc)
+	{
+		// Enlarge and set default value
+		radii_.insert(radii_.end(), nc-radii_.size(), DefaultRadius);
+	}
+	else if (radii_.size() > nc)
+	{
+		// Shrink to fit current input data dimension
+		radii_.resize(nc);
+	}
+
+	// Precomputes distance multipliers for accumulating and squashing potentials
+	std::vector<fl::scalar> squash(radii_.size());
+	std::vector<fl::scalar> accum(radii_.size());
+	for (std::size_t i = 0; i < nc; ++i)
+	{
+		accum[i] = 1.0/radii_[i];
+		squash[i] = 1.0/(squashFactor_*radii_[i]);
+	}
+
+	// Normalize data
+
+	// - Checks/sets data bounds
+	bool clearLBounds = false;
+	bool clearUBounds = false;
+	if (lbounds_.size() == 0 || ubounds_.size() == 0)
+	{
+		// No bound given => Use min and max values
+		if (lbounds_.size() == 0)
+		{
+			clearLBounds = true;
+			lbounds_.resize(nc, std::numeric_limits<fl::scalar>::max());
+		}
+		if (ubounds_.size() == 0)
+		{
+			clearUBounds = true;
+			ubounds_.resize(nc, std::numeric_limits<fl::scalar>::min());
+		}
+		if (clearLBounds || clearUBounds)
+		{
+			for (std::size_t j = 0; j < nc; ++j)
+			{
+				for (std::size_t i = 0; i < nr; ++i)
+				{
+					if (clearLBounds && lbounds_[j] > data[i][j])
+					{
+						lbounds_[j] = data[i][j];
+					}
+					if (clearUBounds && ubounds_[j] < data[i][j])
+					{
+						ubounds_[j] = data[i][j];
+					}
+				}
+			}
+		}
+		// For zero-range data, compute a small artificial range
+		for (std::size_t j = 0; j < nc; ++j)
+		{
+			if (fl::detail::FloatTraits<fl::scalar>::ApproximatelyEqual(lbounds_[j], ubounds_[j]))
+			{
+				if (clearLBounds)
+				{
+					lbounds_[j] -= 0.0001*(1+std::abs(lbounds_[j]));
+				}
+				if (clearUBounds)
+				{
+					ubounds_[j] += 0.0001*(1+std::abs(ubounds_[j]));
+				}
+			}
+		}
+	}
+	else
+	{
+		// Check size
+		if (lbounds_.size() != nc || ubounds_.size() != nc)
+		{
+			FL_THROW("Wrong dimension for data bound vectors");
+		}
+		// Check zero-range data
+		for (std::size_t i = 0; i < nc; ++i)
+		{
+			if (fl::detail::FloatTraits<fl::scalar>::ApproximatelyEqual(lbounds_[i], ubounds_[i]))
+			{
+				FL_THROW("Found zero data-range in data bound vector");
+			}
+		}
+	}
+	// - Does data normalization
+	std::vector< std::vector<fl::scalar> > datan(nr);
+	for (std::size_t i = 0; i < nr; ++i)
+	{
+		datan[i].resize(nc);
+		for (std::size_t j = 0; j < nc; ++j)
+		{
+			datan[i][j] = std::min(std::max((data[i][j]-lbounds_[j])/(ubounds_[j]-lbounds_[j]), 0.0), 1.0);
+		}
+	}
+
+	// Computes potential values
+
+	// - Potential values for each data point
+	std::vector<fl::scalar> potentials(nr, 0);
+
+	// - Computes the initial potential values.
+	//   Also, find the data point with the highest potential.
+	//   The highest potential will be used as a reference for
+	//   accepting/rejecting other data points as cluster centers.
+	fl::scalar maxPotential = -1; // -1 is OK since potentials cannot be negative values
+	std::size_t maxPotentialIdx = 0;
+	for (std::size_t i = 0; i < nr; ++i)
+	{
+		const std::vector<fl::scalar>& point = datan[i];
+		for (std::size_t k = 0; k < nr; ++k)
+		{
+			fl::scalar distSq = 0; // the squared distance
+			for (std::size_t j = 0; j < nc; ++j)
+			{
+				const fl::scalar dist = (point[j]-datan[k][j])*accum[j];
+				distSq += fl::detail::Sqr(dist);
+			}
+			potentials[i] += std::exp(-4.0*distSq);
+		}
+
+		// Update max potential
+		if (maxPotential < potentials[i])
+		{
+			maxPotential = potentials[i];
+			maxPotentialIdx = i;
+		}
+	}
+
+	// Start iteratively finding cluster centers and subtracting potential
+	// from neighboring data points. 
+	bool findMore = true;
+	const fl::scalar refPotential = maxPotential;
+	centers_.clear();
+	while (findMore && maxPotential > 0)
+	{
+		const fl::scalar maxPotentialRatio = maxPotential/refPotential;
+		const std::vector<fl::scalar>& maxPotentialPoint = datan[maxPotentialIdx];
+
+		bool removePoint = false;
+		findMore = false;
+		if (maxPotentialRatio > acceptRatio_)
+		{
+			// The new peak value is significant -> accept
+			findMore = true;
+		}
+		else if (maxPotentialRatio > rejectRatio_)
+		{
+			// Accept this data point only if it achieves a good balance between having a reasonable potential and being far from all existing cluster centers
+			fl::scalar minDistSq = -1;//std::numeric_limits<fl::scalar>::infinity();
+
+			for (std::size_t i = 0,
+							 ni = centers_.size();
+				 i < ni;
+				 ++i)
+			{
+				fl::scalar distSq = 0;
+				for (std::size_t j = 0; j < nc; ++j)
+				{
+					const fl::scalar dist = (maxPotentialPoint[j]-centers_[i][j])*accum[j];
+					distSq += fl::detail::Sqr(dist);
+				}
+				if (minDistSq < 0 || distSq < minDistSq)
+				{
+					minDistSq = distSq;
+				}
+			}
+
+			fl::scalar minDist = std::sqrt(minDistSq);
+			if ((maxPotentialRatio+minDist) >= 1)
+			{
+				// Tentatively accept this data point as a cluster center
+				findMore = true;
+			}
+			else
+			{
+				// Remove this data point from further consideration and continue
+				findMore = true;
+				removePoint = true;
+			}
+		}
+
+		if (findMore)
+		{
+			if (removePoint)
+			{
+				potentials[maxPotentialIdx] = 0;
+				// Recompute max potential
+				maxPotential = -1; // -1 is OK since potentials cannot be negative values
+				for (std::size_t i = 0; i < nr; ++i)
+				{
+					if (maxPotential < potentials[i])
+					{
+						maxPotential = potentials[i];
+						maxPotentialIdx = i;
+					}
+				}
+			}
+			else
+			{
+				// Adds the data point to the list of cluster centers
+				centers_.push_back(maxPotentialPoint);
+
+				//FL_DEBUG_TRACE("Found cluster #" << centers_.size() << ", potential = " << maxPotentialRatio);
+
+				// subtract potential from data points near the new cluster center
+				for (std::size_t i = 0; i < nr; ++i)
+				{
+					fl::scalar distSq = 0;
+					for (std::size_t j = 0; j < nc; ++j)
+					{
+						const fl::scalar dist = (maxPotentialPoint[j]-datan[i][j])*squash[j];
+						distSq += fl::detail::Sqr(dist);
+					}
+					potentials[i] = std::max(potentials[i]-maxPotential*std::exp(-4.0*distSq), 0.0);
+				}
+
+				// Finds the data point with the highest remaining potential
+				maxPotential = -1; // OK since potentials cannot be negative values
+				for (std::size_t i = 0; i < nr; ++i)
+				{
+					if (maxPotential < potentials[i])
+					{
+						maxPotential = potentials[i];
+						maxPotentialIdx = i;
+					}
+				}
+			}
+		}
+	}
+
+	// Scale the cluster centers from the normalized values back to values in
+	// the original range
+	for (std::size_t i = 0,
+					 numClusters = centers_.size();
+		 i < numClusters;
+		 ++i)
+	{
+		for (std::size_t j = 0; j < nc; ++j)
+		{
+			centers_[i][j] = centers_[i][j]*(ubounds_[j]-lbounds_[j]) + lbounds_[j];
+		}
+	}
+
+	// Compute the range of influence of the cluster centers for each data
+	// dimension
+	sigma_.resize(nc);
+	for (std::size_t i = 0; i < nc; ++i)
+	{
+		sigma_[i] = (radii_[i]*(ubounds_[i]-lbounds_[i]))/std::sqrt(8.0);
+	}
+
+	//if (clearLBounds)
+	//{
+	//	lbounds_.clear();
+	//}
+	//if (clearUBounds)
+	//{
+	//	ubounds_.clear();
+	//}
+}
 
 }} // Namespace fl::cluster
 
