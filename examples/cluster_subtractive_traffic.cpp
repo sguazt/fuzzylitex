@@ -121,7 +121,7 @@ int main()
 
 	fl::cluster::SubtractiveClustering subclust;
 	subclust.cluster(dataset.data());
-	const std::vector< std::vector<fl::scalar> > centers = subclust.clusterCenters();
+	const std::vector< std::vector<fl::scalar> > centers = subclust.centers();
 	const std::vector<fl::scalar> sigma = subclust.rangeOfInfluence();
 
 	std::cout << "Centers:" << std::endl;;
