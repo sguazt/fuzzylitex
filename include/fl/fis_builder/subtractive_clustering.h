@@ -1,4 +1,3 @@
-// vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 /**
  * \file fl/fis_builder/subtractive_clustering.h
  *
@@ -29,14 +28,13 @@
  *
  */
 
-#ifndef FL_FIS_BUILDER_GRID_PARTITION_H
-#define FL_FIS_BUILDER_GRID_PARTITION_H
+#ifndef FL_FIS_SUBTRACTIVE_CLUSTERINGARTITION_H
+#define FL_FIS_SUBTRACTIVE_CLUSTERINGARTITION_H
 
 #include <cstddef>
 #include <fl/macro.h>
 #include <fl/dataset.h>
 #include <fl/detail/math.h>
-#include <fl/detail/traits.h>
 #include <fl/fuzzylite.h>
 #include <fl/defuzzifier/WeightedAverage.h>
 #include <fl/norm/s/Maximum.h>
@@ -45,21 +43,11 @@
 #include <fl/rule/Rule.h>
 #include <fl/rule/RuleBlock.h>
 #include <fl/term/Accumulated.h> //FIXME: needed even if not explicitly used because of fwd decl in fl::OutputVariable
-#include <fl/term/Bell.h>
-#include <fl/term/Constant.h>
 #include <fl/term/Gaussian.h>
-#include <fl/term/GaussianProduct.h>
 #include <fl/term/Linear.h>
-#include <fl/term/PiShape.h>
-#include <fl/term/SigmoidDifference.h>
-#include <fl/term/SigmoidProduct.h>
-#include <fl/term/Triangle.h>
-#include <fl/term/Trapezoid.h>
 #include <fl/variable/InputVariable.h>
 #include <fl/variable/OutputVariable.h>
 #include <sstream>
-#include <stdexcept>
-#include <string>
 #include <vector>
 
 
@@ -133,7 +121,7 @@ FL_unique_ptr<EngineT> SubtractiveClusteringFisBuilder<EngineT>::build(const Mat
     subclust_.reset();
     subclust_.cluster(data);
 
-    const std::vector< std::vector<fl::scalar> > centers = subclust_.clusterCenters();
+    const std::vector< std::vector<fl::scalar> > centers = subclust_.centers();
     const std::vector<fl::scalar> sigmas = subclust_.rangeOfInfluence();
     const std::size_t numRules = centers.size();
 
@@ -328,4 +316,5 @@ FL_unique_ptr<EngineT> SubtractiveClusteringFisBuilder<EngineT>::build(const Mat
 
 } // Namespace fl
 
-#endif // FL_FIS_BUILDER_GRID_PARTITION_H
+#endif // FL_FIS_BUILDER_SUBTRACTIVE_CLUSTERING_H
+/* vim: set tabstop=4 expandtab shiftwidth=4 softtabstop=4: */
