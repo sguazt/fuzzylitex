@@ -649,7 +649,7 @@ fl::scalar Jang1993HybridLearningAlgorithm::trainSingleEpochOnline(const fl::Dat
             }
         }
 
-std::cerr << "PHASE #1 - Target output: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - ANFIS output: "; fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << " - Bias: "; fl::detail::VectorOutput(std::cerr, this->getEngine()->getBias()); std::cerr << std::endl; //XXX
+//std::cerr << "PHASE #1 - Target output: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - ANFIS output: "; fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << " - Bias: "; fl::detail::VectorOutput(std::cerr, this->getEngine()->getBias()); std::cerr << std::endl; //XXX
 
         // Update error
         fl::scalar squaredErr = 0;
@@ -663,7 +663,7 @@ std::cerr << "PHASE #1 - Target output: "; fl::detail::VectorOutput(std::cerr, t
             squaredErr += fl::detail::Sqr(targetOut[i]-out);
         }
         rmse += squaredErr;
-std::cerr << "PHASE #1 - Current error: " <<  squaredErr << " - Total error: " << rmse << std::endl;//XXX
+//std::cerr << "PHASE #1 - Current error: " <<  squaredErr << " - Total error: " << rmse << std::endl;//XXX
 
         // Backward errors
         std::map<const Node*,fl::scalar> dEdOs;
@@ -800,9 +800,9 @@ void Jang1993HybridLearningAlgorithm::updateInputParameters()
             }
         }
         errNorm = std::sqrt(errNorm);
-std::cerr << "PHASE #-1 - Layer: " << Engine::FuzzificationLayer << " - Error Norm: " << errNorm << std::endl;///XXX
-std::cerr << "PHASE #-1 - Layer: " << Engine::FuzzificationLayer << " - STEP-SIZE: " << stepSize_ << std::endl;///XXX
-std::cerr << "PHASE #-1 - Layer: " << Engine::FuzzificationLayer << " - Learning Rate: " << (stepSize_/errNorm) << std::endl;///XXX
+//std::cerr << "PHASE #-1 - Layer: " << Engine::FuzzificationLayer << " - Error Norm: " << errNorm << std::endl;///XXX
+//std::cerr << "PHASE #-1 - Layer: " << Engine::FuzzificationLayer << " - STEP-SIZE: " << stepSize_ << std::endl;///XXX
+//std::cerr << "PHASE #-1 - Layer: " << Engine::FuzzificationLayer << " - Learning Rate: " << (stepSize_/errNorm) << std::endl;///XXX
         if (errNorm > 0)
         {
             const fl::scalar learningRate = stepSize_/errNorm;
