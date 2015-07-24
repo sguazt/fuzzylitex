@@ -27,12 +27,13 @@
 
 
 #include <cstddef>
-#include <fl/macro.h>
+#include <fl/activation/General.h>
 #include <fl/dataset.h>
+#include <fl/defuzzifier/WeightedAverage.h>
 #include <fl/detail/math.h>
 #include <fl/detail/traits.h>
 #include <fl/fuzzylite.h>
-#include <fl/defuzzifier/WeightedAverage.h>
+#include <fl/macro.h>
 #include <fl/norm/s/Maximum.h>
 #include <fl/norm/t/AlgebraicProduct.h>
 #include <fl/rule/Rule.h>
@@ -106,7 +107,7 @@ public:
 
     FL_unique_ptr<EngineT> build(const fl::DataSet<fl::scalar>& data);
 
-	template <typename MatrixT>
+    template <typename MatrixT>
     FL_unique_ptr<EngineT> build(const MatrixT& data, std::size_t numInputs, std::size_t numOutputs);
 
 
@@ -160,8 +161,8 @@ GridPartitionFisBuilder<EngineT>::GridPartitionFisBuilder(NumInTermsIterT numInT
 template <typename EngineT>
 FL_unique_ptr<EngineT> GridPartitionFisBuilder<EngineT>::build(const fl::DataSet<fl::scalar>& data)
 {
-	const std::size_t numInputs =  data.numOfInputs();
-	const std::size_t numOutputs =  data.numOfOutputs();
+    const std::size_t numInputs =  data.numOfInputs();
+    const std::size_t numOutputs =  data.numOfOutputs();
     const std::size_t numInOuts = numInputs+numOutputs;
 
     //if (numOutputs > 1)
@@ -446,7 +447,7 @@ FL_unique_ptr<EngineT> GridPartitionFisBuilder<EngineT>::build(const fl::DataSet
 template <typename EngineT>
 FL_unique_ptr<EngineT> GridPartitionFisBuilder<EngineT>::build(const fl::DataSet<fl::scalar>& data)
 {
-	return this->build(data.data(), data.numOfInputs(), data.numOfOutputs());
+    return this->build(data.data(), data.numOfInputs(), data.numOfOutputs());
 }
 
 template <typename EngineT>
@@ -454,7 +455,7 @@ template <typename MatrixT>
 FL_unique_ptr<EngineT> GridPartitionFisBuilder<EngineT>::build(const MatrixT& data, std::size_t numInputs, std::size_t numOutputs)
 {
     const std::size_t numInOuts = numInputs+numOutputs;
-	const std::size_t numData = data.size();
+    const std::size_t numData = data.size();
 
     //if (numOutputs > 1)
     //{
@@ -479,8 +480,8 @@ FL_unique_ptr<EngineT> GridPartitionFisBuilder<EngineT>::build(const MatrixT& da
     // Compute data range
     std::vector<fl::scalar> mins(numInOuts, fl::inf);
     std::vector<fl::scalar> maxs(numInOuts, -fl::inf);
-	for (std::size_t k = 0; k < numData; ++k)
-	{
+    for (std::size_t k = 0; k < numData; ++k)
+    {
         for (std::size_t i = 0; i < numInOuts; ++i)
         {
             mins[i] = std::min(data[k][i], mins[i]);
@@ -664,8 +665,10 @@ FL_unique_ptr<EngineT> GridPartitionFisBuilder<EngineT>::build(const MatrixT& da
     p_rules->setEnabled(true);
     p_rules->setConjunction(new fl::AlgebraicProduct());
     p_rules->setDisjunction(new fl::Maximum());
-    //p_rules->setActivation(new fl::AlgebraicProduct());
-    p_rules->setActivation(fl::null);
+    ////p_rules->setActivation(new fl::AlgebraicProduct());
+    //p_rules->setActivation(fl::null);
+    p_rules->setActivation(new fl::General());
+    p_rules->setImplication(new fl::AlgebraicProduct());
     for (std::size_t r = 0; r < numRules; ++r)
     {
         std::ostringstream oss;
@@ -746,3 +749,4 @@ const std::string GridPartitionFisBuilder<EngineT>::DefaultOutputTerm = fl::Line
 } // Namespace fl
 
 #endif // FL_FIS_BUILDER_GRID_PARTITION_H
+/* vim: set tabstop=4 expandtab shiftwidth=4 softtabstop=4: */

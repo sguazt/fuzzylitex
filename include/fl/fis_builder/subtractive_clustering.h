@@ -32,11 +32,12 @@
 #define FL_FIS_SUBTRACTIVE_CLUSTERINGARTITION_H
 
 #include <cstddef>
-#include <fl/macro.h>
+#include <fl/activation/General.h>
 #include <fl/dataset.h>
+#include <fl/defuzzifier/WeightedAverage.h>
 #include <fl/detail/math.h>
 #include <fl/fuzzylite.h>
-#include <fl/defuzzifier/WeightedAverage.h>
+#include <fl/macro.h>
 #include <fl/norm/s/Maximum.h>
 #include <fl/norm/t/AlgebraicProduct.h>
 #include <fl/norm/s/AlgebraicSum.h>
@@ -246,8 +247,8 @@ FL_unique_ptr<EngineT> SubtractiveClusteringFisBuilder<EngineT>::build(const Mat
         p_ov->setEnabled(true);
         p_ov->setName(oss.str());
         p_ov->setRange(mins[k], maxs[k]);
-        //p_ov->fuzzyOutput()->setAccumulation(new fl::Maximum());
-        p_ov->fuzzyOutput()->setAccumulation(fl::null);
+        p_ov->fuzzyOutput()->setAccumulation(new fl::Maximum());
+    //p_ov->fuzzyOutput()->setAccumulation(fl::null);
         p_ov->setDefuzzifier(new fl::WeightedAverage());
         p_ov->setDefaultValue(fl::nan);
         p_ov->setPreviousValue(false);
@@ -276,8 +277,10 @@ FL_unique_ptr<EngineT> SubtractiveClusteringFisBuilder<EngineT>::build(const Mat
     p_rules->setEnabled(true);
     p_rules->setConjunction(new fl::AlgebraicProduct());
     p_rules->setDisjunction(new fl::AlgebraicSum());
-    //p_rules->setActivation(new fl::AlgebraicProduct());
-    p_rules->setActivation(fl::null);
+    ////p_rules->setActivation(new fl::AlgebraicProduct());
+    //p_rules->setActivation(fl::null);
+    p_rules->setActivation(new fl::General());
+    p_rules->setImplication(new fl::AlgebraicProduct());
     for (std::size_t r = 0; r < numRules; ++r)
     {
         std::ostringstream oss;
