@@ -40,6 +40,7 @@
 #include <fl/rule/Expression.h>
 #include <fl/rule/Rule.h>
 #include <fl/rule/RuleBlock.h>
+#include <fl/term/Accumulated.h> //FIXME: needed even if not explicitly used because of fwd decl in fl::OutputVariable
 #include <fl/term/Term.h>
 #include <fl/variable/Variable.h>
 #include <fl/variable/InputVariable.h>
@@ -330,6 +331,30 @@ bool Engine::isReady(std::string* p_status) const
 
 void Engine::process()
 {
+	//// Necessary to be fully compatible with classic Fuzzy engine (indeed, fl::anfis::Engine is a fl::Engine)
+	//// Specifilly, the call to BaseType::process activates rule blocks and defuzzify output variables
+	//BaseType::process();
+
+	for (std::size_t i = 0,
+					 ni = this->outputVariables().size();
+		 i < ni;
+		 ++i)
+	{
+		this->getOutputVariable(i)->fuzzyOutput()->clear();
+	}
+
+	for (std::size_t i = 0,
+					 ni = this->ruleBlocks().size();
+		 i < ni;
+		 ++i)
+	{
+		fl::RuleBlock* ruleBlock = this->getRuleBlock(i);
+		if (ruleBlock->isEnabled())
+		{
+			ruleBlock->activate();
+		}
+	}
+
     this->eval();
 }
 
