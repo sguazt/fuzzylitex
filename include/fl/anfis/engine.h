@@ -304,6 +304,9 @@ public:
     /// Gets the current values of the input variables
     std::vector<fl::scalar> getInputValues() const;
 
+    /// Gets the current values of the output variables
+    std::vector<fl::scalar> getOutputValues() const;
+
     /// Gets the set of nodes in the input layer of the ANFIS network
     std::vector<InputNode*> getInputLayer() const;
 

@@ -419,6 +419,20 @@ std::vector<fl::scalar> Engine::getInputValues() const
     return inputs;
 }
 
+std::vector<fl::scalar> Engine::getOutputValues() const
+{
+    const std::size_t n = outputNodes_.size();
+
+    std::vector<fl::scalar> outputs(n);
+
+    for (std::size_t i = 0; i < n; ++i)
+    {
+        outputs[i] = outputNodes_[i]->getOutputVariable()->getValue();
+    }
+
+    return outputs;
+}
+
 std::vector<InputNode*> Engine::getInputLayer() const
 {
     return inputNodes_;
