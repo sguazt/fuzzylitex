@@ -1057,7 +1057,7 @@ std::vector< std::vector<RealT> > SVDDecomposition<RealT>::solveMulti(const Matr
     {
         std::vector<RealT> Bcol(m_);
 
-		for (int i = 0; i < m_; ++i)
+		for (std::size_t i = 0; i < m_; ++i)
         {
             Bcol[i] = B[i][j];
         }
