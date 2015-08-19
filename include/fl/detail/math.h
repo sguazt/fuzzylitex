@@ -944,7 +944,7 @@ public:
      * are considered as zero.
      * If thresh is negative, a default based on expected roundoff error is used.
      */
-	int rank(RealT thresh = -1) const;
+	std::size_t rank(RealT thresh = -1) const;
 
     /**
      * Return the nullity of A, after zeroing any singular values smaller than thresh.
@@ -1074,7 +1074,7 @@ std::vector< std::vector<RealT> > SVDDecomposition<RealT>::solveMulti(const Matr
 }
 
 template <typename RealT>
-int SVDDecomposition<RealT>::rank(RealT thresh) const
+std::size_t SVDDecomposition<RealT>::rank(RealT thresh) const
 {
     const RealT tsh = (thresh >= 0) ? thresh : this->getDefaultThreshold();
 
