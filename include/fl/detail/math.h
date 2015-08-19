@@ -1134,7 +1134,7 @@ std::vector< std::vector<RealT> > SVDDecomposition<RealT>::nullspace(RealT thres
 
 	std::vector< std::vector<RealT> > nullsp(n_, this->nullity(thresh));
 
-	int nn = 0;
+	std::size_t nn = 0;
     for (std::size_t j = 0; j < n_; ++j)
     {
         if (w_[j] <= tsh)
