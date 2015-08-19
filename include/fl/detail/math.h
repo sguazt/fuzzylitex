@@ -1112,7 +1112,7 @@ std::vector< std::vector<RealT> > SVDDecomposition<RealT>::range(RealT thresh) c
 {
     const RealT tsh = (thresh >= 0) ? thresh : this->getDefaultThreshold();
 
-	int nr = 0;
+	std::size_t nr = 0;
 	std::vector< std::vector<RealT> > rnge(m_, this->rank(thresh));
 	for (std::size_t j = 0; j < n_; ++j)
     {
