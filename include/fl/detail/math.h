@@ -1096,7 +1096,7 @@ int SVDDecomposition<RealT>::nullity(RealT thresh) const
     const RealT tsh = (thresh >= 0) ? thresh : this->getDefaultThreshold();
 
 	int nn = 0;
-	for (int j = 0; j < n_; ++j)
+	for (std::size_t j = 0; j < n_; ++j)
     {
         if (w_[j] <= tsh)
         {
