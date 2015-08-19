@@ -953,7 +953,7 @@ public:
      * are considered as zero.
      * If thresh is negative, a default based on expected roundoff error is used.
      */
-	int nullity(RealT thresh = -1) const;
+	std::size_t nullity(RealT thresh = -1) const;
 
     /**
      * Give an orthonormal basis for the range of \f$\mathbf{A}\f$ as the
@@ -1091,11 +1091,11 @@ int SVDDecomposition<RealT>::rank(RealT thresh) const
 }
 
 template <typename RealT>
-int SVDDecomposition<RealT>::nullity(RealT thresh) const
+std::size_t SVDDecomposition<RealT>::nullity(RealT thresh) const
 {
     const RealT tsh = (thresh >= 0) ? thresh : this->getDefaultThreshold();
 
-	int nn = 0;
+	std::size_t nn = 0;
 	for (std::size_t j = 0; j < n_; ++j)
     {
         if (w_[j] <= tsh)
