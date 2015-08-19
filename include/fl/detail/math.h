@@ -1064,7 +1064,7 @@ std::vector< std::vector<RealT> > SVDDecomposition<RealT>::solveMulti(const Matr
 
 	    const std::vector<RealT> x = this->solve(Bcol, thresh);
 
-		for (int i = 0; i < n_; ++i)
+		for (std::size_t i = 0; i < n_; ++i)
         {
             X[i][j] = x[i];
         }
