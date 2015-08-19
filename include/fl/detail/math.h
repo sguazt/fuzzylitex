@@ -1114,10 +1114,10 @@ std::vector< std::vector<RealT> > SVDDecomposition<RealT>::range(RealT thresh) c
 
 	int nr = 0;
 	std::vector< std::vector<RealT> > rnge(m_, this->rank(thresh));
-	for (int j = 0; j < n_; ++j)
+	for (std::size_t j = 0; j < n_; ++j)
     {
 		if (w_[j] > tsh) {
-			for (int i = 0; i < m_; ++i)
+			for (std::size_t i = 0; i < m_; ++i)
             {
                 rnge[i][nr] = u_[i][j];
             }
@@ -1135,11 +1135,11 @@ std::vector< std::vector<RealT> > SVDDecomposition<RealT>::nullspace(RealT thres
 	std::vector< std::vector<RealT> > nullsp(n_, this->nullity(thresh));
 
 	int nn = 0;
-    for (int j = 0; j < n_; ++j)
+    for (std::size_t j = 0; j < n_; ++j)
     {
         if (w_[j] <= tsh)
         {
-            for (int jj = 0; jj < n_; ++jj)
+            for (std::size_t jj = 0; jj < n_; ++jj)
             {
                 nullsp[jj][nn] = v_[jj][j];
             }
