@@ -116,7 +116,7 @@ template <typename EngineT>
 template <typename MatrixT>
 FL_unique_ptr<EngineT> SubtractiveClusteringFisBuilder<EngineT>::build(const MatrixT& data, std::size_t numInputs, std::size_t numOutputs)
 {
-    const std::size_t numInOuts = numInputs+numOutputs;
+    //const std::size_t numInOuts = numInputs+numOutputs;
     const std::size_t numData = data.size();
 
     subclust_.reset();
