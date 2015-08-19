@@ -37,15 +37,20 @@
 
 namespace fl { namespace detail {
 
-template <typename OutMatrixT, typename InMatrixT>
-OutMatrixT& MatrixCopy(OutMatrixT& out, const InMatrixT& in);
+////////////////////////////////////////////////////////////////////////////////
+/// Declarations
+////////////////////////////////////////////////////////////////////////////////
 
+
+/// Returns the sum (or the difference, if \a minus is true) of the values in the range [\a first, \a last)
 template <typename T, typename IterT>
 T AlgebraicSum(IterT first, IterT last, bool minus);
 
+/// Returns the difference of the values in the range [\a first, \a last)
 template <typename T, typename IterT>
 T Diff(IterT first, IterT last);
 
+/// Returns evenly \a spaced values over the given interval [\a start, \a stop]. The end-point of the interval can be optionally excluded.
 template <typename ValueT>
 std::vector<ValueT> LinSpace(ValueT start, ValueT stop, std::size_t num, bool endPoint = true);
 
@@ -55,12 +60,19 @@ std::vector<ValueT> LsqSolve(const MatrixT& A, const VectorT& b);
 template <typename ValueT, typename AMatrixT, typename BMatrixT>
 std::vector< std::vector<ValueT> > LsqSolveMulti(const AMatrixT& A, const BMatrixT& B);
 
+/// Computes A+B, where \a A and \a B are nxm matrices
 template <typename MatrixT>
 MatrixT MatrixAlgebraicSum(const MatrixT& A, const MatrixT& B, bool minus);
 
+/// Copies matrix \a in into matrix \a out
+template <typename InMatrixT, typename OutMatrixT>
+OutMatrixT& MatrixCopy(const InMatrixT& in, OutMatrixT& out);
+
+/// Computes A-B, where A and B are nxm matrices
 template <typename MatrixT>
 MatrixT MatrixDiff(const MatrixT& A, const MatrixT& B);
 
+/// Computes the transpose A' of A, where \a A is a nxm matrix
 template <typename MatrixT>
 MatrixT MatrixIdentity(std::size_t nr, std::size_t nc);
 
@@ -82,45 +94,62 @@ std::vector<typename MatrixT::value_type> MatrixMinColumn(const MatrixT& A);
 template <typename MatrixT>
 std::vector<typename MatrixT::value_type> MatrixMinRow(const MatrixT& A);
 
+/// Outputs the given matrix \a A to the output stream \a os
 template <typename CharT, typename CharTraitsT, typename MatrixT>
 void MatrixOutput(std::basic_ostream<CharT,CharTraitsT>& os, const MatrixT& A);
 
+/// Outputs the given matrix \a A to the output stream \a os
+template <typename CharT, typename CharTraitsT, typename MatrixT>
+void MatrixOutput(std::basic_ostream<CharT,CharTraitsT>& os, const MatrixT& A, std::size_t nrows, std::size_t ncols);
+
+/// Computes A*B, where \a A is a nxp matrix and \a B is a pxm matrix
 template <typename MatrixT>
 MatrixT MatrixProduct(const MatrixT& A, const MatrixT& B);
 
+/// Computes A*c, where \a A is a nxm matrix and \a c is a scalar value
 template <typename MatrixT, typename ValueT>
 MatrixT MatrixScalarProduct(const MatrixT& A, ValueT c);
 
+/// Computes A+B, where \a A and \a B are nxm matrices
 template <typename MatrixT>
 MatrixT MatrixSum(const MatrixT& A, const MatrixT& B);
 
+/// Computes the transpose A' of A, where \a A is a nxm matrix
 template <typename MatrixT>
 MatrixT MatrixTranspose(const MatrixT& A);
 
+/// Computes A*v, where \a A is a nxp matrix and \a v is a px1 vector
 template <typename MatrixT, typename VectorT>
 VectorT MatrixVectorProduct(const MatrixT& A, const VectorT& v);
 
 template <typename T>
 std::vector< std::vector<T> > MatrixZero(std::size_t nr, std::size_t nc);
 
+/// Returns the square of the given parameter \a x
 template <typename T>
 T Sqr(T x);
 
+/// Returns the sum of the values in the range [\a first, \a last)
 template <typename T, typename IterT>
 T Sum(IterT first, IterT last);
 
+/// Computes u+v (or u-v, if \a minus is true), where \a u and \a v are nx1 vectors
 template <typename VectorT>
 VectorT VectorAlgebraicSum(const VectorT& u, const VectorT& v, bool minus);
 
-template <typename OutVectorT, typename InVectorT>
-OutVectorT& VectorCopy(OutVectorT& out, const InVectorT& in);
+/// Copies vector \a in into vector \a out
+template <typename InVectorT, typename OutVectorT>
+OutVectorT& VectorCopy(const InVectorT& in, OutVectorT& out);
 
+/// Computes u-v, where \a u and \a v are nx1 vectors
 template <typename VectorT>
 VectorT VectorDiff(const VectorT& u, const VectorT& v);
 
+/// Computes the inner product u'*v, where \a u and \a v are nx1 vectors, and u' is the transpose of u
 template <typename VectorT>
 typename VectorT::value_type VectorInnerProduct(const VectorT& u, const VectorT& v);
 
+/// Computes v'*A, where \a v is a px1 vector, \a A is a pxn matrix, and v' is the transpose of v
 template <typename VectorT, typename MatrixT>
 VectorT VectorMatrixProduct(const VectorT& v, const MatrixT& A);
 
@@ -133,15 +162,23 @@ typename VectorT::value_type VectorMin(const VectorT& v);
 template <typename VectorT>
 typename VectorT::value_type VectorNorm(VectorT& v, unsigned int p = 2);
 
+/// Computes the outer product u*v', where \a u and \a v are nx1 vectors, and v' is the transpose of v
 template <typename MatrixT, typename VectorT>
 MatrixT VectorOuterProduct(const VectorT& u, const VectorT& v);
 
+/// Outputs the given vector \a v to the output stream \a os
+template <typename CharT, typename CharTraitsT, typename VectorT>
+void VectorOutput(std::basic_ostream<CharT,CharTraitsT>& os, const VectorT& v, std::size_t n);
+
+/// Outputs the given vector \a v to the output stream \a os
 template <typename CharT, typename CharTraitsT, typename VectorT>
 void VectorOutput(std::basic_ostream<CharT,CharTraitsT>& os, const VectorT& v);
 
+/// Computes v*c, where \a v is a nx1 vector and \a c is a scalar value
 template <typename VectorT, typename ValueT>
 VectorT VectorScalarProduct(const VectorT& v, ValueT c);
 
+/// Computes u+v, where \a u and \a v are nx1 vectors
 template <typename VectorT>
 VectorT VectorSum(const VectorT& u, const VectorT& v);
 
@@ -149,15 +186,17 @@ template <typename T>
 std::vector<T> VectorZero(std::size_t n);
 
 
+////////////////////////////////////////////////////////////////////////////////
+/// Definitions
+////////////////////////////////////////////////////////////////////////////////
 
-/// Returns the square of the given parameter \a x
+
 template <typename T>
 T Sqr(T x)
 {
     return x*x;
 }
 
-/// Returns the sum (or the difference, if \a minus is true) of the values in the range [\a first, \a last)
 template <typename T, typename IterT>
 T AlgebraicSum(IterT first, IterT last, bool minus)
 {
@@ -177,21 +216,18 @@ T AlgebraicSum(IterT first, IterT last, bool minus)
     return sum;
 }
 
-/// Returns the sum of the values in the range [\a first, \a last)
 template <typename T, typename IterT>
 T Sum(IterT first, IterT last)
 {
     return AlgebraicSum<T>(first, last, false);
 }
 
-/// Returns the difference of the values in the range [\a first, \a last)
 template <typename T, typename IterT>
 T Diff(IterT first, IterT last)
 {
     return AlgebraicSum<T>(first, last, true);
 }
 
-/// Returns evenly \a spaced values over the given interval [\a start, \a stop]. The end-point of the interval can be optionally excluded.
 template <typename ValueT>
 std::vector<ValueT> LinSpace(ValueT start, ValueT stop, std::size_t num, bool endPoint)
 {
@@ -225,10 +261,10 @@ std::vector<ValueT> LinSpace(ValueT start, ValueT stop, std::size_t num, bool en
     return res;
 }
 
-/// Outputs the given vector \a v to the output stream \a os
 template <typename CharT, typename CharTraitsT, typename VectorT>
 void VectorOutput(std::basic_ostream<CharT,CharTraitsT>& os, const VectorT& v)
 {
+/*
     os << "[";
     for (std::size_t i = 0; i < v.size(); ++i)
     {
@@ -239,12 +275,29 @@ void VectorOutput(std::basic_ostream<CharT,CharTraitsT>& os, const VectorT& v)
         os << v[i];
     }
     os << "]";
+*/
+    VectorOutput(os, v, v.size());
 }
 
-/// Outputs the given matrix \a A to the output stream \a os
+template <typename CharT, typename CharTraitsT, typename VectorT>
+void VectorOutput(std::basic_ostream<CharT,CharTraitsT>& os, const VectorT& v, std::size_t n)
+{
+    os << "[";
+    for (std::size_t i = 0; i < n; ++i)
+    {
+        if (i > 0)
+        {
+            os << " ";
+        }
+        os << v[i];
+    }
+    os << "]";
+}
+
 template <typename CharT, typename CharTraitsT, typename MatrixT>
 void MatrixOutput(std::basic_ostream<CharT,CharTraitsT>& os, const MatrixT& A)
 {
+/*
     os << "[";
     for (std::size_t i = 0; i < A.size(); ++i)
     {
@@ -262,9 +315,32 @@ void MatrixOutput(std::basic_ostream<CharT,CharTraitsT>& os, const MatrixT& A)
         }
     }
     os << "]";
+*/
+    MatrixOutput(os, A, A.size(), A.size() > 0 ? A[0].size() : 0);
 }
 
-/// Computes v*c, where \a v is a nx1 vector and \a c is a scalar value
+template <typename CharT, typename CharTraitsT, typename MatrixT>
+void MatrixOutput(std::basic_ostream<CharT,CharTraitsT>& os, const MatrixT& A, std::size_t nrows, std::size_t ncols)
+{
+    os << "[";
+    for (std::size_t i = 0; i < nrows; ++i)
+    {
+        if (i > 0)
+        {
+            os << "; ";
+        }
+        for (std::size_t j = 0; j < ncols; ++j)
+        {
+            if (j > 0)
+            {
+                os << " ";
+            }
+            os << A[i][j];
+        }
+    }
+    os << "]";
+}
+
 template <typename VectorT, typename ValueT>
 VectorT VectorScalarProduct(const VectorT& v, ValueT c)
 {
@@ -280,7 +356,6 @@ VectorT VectorScalarProduct(const VectorT& v, ValueT c)
     return res;
 }
 
-/// Computes A*c, where \a A is a nxm matrix and \a c is a scalar value
 template <typename MatrixT, typename ValueT>
 MatrixT MatrixScalarProduct(const MatrixT& A, ValueT c)
 {
@@ -301,7 +376,6 @@ MatrixT MatrixScalarProduct(const MatrixT& A, ValueT c)
     return res;
 }
 
-/// Computes u+v (or u-v, if \a minus is true), where \a u and \a v are nx1 vectors
 template <typename VectorT>
 VectorT VectorAlgebraicSum(const VectorT& u, const VectorT& v, bool minus)
 {
@@ -323,21 +397,18 @@ VectorT VectorAlgebraicSum(const VectorT& u, const VectorT& v, bool minus)
     return res;
 }
 
-/// Computes u+v, where \a u and \a v are nx1 vectors
 template <typename VectorT>
 VectorT VectorSum(const VectorT& u, const VectorT& v)
 {
     return VectorAlgebraicSum(u, v, false);
 }
 
-/// Computes u-v, where \a u and \a v are nx1 vectors
 template <typename VectorT>
 VectorT VectorDiff(const VectorT& u, const VectorT& v)
 {
     return VectorAlgebraicSum(u, v, true);
 }
 
-/// Computes the transpose A' of A, where \a A is a nxm matrix
 template <typename MatrixT>
 MatrixT MatrixTranspose(const MatrixT& A)
 {
@@ -358,7 +429,6 @@ MatrixT MatrixTranspose(const MatrixT& A)
     return res;
 }
 
-/// Computes the transpose A' of A, where \a A is a nxm matrix
 template <typename MatrixT>
 MatrixT MatrixIdentity(std::size_t nr, std::size_t nc)
 {
@@ -373,7 +443,6 @@ MatrixT MatrixIdentity(std::size_t nr, std::size_t nc)
     return res;
 }
 
-/// Computes A+B, where \a A and \a B are nxm matrices
 template <typename MatrixT>
 MatrixT MatrixAlgebraicSum(const MatrixT& A, const MatrixT& B, bool minus)
 {
@@ -401,21 +470,18 @@ MatrixT MatrixAlgebraicSum(const MatrixT& A, const MatrixT& B, bool minus)
     return res;
 }
 
-/// Computes A+B, where \a A and \a B are nxm matrices
 template <typename MatrixT>
 MatrixT MatrixSum(const MatrixT& A, const MatrixT& B)
 {
     return MatrixAlgebraicSum(A, B, false);
 }
 
-/// Computes A-B, where A and B are nxm matrices
 template <typename MatrixT>
 MatrixT MatrixDiff(const MatrixT& A, const MatrixT& B)
 {
     return MatrixAlgebraicSum(A, B, true);
 }
 
-/// Computes A*B, where \a A is a nxp matrix and \a B is a pxm matrix
 template <typename MatrixT>
 MatrixT MatrixProduct(const MatrixT& A, const MatrixT& B)
 {
@@ -446,7 +512,6 @@ MatrixT MatrixProduct(const MatrixT& A, const MatrixT& B)
     return res;
 }
 
-/// Computes the inner product u'*v, where \a u and \a v are nx1 vectors, and u' is the transpose of u
 template <typename VectorT>
 typename VectorT::value_type VectorInnerProduct(const VectorT& u, const VectorT& v)
 {
@@ -468,7 +533,6 @@ typename VectorT::value_type VectorInnerProduct(const VectorT& u, const VectorT&
     return res;
 }
  
-/// Computes the outer product u*v', where \a u and \a v are nx1 vectors, and v' is the transpose of v
 template <typename MatrixT, typename VectorT>
 MatrixT VectorOuterProduct(const VectorT& u, const VectorT& v)
 {
@@ -489,7 +553,6 @@ MatrixT VectorOuterProduct(const VectorT& u, const VectorT& v)
     return res;
 }
  
-/// Computes A*v, where \a A is a nxp matrix and \a v is a px1 vector
 template <typename MatrixT, typename VectorT>
 VectorT MatrixVectorProduct(const MatrixT& A, const VectorT& v)
 {
@@ -515,7 +578,6 @@ VectorT MatrixVectorProduct(const MatrixT& A, const VectorT& v)
     return res;
 }
 
-/// Computes v'*A, where \a v is a px1 vector, \a A is a pxn matrix, and v' is the transpose of v
 template <typename VectorT, typename MatrixT>
 VectorT VectorMatrixProduct(const VectorT& v, const MatrixT& A)
 {
@@ -725,8 +787,8 @@ typename VectorT::value_type VectorNorm(VectorT& v, unsigned int p)
     return norm;
 }
 
-template <typename OutVectorT, typename InVectorT>
-OutVectorT& VectorCopy(OutVectorT& out, const InVectorT& in)
+template <typename InVectorT, typename OutVectorT>
+OutVectorT& VectorCopy(const InVectorT& in, OutVectorT& out)
 {
     out.resize(in.size());
     for (std::size_t i = 0,
@@ -740,8 +802,8 @@ OutVectorT& VectorCopy(OutVectorT& out, const InVectorT& in)
     return out;
 }
 
-template <typename OutMatrixT, typename InMatrixT>
-OutMatrixT& MatrixCopy(OutMatrixT& out, const InMatrixT& in)
+template <typename InMatrixT, typename OutMatrixT>
+OutMatrixT& MatrixCopy(const InMatrixT& in, OutMatrixT& out)
 {
     out.resize(in.size());
     for (std::size_t r = 0,
@@ -844,9 +906,9 @@ public:
         m_ = A.size();
         n_ = (A.size() > 0) ? A[0].size() : 0;
 
-        MatrixCopy(u_, A);
-        MatrixCopy(v_, MatrixZero<RealT>(n_, n_));
-        VectorCopy(w_, VectorZero<RealT>(n_));
+        MatrixCopy(A, u_);
+        MatrixCopy(MatrixZero<RealT>(n_, n_), v_);
+        VectorCopy(VectorZero<RealT>(n_), w_);
 
         decompose();
         reorder();
@@ -989,9 +1051,9 @@ std::vector< std::vector<RealT> > SVDDecomposition<RealT>::solveMulti(const Matr
     const std::size_t p = B[0].size();
 
     std::vector< std::vector<RealT> > X;
-    MatrixCopy(X, MatrixZero<RealT>(n_, p));
+    MatrixCopy(MatrixZero<RealT>(n_, p), X);
 
-	for (int j = 0; j < p;  ++j)
+	for (std::size_t j = 0; j < p;  ++j)
     {
         std::vector<RealT> Bcol(m_);
 
