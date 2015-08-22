@@ -36,6 +36,11 @@ TrainingAlgorithm::TrainingAlgorithm(Engine* p_anfis)
 {
 }
 
+TrainingAlgorithm::~TrainingAlgorithm()
+{
+	// empty
+}
+
 void TrainingAlgorithm::setEngine(Engine* p_anfis)
 {
     p_anfis_ = p_anfis;

@@ -50,6 +50,9 @@ public:
      */
     explicit TrainingAlgorithm(Engine* p_anfis = fl::null);
 
+	/// The class destructor.
+	virtual ~TrainingAlgorithm();
+
     /// Sets the ANFIS model to be trained
     void setEngine(Engine* p_anfis);
 
