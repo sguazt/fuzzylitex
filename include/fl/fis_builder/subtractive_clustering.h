@@ -33,6 +33,7 @@
 
 #include <cstddef>
 #include <fl/activation/General.h>
+#include <fl/cluster/subtractive.h>
 #include <fl/dataset.h>
 #include <fl/defuzzifier/WeightedAverage.h>
 #include <fl/detail/math.h>

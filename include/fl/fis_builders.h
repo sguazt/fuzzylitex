@@ -26,5 +26,6 @@
 #define FL_FIS_BUILDERS_H
 
 #include <fl/fis_builder/grid_partition.h>
+#include <fl/fis_builder/subtractive_clustering.h>
 
 #endif // FL_FIS_BUILDERS_H
