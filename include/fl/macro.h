@@ -80,7 +80,7 @@
 #else // NDEBUG
 # undef FL_DEBUG 
 # define FL_DEBUG_ASSERT(x) FL_DEBUG_BEGIN \
-                                assert(x); \
+                                if (!(x)) { throw fl::Exception("Failed assertion: " #x, FL_AT); } \
                             FL_DEBUG_END
 # define FL_DEBUG_TRACE(x)  FL_DEBUG_BEGIN \
                                 ::std::cerr << FL__FILE__ << "::" << FL__FUNCTION__ << "[" << __LINE__ << "]:" << FL_EXPAND__(x) << ::std::endl \
