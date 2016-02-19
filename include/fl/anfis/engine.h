@@ -515,8 +515,8 @@ void Engine::setBias(IterT first, IterT last)
 template <typename IterT>
 void Engine::setInputValues(IterT first, IterT last)
 {
-    std::vector<InputNode*>::iterator nodeIt = inputNodes_.begin();
-    std::vector<InputNode*>::iterator nodeEndIt = inputNodes_.end();
+    typename std::vector<InputNode*>::iterator nodeIt = inputNodes_.begin();
+    typename std::vector<InputNode*>::iterator nodeEndIt = inputNodes_.end();
 
     while (first != last && nodeIt != nodeEndIt)
     {
