@@ -369,6 +369,7 @@ fl::scalar LeastSquaresLearningAlgorithm::trainSingleEpochOnline(const fl::DataS
         ++numTrainings;
 
         // Put estimated RLS parameters in the ANFIS model
+        if (numTrainings > 0)
         {
             const std::vector< std::vector<fl::scalar> > rlsParamMatrix = rls_.getEstimatedParameters();
 //std::cerr << "PHASE #0 - Estimated RLS params: "; fl::detail::MatrixOutput(std::cerr, rlsParamMatrix); std::cerr << std::endl;//XXX
