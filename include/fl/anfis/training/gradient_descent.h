@@ -115,10 +115,10 @@ private:
     void check() const;
 
     /// Trains ANFIS for a signle epoch in offline (batch) mode
-    fl::scalar trainSingleEpochOffline(const fl::DataSet<fl::scalar>& data);
+    fl::scalar trainSingleEpochOffline(const fl::DataSet<fl::scalar>& trainData);
 
     /// Trains ANFIS for a signle epoch in online mode
-    fl::scalar trainSingleEpochOnline(const fl::DataSet<fl::scalar>& data);
+    fl::scalar trainSingleEpochOnline(const fl::DataSet<fl::scalar>& trainData);
 
     /// Updates parameters of input terms
     void updateInputParameters();
@@ -127,7 +127,7 @@ private:
     void resetSingleEpoch();
 
     /// Trains the ANFIS model for a single epoch only using the given training set \a data
-    fl::scalar doTrainSingleEpoch(const fl::DataSet<fl::scalar>& data);
+    fl::scalar doTrainSingleEpoch(const fl::DataSet<fl::scalar>& trainData);
 
     /// Updates parameters of input terms
     virtual void doUpdateInputParameters() = 0;
