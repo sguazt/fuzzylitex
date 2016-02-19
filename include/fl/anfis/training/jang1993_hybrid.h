@@ -31,6 +31,7 @@
 #include <fl/anfis/engine.h>
 #include <fl/anfis/training/training_algorithm.h>
 #include <fl/dataset.h>
+//#include <fl/detail/kalman.h>
 #include <fl/detail/rls.h>
 #include <fl/fuzzylite.h>
 #include <map>
@@ -182,10 +183,10 @@ private:
     void check() const;
 
     /// Trains ANFIS for a signle epoch in offline (batch) mode
-    fl::scalar trainSingleEpochOffline(const fl::DataSet<fl::scalar>& data);
+    fl::scalar trainSingleEpochOffline(const fl::DataSet<fl::scalar>& trainData);
 
     /// Trains ANFIS for a signle epoch in online mode
-    fl::scalar trainSingleEpochOnline(const fl::DataSet<fl::scalar>& data);
+    fl::scalar trainSingleEpochOnline(const fl::DataSet<fl::scalar>& trainData);
 
     /// Updates parameters of input terms
     void updateInputParameters();
@@ -199,8 +200,8 @@ private:
     /// Gets the number of parameters of each output term
     std::size_t numberOfOutputTermParameters() const;
 
-    /// Trains the ANFIS model for a single epoch only using the given training set \a data
-    fl::scalar doTrainSingleEpoch(const fl::DataSet<fl::scalar>& data);
+    /// Trains the ANFIS model for a single epoch only using the given training set \a trainData
+    fl::scalar doTrainSingleEpoch(const fl::DataSet<fl::scalar>& trainData);
 
     /// Resets the state of the learning algorithm
     void doReset();
@@ -217,6 +218,7 @@ private:
     std::size_t stepSizeDecrCounter_; ///< Counter used to check when to decrease the step size
     bool online_; ///< \c true in case of online learning; \c false if offline (batch) learning
     fl::detail::RecursiveLeastSquaresEstimator<fl::scalar> rls_; ///< The recursive least-squares estimator
+    //fl::detail::KalmanFilter<fl::scalar> rls_; ///< The recursive least-squares estimator
     std::map< Node*, std::vector<fl::scalar> > dEdPs_; ///< Error derivatives wrt node parameters
     std::map< Node*, std::vector<fl::scalar> > oldDeltaPs_; ///< Old values of parameters changes (only for momentum learning)
 }; // Jang1993HybridLearningAlgorithm
