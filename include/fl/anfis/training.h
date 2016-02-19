@@ -28,6 +28,7 @@
 
 #include <fl/anfis/training/gradient_descent.h>
 #include <fl/anfis/training/jang1993_hybrid.h>
+#include <fl/anfis/training/least_squares.h>
 #include <fl/anfis/training/training_algorithm.h>
 
 #endif // FL_ANFIS_TRAINING_H
