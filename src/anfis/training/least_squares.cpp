@@ -413,6 +413,7 @@ fl::scalar LeastSquaresLearningAlgorithm::trainSingleEpochOnline(const fl::DataS
 
         // Compute ANFIS output with the new estimated consequent parameters
         actualOut = this->getEngine()->eval(entry.inputBegin(), entry.inputEnd());
+//std::cerr << "PHASE #0 - Target: "; fl::detail::VectorOutput(std::cerr, targetOut); std::cerr << " - Actual: ";fl::detail::VectorOutput(std::cerr, actualOut); std::cerr << std::endl;///XXX
 
         // Update bias in case of zero rule firing strength
         if (this->getEngine()->hasBias())

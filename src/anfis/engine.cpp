@@ -1215,6 +1215,9 @@ void Engine::build()
         // check: null
         FL_DEBUG_ASSERT( p_output );
 
+		// Set the default value to be the average of the variable's range in order to be compatible with MATLAB in case of rules with zero firing strength
+		p_output->setDefaultValue((p_output->getMinimum()+p_output->getMaximum())/2.0);
+
         OutputNode* p_node = new OutputNode(p_output, this);
         outputNodes_.push_back(p_node);
 

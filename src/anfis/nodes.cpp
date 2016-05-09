@@ -322,6 +322,7 @@ fl::scalar AntecedentNode::doEval()
             res = p_norm_->compute(res, inputs[i]);
         }
     }
+FL_DEBUG_TRACE("Evaluating Antecedent - input size: " << inputs.size() << ", inputs: "; fl::detail::VectorOutput(std::cerr, inputs); std::cerr << " -> eval: " << res);///XXX
 
     return res;
 }
@@ -463,6 +464,7 @@ fl::scalar ConsequentNode::doEval()
 
     // The last and only input is the one coming from the antecedent layer.
     //return p_tnorm_->compute(inputs.back(), p_term_->membership(1.0));
+FL_DEBUG_TRACE("Evaluating Consequent - input size: " << inputs.size() << " -> eval: input: " << inputs.back() << ", membership: " << p_term_->membership(1.0));///XXX
     return inputs.back()*p_term_->membership(1.0);
 }
 
@@ -558,6 +560,7 @@ fl::scalar AccumulationNode::doEval()
         sum += inputs[i];
     }
 
+FL_DEBUG_TRACE("Evaluating Accumulation - input size: " << inputs.size() << " -> eval: " << sum);///XXX
     return sum;
 }
 
@@ -635,8 +638,15 @@ fl::scalar OutputNode::doEval()
         }
         else
         {
-            // Return the average value among all possible values
-            res = (p_var_->getMinimum()+p_var_->getMaximum())/2.0;
+			//FIXME: In this case, the MATLAB choice is to return the average value over the range of this variable.
+			//		 This could conflict with the fuzzylite's inference engine which uses the variable's default value.
+			//		 So, to be consistent with fuzzulite, we use the default value.
+			//		 The MATLAB behavior can be emulated by setting as default value the average (max+min)/2.
+			//		 Indeed, this is what is done in fl::anfis::Engine::build() method.
+
+            //// Return the average value among all possible values
+            //res = (p_var_->getMinimum()+p_var_->getMaximum())/2.0;
+			res = p_var_->getDefaultValue();
         }
     }
     else

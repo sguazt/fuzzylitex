@@ -170,6 +170,11 @@ void RecursiveLeastSquaresEstimator<ValueT>::setModelOrder(std::size_t order)
 template <typename ValueT>
 std::size_t RecursiveLeastSquaresEstimator<ValueT>::getModelOrder() const
 {
+	if (p_ == 0)
+	{
+		return 0;
+	}
+
     return p_-1;
 }
 
@@ -334,14 +339,12 @@ std::vector<ValueT> RecursiveLeastSquaresEstimator<ValueT>::estimate(const std::
     // Update parameter and covariance matrices (to be done only after enough observations have been seen)
     if (count_ >= p_)
     {
+#if 0
             // Compute the Gain:
             //  $l(k+1) = \frac{P(k)\phi(k+1)}{\lambda(k)+\phi^T(k+1)P(k)\phi(k+1)}$
             const VectorType l = fl::detail::VectorScalarProduct(
                                     fl::detail::MatrixVectorProduct(P_, phi_),
-                                    1.0/(lambda_
-                                         + fl::detail::VectorInnerProduct(
-                                           fl::detail::VectorMatrixProduct(phi_, P_), phi_)));
-//std::cerr << "l="; fl::detail::VectorOutput(std::cerr, l); std::cerr << std::endl; //XXX
+                                    1.0/(lambda_ + fl::detail::VectorInnerProduct(fl::detail::VectorMatrixProduct(phi_, P_), phi_)));
 
             // Update the covariance matrix by means of the matrix inversion lemma (use the Woodbury's identity: A=B^{-1}+CD^{-1}C^T ==> A^{-1}=B-BC(D+C^TBC)^{-1}C^TB)
             //  $P(k+1) = \frac{1}{\lambda(k)}\left[I-l(k+1)\Phi^T(k+1)\right]P(k)$
@@ -357,20 +360,67 @@ std::vector<ValueT> RecursiveLeastSquaresEstimator<ValueT>::estimate(const std::
             // Computes the output estimate
             //  $\hat{y}(k) = (\phi^T(k)\Theta(k))^T$
             yhat = fl::detail::VectorMatrixProduct(phi_, Theta_);
-//std::cerr << "yhat(k)="; fl::detail::VectorOutput(std::cerr, yhat); std::cerr << std::endl; //XXX
 
             // Update parameters estimate
             //  $\hat{\Theta}(k+1) = \hat{\Theta}(k)+l^T(k+1)(y^T(k+1)-\phi^T(k+1)\hat{\Theta}(k))$
-//std::cerr << "xi(k)="; fl::detail::VectorOutput(std::cerr, fl::detail::VectorDiff(y,yhat)); std::cerr << std::endl; //XXX
             Theta_ = fl::detail::MatrixSum(
                         Theta_,
                         fl::detail::VectorOuterProduct<MatrixType>(
                             l,
                             fl::detail::VectorDiff(y, yhat)));
+#else // if 0
+            // Update the covariance matrix by means of the matrix inversion lemma (use the Woodbury's identity: A=B^{-1}+CD^{-1}C^T ==> A^{-1}=B-BC(D+C^TBC)^{-1}C^TB)
+            //  $P(k+1) = \frac{1}{\lambda(k)}\left[P(k)-\frac{P(k)\phi(k+1)\phi^T(k+1)P(k)}{\lambda+\phi^T(k+1)P(k)\phi(k+1)}\right]$
+/*
+            P_ = fl::detail::MatrixScalarProduct(
+                        fl::detail::MatrixDiff(
+							P_,
+							fl::detail::MatrixScalarProduct(
+								fl::detail::MatrixProduct(
+									fl::detail::VectorOuterProduct<MatrixType>(
+										fl::detail::MatrixVectorProduct(P_, phi_),
+										phi_
+									),
+									P_
+								),
+								1.0/(lambda_+fl::detail::VectorInnerProduct(fl::detail::VectorMatrixProduct(phi_, P_), phi_))
+							)
+						),
+						1.0/lambda_);
+*/
+			VectorType aux1 = fl::detail::MatrixVectorProduct(P_, phi_);
+			VectorType aux2 = fl::detail::VectorMatrixProduct(phi_, P_);
+			MatrixType aux3 = fl::detail::VectorOuterProduct<MatrixType>(aux1, aux2);
+			const ValueT denom = lambda_ + fl::detail::VectorInnerProduct(phi_, aux1);
+			aux3 = fl::detail::MatrixScalarProduct(aux3, 1.0/denom);
+			P_ = fl::detail::MatrixDiff(P_, aux3);
+			P_ = fl::detail::MatrixScalarProduct(P_, 1.0/lambda_);
+
+            // Computes the output estimate
+            //  $\hat{y}(k+1) = (\phi^T(k+1)\Theta(k))^T$
+            yhat = fl::detail::VectorMatrixProduct(phi_, Theta_);
+
+            // Update parameters estimate
+            //  $\hat{\Theta}(k+1) = \hat{\Theta}(k)+P(k+1)\phi(k+1)[y^T(k+1)-\phi^T(k+1)\hat{\Theta}(k)]$
+			////VectorType aux5 = fl::detail::VectorMatrixProduct(phi_, Theta_);
+			////aux5 = fl::detail::VectorDiff(y, tmp5);
+			//VectorType aux5 = fl::detail::VectorDiff(y, yhat);
+			//const MatrixType aux6 = fl::detail::VectorOuterProduct<MatrixType>(phi_, aux5);
+			//const MatrixType aux7 = fl::detail::MatrixProduct(P_, aux6);
+			//Theta_ = fl::detail::MatrixSum(Theta_, aux7);
+			aux1 = fl::detail::VectorDiff(y, yhat);
+			aux3 = fl::detail::VectorOuterProduct<MatrixType>(phi_, aux1);
+			MatrixType aux4 = fl::detail::MatrixProduct(P_, aux3);
+			Theta_ = fl::detail::MatrixSum(Theta_, aux4);
+#endif // if 0
+//std::cerr << "RLS - Covariance Matrix ="; fl::detail::MatrixOutput(std::cerr, P_); std::cerr << std::endl; //XXX
+//std::cerr << "RLS - Regressor = "; fl::detail::VectorOutput(std::cerr, phi_); std::cerr << std::endl; //XXX
+//std::cerr << "RLS - Parameters Matrix ="; fl::detail::MatrixOutput(std::cerr, Theta_); std::cerr << std::endl; //XXX
+//std::cerr << "RLS - yhat(k)="; fl::detail::VectorOutput(std::cerr, yhat); std::cerr << std::endl; //XXX
     }
     else
     {
-        yhat.resize(ny_, 0);
+        yhat.resize(ny_, std::numeric_limits<ValueT>::quiet_NaN());
     }
 
 //std::cerr << "phi(k+1)="; fl::detail::VectorOutput(std::cerr, phi_); std::cerr << std::endl; //XXX

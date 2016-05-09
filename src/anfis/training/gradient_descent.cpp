@@ -77,7 +77,7 @@ const std::map< Node*, std::vector<fl::scalar> >& GradientDescentBackpropagation
     return dEdPs_;
 }
 
-fl::scalar GradientDescentBackpropagationAlgorithm::doTrainSingleEpoch(const fl::DataSet<fl::scalar>& data)
+fl::scalar GradientDescentBackpropagationAlgorithm::doTrainSingleEpoch(const fl::DataSet<fl::scalar>& trainData)
 {
     this->check();
 
@@ -85,11 +85,11 @@ fl::scalar GradientDescentBackpropagationAlgorithm::doTrainSingleEpoch(const fl:
 
     if (online_)
     {
-        rmse = this->trainSingleEpochOnline(data);
+        rmse = this->trainSingleEpochOnline(trainData);
     }
     else
     {
-        rmse = this->trainSingleEpochOffline(data);
+        rmse = this->trainSingleEpochOffline(trainData);
     }
 
     //TODO
@@ -104,15 +104,15 @@ void GradientDescentBackpropagationAlgorithm::doReset()
     this->init();
 }
 
-fl::scalar GradientDescentBackpropagationAlgorithm::trainSingleEpochOffline(const fl::DataSet<fl::scalar>& data)
+fl::scalar GradientDescentBackpropagationAlgorithm::trainSingleEpochOffline(const fl::DataSet<fl::scalar>& trainData)
 {
     this->resetSingleEpoch();
 
     fl::scalar rmse = 0; // The Root Mean Squared Error (RMSE) for this epoch
 
     // Forwards inputs from input layer to the output layer
-    for (typename fl::DataSet<fl::scalar>::ConstEntryIterator entryIt = data.entryBegin(),
-                                                              entryEndIt = data.entryEnd();
+    for (typename fl::DataSet<fl::scalar>::ConstEntryIterator entryIt = trainData.entryBegin(),
+                                                              entryEndIt = trainData.entryEnd();
          entryIt != entryEndIt;
          ++entryIt)
     {
@@ -127,7 +127,7 @@ fl::scalar GradientDescentBackpropagationAlgorithm::trainSingleEpochOffline(cons
 
         const std::vector<fl::scalar> targetOut(entry.outputBegin(), entry.outputEnd());
 
-//std::cerr << "PHASE #0 - Traning data #: " << std::distance(data.entryBegin(), entryIt) << std::endl;//XXX
+//std::cerr << "PHASE #0 - Traning data #: " << std::distance(trainData.entryBegin(), entryIt) << std::endl;//XXX
 //std::cerr << "PHASE #0 - Entry input: "; fl::detail::VectorOutput(std::cerr, std::vector<fl::scalar>(entry.inputBegin(), entry.inputEnd())); std::cerr << std::endl;//XXX
 
         // Compute ANFIS output
@@ -261,7 +261,7 @@ fl::scalar GradientDescentBackpropagationAlgorithm::trainSingleEpochOffline(cons
         while (layerCat != Engine::OutputLayer);
     }
 
-    rmse = std::sqrt(rmse/data.size());
+    rmse = std::sqrt(rmse/trainData.size());
 
     this->setCurrentError(rmse);
 
@@ -271,7 +271,7 @@ fl::scalar GradientDescentBackpropagationAlgorithm::trainSingleEpochOffline(cons
     return rmse;
 }
 
-fl::scalar GradientDescentBackpropagationAlgorithm::trainSingleEpochOnline(const fl::DataSet<fl::scalar>& data)
+fl::scalar GradientDescentBackpropagationAlgorithm::trainSingleEpochOnline(const fl::DataSet<fl::scalar>& trainData)
 {
     this->resetSingleEpoch();
 
@@ -279,8 +279,8 @@ fl::scalar GradientDescentBackpropagationAlgorithm::trainSingleEpochOnline(const
 
     // Forwards inputs from input layer to antecedent layer, and estimate parameters with RLS
     //std::vector< std::vector<fl::scalar> > antecedentValues;
-    for (typename fl::DataSet<fl::scalar>::ConstEntryIterator entryIt = data.entryBegin(),
-                                                              entryEndIt = data.entryEnd();
+    for (typename fl::DataSet<fl::scalar>::ConstEntryIterator entryIt = trainData.entryBegin(),
+                                                              entryEndIt = trainData.entryEnd();
          entryIt != entryEndIt;
          ++entryIt)
     {
@@ -438,7 +438,7 @@ std::cerr << "PHASE #1 - Current error: " <<  squaredErr << " - Total error: " <
         this->updateInputParameters();
     }
 
-    rmse = std::sqrt(rmse/data.size());
+    rmse = std::sqrt(rmse/trainData.size());
 
     return rmse;
 }

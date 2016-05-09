@@ -12,21 +12,24 @@
 
 .PHONY: all clean
 
-all: anfis_invkinematics anfis_mackeyglass canfis_invkinematics cluster_subtractive_traffic
+all: anfis_invkinematics anfis_mackeyglass builder_subtractive_clustering_traffic canfis_invkinematics cluster_subtractive_traffic
 
-anfis_invkinematics: anfis_invkinematics.o
+anfis_invkinematics: anfis_invkinematics.o $(bindir)/libfuzzylitex.so
 	#$(CXX) $(CXXFLAGS) -o anfis_invkinematics anfis_invkinematics.o $(bindir)/libfuzzylitex-static.a $(LDFLAGS)
 	$(CXX) $(CXXFLAGS) -o anfis_invkinematics anfis_invkinematics.o $(LDFLAGS) -L$(bindir) -lfuzzylitex
 
-anfis_mackeyglass: anfis_mackeyglass.o
+anfis_mackeyglass: anfis_mackeyglass.o $(bindir)/libfuzzylitex.so
 	#$(CXX) $(CXXFLAGS) -o anfis_mackeyglass anfis_mackeyglass.o $(LDFLAGS) $(bindir)/libfuzzylitex-static-static.a
 	$(CXX) $(CXXFLAGS) -o anfis_mackeyglass anfis_mackeyglass.o $(LDFLAGS) -L$(bindir) -lfuzzylitex
 
-canfis_invkinematics: canfis_invkinematics.o
+builder_subtractive_clustering_traffic: builder_subtractive_clustering_traffic.o $(bindir)/libfuzzylitex.so
+	$(CXX) $(CXXFLAGS) -o builder_subtractive_clustering_traffic builder_subtractive_clustering_traffic.o $(LDFLAGS) -L$(bindir) -lfuzzylitex
+
+canfis_invkinematics: canfis_invkinematics.o $(bindir)/libfuzzylitex.so
 	#$(CXX) $(CXXFLAGS) -o canfis_invkinematics canfis_invkinematics.o $(LDFLAGS) $(bindir)/libfuzzylitex-static.a
 	$(CXX) $(CXXFLAGS) -o canfis_invkinematics canfis_invkinematics.o $(LDFLAGS) -L$(bindir) -lfuzzylitex
 
-cluster_subtractive_traffic: cluster_subtractive_traffic.o
+cluster_subtractive_traffic: cluster_subtractive_traffic.o $(bindir)/libfuzzylitex.so
 	#$(CXX) $(CXXFLAGS) -o cluster_subtractive_traffic cluster_subtractive_traffic.o $(LDFLAGS) $(bindir)/libfuzzylitex-static.a
 	$(CXX) $(CXXFLAGS) -o cluster_subtractive_traffic cluster_subtractive_traffic.o $(LDFLAGS) -L$(bindir) -lfuzzylitex
 
@@ -91,5 +94,6 @@ clean:
 	rm -f *.o \
 		  anfis_invkinematics \
 		  anfis_mackeyglass \
+		  builder_subtractive_clustering_traffic \
 		  canfis_invkinematics \
 		  cluster_subtractive_traffic

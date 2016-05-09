@@ -60,7 +60,7 @@ public:
     Engine* getEngine() const;
 
     /**
-     * Trains the ANFIS model
+     * Trains the ANFIS model.
      *
      * \param data The training set
      * \param maxEpochs The maximum number of epochs
@@ -74,7 +74,24 @@ public:
                      std::size_t maxEpochs = 10,
                      fl::scalar errorGoal = 0);
 
-    /// Trains the ANFIS model for a single epoch only using the given training set \a data
+    /**
+     * Trains the ANFIS model with validation data.
+     *
+     * \param trainData The training set
+     * \param checkData The validation set
+     * \param maxEpochs The maximum number of epochs
+     * \param errorGoal The error to achieve
+     *
+     * The error measure is the Root Mean Squared Error (RMSE).
+     *
+     * \return The achieved error
+     */
+    fl::scalar train(const fl::DataSet<fl::scalar>& testData,
+    				 const fl::DataSet<fl::scalar>& checkData,
+                     std::size_t maxEpochs = 10,
+                     fl::scalar errorGoal = 0);
+
+    /// Trains the ANFIS model for a single epoch only using the given training set \a data.
     fl::scalar trainSingleEpoch(const fl::DataSet<fl::scalar>& data);
 
     /// Resets the state of the learning algorithm
@@ -82,7 +99,7 @@ public:
 
 private:
     /// Trains the ANFIS model for a single epoch only using the given training set \a data
-    virtual fl::scalar doTrainSingleEpoch(const fl::DataSet<fl::scalar>& data) = 0;
+    virtual fl::scalar doTrainSingleEpoch(const fl::DataSet<fl::scalar>& trainData) = 0;
 
     /// Resets state for single epoch training
     virtual void doReset() = 0;

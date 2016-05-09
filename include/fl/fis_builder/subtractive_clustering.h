@@ -107,10 +107,7 @@ SubtractiveClusteringFisBuilder<EngineT>::SubtractiveClusteringFisBuilder(const 
 template <typename EngineT>
 FL_unique_ptr<EngineT> SubtractiveClusteringFisBuilder<EngineT>::build(const fl::DataSet<fl::scalar>& data)
 {
-    const std::size_t numInputs = data.numOfInputs();
-    const std::size_t numOutputs = data.numOfOutputs();
-
-    return this->build(data.data(), numInputs, numOutputs);
+    return this->build(data.data(), data.numOfInputs(), data.numOfOutputs());
 }
 
 template <typename EngineT>
@@ -202,6 +199,9 @@ FL_unique_ptr<EngineT> SubtractiveClusteringFisBuilder<EngineT>::build(const Mat
             }
         }
         outParams = fl::detail::LsqSolveMulti<fl::scalar>(muMatrix, dataOut);
+std::cerr << "muMatrix: "; fl::detail::MatrixOutput(std::cerr, muMatrix); std::cerr << std::endl;
+std::cerr << "Xout: "; fl::detail::MatrixOutput(std::cerr, dataOut); std::cerr << std::endl;
+std::cerr << "outEqns: "; fl::detail::MatrixOutput(std::cerr, outParams); std::cerr << std::endl;
     }
 
     const std::vector<fl::scalar> mins = subclust_.lowerBounds();

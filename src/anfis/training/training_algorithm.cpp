@@ -23,6 +23,7 @@
  */
 
 #include <cstddef>
+#include <fl/detail/math.h>
 #include <fl/anfis/engine.h>
 #include <fl/anfis/training/training_algorithm.h>
 #include <fl/dataset.h>
@@ -38,7 +39,7 @@ TrainingAlgorithm::TrainingAlgorithm(Engine* p_anfis)
 
 TrainingAlgorithm::~TrainingAlgorithm()
 {
-	// empty
+    // empty
 }
 
 void TrainingAlgorithm::setEngine(Engine* p_anfis)
@@ -52,8 +53,8 @@ Engine* TrainingAlgorithm::getEngine() const
 }
 
 fl::scalar TrainingAlgorithm::train(const fl::DataSet<fl::scalar>& data,
-                                   std::size_t maxEpochs,
-                                   fl::scalar errorGoal)
+                                    std::size_t maxEpochs,
+                                    fl::scalar errorGoal)
 {
     this->reset();
 
@@ -72,6 +73,77 @@ fl::scalar TrainingAlgorithm::train(const fl::DataSet<fl::scalar>& data,
         }
     }
     return rmse;
+}
+
+fl::scalar TrainingAlgorithm::train(const fl::DataSet<fl::scalar>& trainData,
+                                    const fl::DataSet<fl::scalar>& checkData,
+                                    std::size_t maxEpochs,
+                                    fl::scalar errorGoal)
+{
+    this->reset();
+
+    fl::scalar minCheckRmse = std::numeric_limits<fl::scalar>::infinity();
+    fl::anfis::Engine bestCheckAnfis;
+    fl::scalar trainRmse = 0;
+    fl::scalar checkRmse = 0;
+    for (std::size_t epoch = 0; epoch < maxEpochs; ++epoch)
+    {
+        FL_DEBUG_TRACE("TRAINING - EPOCH #" << epoch);
+
+        trainRmse = this->trainSingleEpoch(trainData);
+
+        if (checkData.size() > 0)
+        {
+
+            for (typename fl::DataSet<fl::scalar>::ConstEntryIterator entryIt = checkData.entryBegin(),
+                                                                      entryEndIt = checkData.entryEnd();
+                 entryIt != entryEndIt;
+                 ++entryIt)
+            {
+                const fl::DataSetEntry<fl::scalar>& entry = *entryIt;
+
+                const std::size_t nout = entry.numOfOutputs();
+
+                if (nout != this->getEngine()->numberOfOutputVariables())
+                {
+                    FL_THROW2(std::invalid_argument, "Incorrect output dimension");
+                }
+
+                const std::vector<fl::scalar> targetOut(entry.outputBegin(), entry.outputEnd());
+                const std::vector<fl::scalar> anfisOut = this->getEngine()->eval(entry.inputBegin(), entry.inputEnd());
+
+                for (std::size_t i = 0; i < nout; ++i)
+                {
+                    checkRmse += fl::detail::Sqr(targetOut[i]-anfisOut[i]);
+                }
+            }
+            checkRmse = std::sqrt(checkRmse/checkData.size());
+
+            if (checkRmse < minCheckRmse)
+            {
+                minCheckRmse = checkRmse;
+                bestCheckAnfis = *(this->getEngine());
+            }
+        }
+
+        FL_DEBUG_TRACE("TRAINING - EPOCH #" << epoch << " -> Train RMSE: " << trainRmse << ", Check RMSE: " << checkRmse << ", Best Check RMSE: " << minCheckRmse);
+
+        if (fl::detail::FloatTraits<fl::scalar>::EssentiallyLessEqual(trainRmse, errorGoal))
+        {
+            break;
+        }
+    }
+
+    if (checkData.size() > 0)
+    {
+        // Copy back the ANFIS engine with the best parameters wrt validation set
+
+        *p_anfis_ = bestCheckAnfis;
+
+        return checkRmse;
+    }
+
+    return trainRmse;
 }
 
 fl::scalar TrainingAlgorithm::trainSingleEpoch(const fl::DataSet<fl::scalar>& data)
@@ -93,3 +165,5 @@ void TrainingAlgorithm::reset()
 }
 
 }} // Namespace fl::anfis
+
+/* vim: set tabstop=4 expandtab shiftwidth=4 softtabstop=4: */

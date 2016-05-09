@@ -17,19 +17,19 @@ all: test_anfis test_cluster_subtractive test_ann test_lsq test_rls
 #test_anfis: test_anfis.o engine.o nodes.o terms.o
 #	$(CXX) $(CXXFLAGS) -o test_anfis test_anfis.o engine.o nodes.o terms.o $(LDFLAGS)
 
-test_anfis: test_anfis.o
+test_anfis: test_anfis.o $(bindir)/libfuzzylitex.so
 	$(CXX) $(CXXFLAGS) -o test_anfis test_anfis.o $(LDFLAGS) -L$(bindir) -lfuzzylitex
 
 #test_anfis.o: test_anfis.cpp
 #	$(CXX) $(CXXFLAGS) -c -o test_anfis.o test_anfis.cpp
 
-test_cluster_subtractive: test_cluster_subtractive.o
+test_cluster_subtractive: test_cluster_subtractive.o $(bindir)/libfuzzylitex.so
 	$(CXX) $(CXXFLAGS) -o test_cluster_subtractive test_cluster_subtractive.o $(LDFLAGS) -L$(bindir) -lfuzzylitex
 
-test_lsq: test_lsq.o
+test_lsq: test_lsq.o $(bindir)/libfuzzylitex.so
 	$(CXX) $(CXXFLAGS) -o test_lsq test_lsq.o $(LDFLAGS) -L$(bindir) -lfuzzylitex
 
-test_rls: test_rls.o
+test_rls: test_rls.o $(bindir)/libfuzzylitex.so
 	$(CXX) $(CXXFLAGS) -o test_rls test_rls.o $(LDFLAGS) -L$(bindir) -lfuzzylitex
 
 clean:

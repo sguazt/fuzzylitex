@@ -65,6 +65,7 @@ namespace /*<unnamed>*/ {
 const std::string Jang1993GradientDescentAlgorithmTag = "gdss";
 const std::string GradientDescentMomentumAlgorithmTag = "gdm";
 const std::string Jang1993HybridAlgorithmTag = "hybrid";
+const std::string LeastSquaresAlgorithmTag = "lsq";
 
 const std::size_t DefaultMaxEpochs = 10;
 const fl::scalar DefaultGoalError = 0;
@@ -131,6 +132,7 @@ void usage(const char* progname)
 			  << "  - '" << GradientDescentMomentumAlgorithmTag << "': gradient descent backpropagation with momentum." << std::endl
 			  << "  - '" << Jang1993GradientDescentAlgorithmTag << "': gradient descent backpropagation with adaptive learning rate based on step-size and proposed by (Jang et al.,1993)." << std::endl
 			  << "  - '" << Jang1993HybridAlgorithmTag << "': hybrid algorithm proposed by (Jang et al.,1993)." << std::endl
+			  << "  - '" << LeastSquaresAlgorithmTag << "': least-squares algorithm." << std::endl
 			  << "  [default: " << DefaultTrainingAlgorithm << "]" << std::endl
 			  << "--epoch <value>: Set the maximum number of epochs in the training algorithm." << std::endl
 			  << "  [default: " << DefaultMaxEpochs << "]" << std::endl
@@ -247,7 +249,7 @@ fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& trainingS
 		if (online)
 		{
 			p_hybrid->setIsOnline(true);
-			p_hybrid->setForgettingFactor(0.98);
+			p_hybrid->setForgettingFactor(0.90);
 		}
 		else
 		{
@@ -280,6 +282,20 @@ fl::scalar TrainAnfis(fl::anfis::Engine* p_anfis, const fl::DataSet<>& trainingS
 			p_gdm->setIsOnline(false);
 		}
 		p_trainAlgo.reset(p_gdm);
+	}
+	else if (algo == LeastSquaresAlgorithmTag)
+	{
+		fl::anfis::LeastSquaresLearningAlgorithm* p_lsq = new fl::anfis::LeastSquaresLearningAlgorithm(p_anfis);
+		if (online)
+		{
+			p_lsq->setIsOnline(true);
+		}
+		else
+		{
+			p_lsq->setIsOnline(false);
+		}
+		p_lsq->setForgettingFactor(0.98);
+		p_trainAlgo.reset(p_lsq);
 	}
 	else
 	{
