@@ -39,9 +39,9 @@ shared_msg:
 	@echo "====== Building Dynamic Library ======"
 
 shared_build: $(objs)
-	$(CXX) -o $(bindir)/libfuzzylitex.so.1.1.1 -shared -Wl,-soname,libfuzzylitex.so.1 $^
-	ln -sf $(bindir)/libfuzzylitex.so.1.1.1 $(bindir)/libfuzzylitex.so.1
-	ln -sf $(bindir)/libfuzzylitex.so.1.1.1 $(bindir)/libfuzzylitex.so
+	$(CXX) -o $(bindir)/libfuzzylitex.so.1.1.2 -shared -Wl,-soname,libfuzzylitex.so.1 $^
+	ln -sf $(bindir)/libfuzzylitex.so.1.1.2 $(bindir)/libfuzzylitex.so.1
+	ln -sf $(bindir)/libfuzzylitex.so.1.1.2 $(bindir)/libfuzzylitex.so
 	rm -rf $(objs)
 
 #$(bindir)/% : $(builddir)/%.o $(headers)
