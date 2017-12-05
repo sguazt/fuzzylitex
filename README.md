@@ -1,6 +1,32 @@
-# fuzzylitex
+# Fuzzylitex
 
-Extensions to the [fuzzylite](http://www.fuzzylite.com) project that will be hopefully integrated into the official *fuzzylite* project.
+Fuzzylitex is a C++ library for Fuzzy Inference System Modeling and Identification.
+It is an extensions to the [fuzzylite](http://www.fuzzylite.com) project that will be hopefully integrated into the official *fuzzylite* project.
+
+## How to Cite
+
+Please, cite this project as the following paper (BibTeX format):
+
+	@MISC{Fuzzylitex,
+		author = {Marco Guazzone},
+		title = {{Fuzzylitex}: a {C++} library for Fuzzy Inference System Modeling and Identification},
+		year = {2015},
+		doi = {10.5281/zenodo.592585}
+		url = {https://doi.org/10.5281/zenodo.592585},
+	}
+
+In addition, you can cite the following papers where Fuzzylitex has been used to carry out the experimental evaluation (BibTeX format):
+
+    @JOURNAL{Prometheus,
+        author = {Cosimo Anglano and Massimo Canonico and Marco Guazzone},
+        title = {{Prometheus}: a flexible toolkit for the experimentation with virtualized infrastructures},
+        journal = {Concurrency and Computation: Practice and Experience},
+        year = {2017},
+        doi = {10.1002/cpe.4400},
+        url = {http://dx.doi.org/10.1002/cpe.4400},
+        keywords = {toolkit, resource management, experimental evaluation, physical testbed, virtualization},
+        note = {Accepted for publication},
+    }
 
 
 ## ANN Extension
